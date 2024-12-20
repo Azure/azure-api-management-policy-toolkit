@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.ApiManagement.PolicyToolkit.Authoring;
+using Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 namespace Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
@@ -18,4 +19,7 @@ public static class TestDocumentExtensions
 
     public static MockPoliciesProvider<IOnErrorContext> SetupOnError(this TestDocument document) =>
         new(document.Context.OnErrorProxy);
+
+    public static CertificateStore SetupCertificateStore(this TestDocument document) =>
+        document.Context.CertificateStore;
 }

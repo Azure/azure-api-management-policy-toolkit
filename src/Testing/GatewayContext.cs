@@ -3,6 +3,7 @@
 
 using Azure.ApiManagement.PolicyToolkit.Authoring;
 using Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+using Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 using Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 namespace Azure.ApiManagement.PolicyToolkit.Testing;
@@ -13,6 +14,7 @@ public class GatewayContext : MockExpressionContext
     internal readonly SectionContextProxy<IBackendContext> BackendProxy;
     internal readonly SectionContextProxy<IOutboundContext> OutboundProxy;
     internal readonly SectionContextProxy<IOnErrorContext> OnErrorProxy;
+    internal readonly CertificateStore CertificateStore = new();
 
     public GatewayContext()
     {

@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Security.Cryptography.X509Certificates;
+
 using Azure.ApiManagement.PolicyToolkit.Authoring;
 using Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -34,5 +36,8 @@ public static class MockAuthenticationCertificateProvider
 
         public void WithCallback(Action<GatewayContext, CertificateAuthenticationConfig> callback) =>
             _handler.CallbackSetup.Add((_predicate, callback).ToTuple());
+
+        public void WithCertificate(X509Certificate2 certificate) =>
+            _handler.CertificateSetup.Add((_predicate, certificate).ToTuple());
     }
 }
