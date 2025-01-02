@@ -35,5 +35,11 @@ public static class MockCheckHeaderProvider
 
         public void WithCallback(Action<GatewayContext, CheckHeaderConfig> callback) =>
             _handler.CallbackSetup.Add((_predicate, callback).ToTuple());
+
+        public void OnCheckPass(Action<GatewayContext, CheckHeaderConfig> onCheckPass) =>
+            _handler.OnCheckPassed.Add((_predicate, onCheckPass).ToTuple());
+
+        public void OnCheckFail(Action<GatewayContext, CheckHeaderConfig> onCheckFail) =>
+            _handler.OnCheckFailed.Add((_predicate, onCheckFail).ToTuple());
     }
 }
