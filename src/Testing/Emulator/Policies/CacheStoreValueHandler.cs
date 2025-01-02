@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.ApiManagement.PolicyToolkit.Authoring;
+using Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -17,6 +18,11 @@ internal class CacheStoreValueHandler : PolicyHandler<CacheStoreValueConfig>
 
     protected override void Handle(GatewayContext context, CacheStoreValueConfig config)
     {
-        throw new NotImplementedException();
+        var store = context.CacheStore.GetCache(config.CachingType ?? "prefer-external");
+
+        if (store is not null)
+        {
+            store[config.Key] = new CacheValue(config.Value) { Duration = config.Duration };
+        }
     }
 }

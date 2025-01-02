@@ -5,12 +5,12 @@ namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 public class CacheStore
 {
-    private readonly Dictionary<string, object> _internalCache = new();
-    private readonly Dictionary<string, object> _externalCache = new();
+    private readonly Dictionary<string, CacheValue> _internalCache = new();
+    private readonly Dictionary<string, CacheValue> _externalCache = new();
 
     private bool _isExternalCacheSetup = false;
 
-    internal Dictionary<string, object>? GetCache(string type) =>
+    internal Dictionary<string, CacheValue>? GetCache(string type) =>
         type switch
         {
             "internal" => _internalCache,
@@ -19,8 +19,8 @@ public class CacheStore
             _ => throw new ArgumentException($"Unrecognized type {type}", nameof(type)),
         };
 
-    public IReadOnlyDictionary<string, object> InternalCache => _internalCache;
-    public IReadOnlyDictionary<string, object> ExternalCache => _externalCache;
+    public IReadOnlyDictionary<string, CacheValue> InternalCache => _internalCache;
+    public IReadOnlyDictionary<string, CacheValue> ExternalCache => _externalCache;
 
     public CacheStore WithExternalCacheSetup(bool isSetup = true)
     {
@@ -28,15 +28,15 @@ public class CacheStore
         return this;
     }
 
-    public CacheStore WithExternalCacheValue(string key, object value)
+    public CacheStore WithExternalCacheValue(string key, object value, uint? duration = null)
     {
-        _externalCache.Add(key, value);
+        _externalCache.Add(key, new CacheValue(value) { Duration = duration });
         return this;
     }
 
-    public CacheStore WithInternalCacheValue(string key, object value)
+    public CacheStore WithInternalCacheValue(string key, object value, uint? duration = null)
     {
-        _internalCache.Add(key, value);
+        _internalCache.Add(key, new CacheValue(value) { Duration = duration });
         return this;
     }
 }

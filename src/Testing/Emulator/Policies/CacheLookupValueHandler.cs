@@ -40,7 +40,7 @@ internal class CacheLookupValueHandler : PolicyHandler<CacheLookupValueConfig>
 
         if (store.TryGetValue(config.Key, out var value))
         {
-            context.Variables[config.VariableName] = value;
+            context.Variables[config.VariableName] = value.Value;
             return;
         }
 
