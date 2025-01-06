@@ -35,5 +35,11 @@ public static class MockIpFilterProvider
 
         public void WithCallback(Action<GatewayContext, IpFilterConfig> callback) =>
             _handler.CallbackSetup.Add((_predicate, callback).ToTuple());
+
+        public void OnIpDeny(Action<GatewayContext, IpFilterConfig> onIpDeny) =>
+            _handler.OnIpDenied.Add((_predicate, onIpDeny).ToTuple());
+
+        public void OnIpAllow(Action<GatewayContext, IpFilterConfig> onIpAllow) =>
+            _handler.OnIpAllowed.Add((_predicate, onIpAllow).ToTuple());
     }
 }
