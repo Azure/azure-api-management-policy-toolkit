@@ -32,12 +32,4 @@ public abstract record EntityLimitConfig
     public string? Id { get; init; }
     public required int Calls { get; init; }
     public required int RenewalPeriod { get; init; }
-
-    public EntityLimitConfig()
-    {
-        if (Name is null && Id is null)
-        {
-            throw new ArgumentNullException("Name or Id need to be specified");
-        }
-    }
 }

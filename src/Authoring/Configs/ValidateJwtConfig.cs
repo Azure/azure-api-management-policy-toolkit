@@ -23,14 +23,6 @@ public record ValidateJwtConfig
     public string[]? Audiences { get; init; }
     public string[]? Issuers { get; init; }
     public ClaimConfig[]? RequiredClaims { get; init; }
-
-    public ValidateJwtConfig()
-    {
-        if (new[] { HeaderName, QueryParameterName, TokenValue }.Count(string.IsNullOrEmpty) != 1)
-        {
-            throw new ArgumentException("Only one of HeaderName, QueryParameterName and TokenValue must be set");
-        }
-    }
 }
 
 public record OpenIdConfig

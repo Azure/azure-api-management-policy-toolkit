@@ -52,12 +52,4 @@ public record ForwardRequestConfig
     /// When set to true, triggers on-error section for response codes in the range from 400 to 599 inclusive. Policy expressions aren't allowed.
     /// </summary>
     public bool? FailOnErrorStatusCode { get; init; }
-
-    public ForwardRequestConfig()
-    {
-        if (Timeout.HasValue && TimeoutMs.HasValue)
-        {
-            throw new ArgumentException("You can specify either timeout or timeout-ms but not both.");
-        }
-    }
 }
