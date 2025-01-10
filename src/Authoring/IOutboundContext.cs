@@ -133,6 +133,13 @@ public interface IOutboundContext : IHaveExpressionContext
     void CacheStoreValue(CacheStoreValueConfig config);
 
     /// <summary>
+    /// The policy inserts the policy fragment as-is at the location you select in the policy definition.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/include-fragment-policy">include-fragment</a> policy.
+    /// </summary>
+    /// <param name="fragmentId">A string. Specifies the identifier (name) of a policy fragment created in the API Management instance. Policy expressions aren't allowed.</param>
+    void IncludeFragment(string fragmentId);
+
+    /// <summary>
     /// Inlines the specified policy as is to policy document.
     /// </summary>
     /// <param name="policy">
