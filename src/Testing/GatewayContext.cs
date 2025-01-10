@@ -15,6 +15,7 @@ public class GatewayContext : MockExpressionContext
     internal readonly SectionContextProxy<IOutboundContext> OutboundProxy;
     internal readonly SectionContextProxy<IOnErrorContext> OnErrorProxy;
     internal readonly CertificateStore CertificateStore = new();
+    internal readonly CacheStore CacheStore = new();
 
     public GatewayContext()
     {

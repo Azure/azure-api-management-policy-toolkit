@@ -35,5 +35,7 @@ public static class MockCacheLookupValueProvider
 
         public void WithCallback(Action<GatewayContext, CacheLookupValueConfig> callback) =>
             _handler.CallbackSetup.Add((_predicate, callback).ToTuple());
+
+        public void WithValue(object value) => _handler.ValueSetup.Add((_predicate, value).ToTuple());
     }
 }

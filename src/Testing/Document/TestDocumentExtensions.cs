@@ -22,4 +22,7 @@ public static class TestDocumentExtensions
 
     public static CertificateStore SetupCertificateStore(this TestDocument document) =>
         document.Context.CertificateStore;
+
+    public static CacheStore SetupCacheStore(this TestDocument document) =>
+        document.Context.CacheStore;
 }
