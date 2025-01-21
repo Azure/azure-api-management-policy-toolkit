@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <RootNamespace Condition="'$(name)' != '$(name{-VALUE-FORMS-}safe_namespace)'">Company.Policies</RootNamespace>
+        <PackageVersion>1.0.0</PackageVersion>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <TargetFramework>.net8</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Azure.ApiManagement.PolicyToolkit.Authoring" Version="0.0.1"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
+    </ItemGroup>
+</Project>

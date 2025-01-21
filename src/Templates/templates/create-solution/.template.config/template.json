@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Microsoft",
+  "classifications": [
+    "Solution",
+    "Policy Toolkit"
+  ],
+  "identity": "Azure.ApiManagement.PolicyToolkit.Templates.Solution",
+  "name": "Azure API Management Policy Toolkit solution template",
+  "shortName": "azureapimpolicytoolkitsolution",
+  "tags": {
+    "language": "c#",
+    "type": "solution"
+  },
+  "primaryOutputs": [
+    {
+      "path": "src/Source.csproj"
+    },
+    {
+      "path": "test/Test.csproj"
+    }
+  ],
+  "postActions": [
+    {
+      "actionId": "D396686C-DE0E-4DE6-906D-291CD29FC5DE",
+      "description": "Add projects to solution",
+      "continueOnError": true,
+      "manualInstructions": [
+        {
+          "text": "Add generated project to solution manually."
+        }
+      ],
+      "args": {
+        "inRoot": true
+      }
+    },
+    {
+      "actionId": "B17581D1-C5C9-4489-8F0A-004BE667B814",
+      "description": "Adding reference to Source project in Test project",
+      "continueOnError": false,
+      "manualInstructions": [
+        {
+          "text": "Manually add the reference to Source project in Test project"
+        }
+      ],
+      "args": {
+        "targetFiles": [
+          "test/Test.csproj"
+        ],
+        "referenceType": "project",
+        "reference": "src/Source.csproj"
+      }
+    },
+    {
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "description": "Restore NuGet packages required by this project.",
+      "continueOnError": true,
+      "manualInstructions": [
+        {
+          "text": "Run 'dotnet restore'"
+        }
+      ]
+    }
+  ]
+}

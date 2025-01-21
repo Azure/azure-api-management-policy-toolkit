@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PackageId>Azure.ApiManagement.PolicyToolkit.Templates</PackageId>
+        <PackageVersion>0.0.1</PackageVersion>
+        <Authors>Microsoft</Authors>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+        <PackageProjectUrl>https://github.com/Azure/azure-api-management-policy-toolkit</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
+        <Description>
+            Azure API Management Policy Toolkit Templates is a library which contains custom templates for dotnet.
+            Read more about it at https://github.com/Azure/azure-api-management-policy-toolkit
+        </Description>
+        <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Templates</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageType>Template</PackageType>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <IncludeContentInPack>true</IncludeContentInPack>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <ContentTargetFolders>content</ContentTargetFolders>
+        <PackageOutputPath>..\..\output</PackageOutputPath>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**"/>
+        <Compile Remove="**\*"/>
+    </ItemGroup>
+
+</Project>
