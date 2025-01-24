@@ -1,9 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Xml.Linq;
-
 namespace Azure.Api.Management.PolicyToolkit.Compiling;
 
 [TestClass]
@@ -19,6 +16,21 @@ public class FindAndReplaceTests
             {
                 context.FindAndReplace("cat", "dog");
             }
+        
+            public void Backend(IBackendContext context)
+            {
+                context.FindAndReplace("cat", "dog");
+            }
+        
+            public void Outbound(IOutboundContext context)
+            {
+                context.FindAndReplace("cat", "dog");
+            }
+        
+            public void OnError(IOnErrorContext context)
+            {
+                context.FindAndReplace("cat", "dog");
+            }
         }
         """,
         """
@@ -26,9 +38,18 @@ public class FindAndReplaceTests
             <inbound>
                 <find-and-replace from="cat" to="dog" />
             </inbound>
+            <backend>
+                <find-and-replace from="cat" to="dog" />
+            </backend>
+            <outbound>
+                <find-and-replace from="cat" to="dog" />
+            </outbound>
+            <on-error>
+                <find-and-replace from="cat" to="dog" />
+            </on-error>
         </policies>
         """,
-        DisplayName = "Should compile find-and-replace policy with static strings"
+        DisplayName = "Should compile find-and-replace policy in sections"
     )]
     [DataRow(
         """
@@ -39,7 +60,7 @@ public class FindAndReplaceTests
             {
                 context.FindAndReplace(FromEmail(context.ExpressionContext), "issues@contoso.com");
             }
-
+        
             private string FromEmail(IExpressionContext context) => context.User.Email;
         }
         """,
@@ -61,7 +82,7 @@ public class FindAndReplaceTests
             {
                 context.FindAndReplace("admin@contoso.com", ToEmail(context.ExpressionContext));
             }
-
+        
             private string ToEmail(IExpressionContext context) => context.User.Email;
         }
         """,
@@ -83,14 +104,16 @@ public class FindAndReplaceTests
             {
                 context.FindAndReplace(FromId(context.ExpressionContext), ToName(context.ExpressionContext));
             }
-
+        
             private string FromId(IExpressionContext context) => context.User.Id;
             private string ToName(IExpressionContext context) => context.User.Name;
         }
         """,
         """
         <policies>
-            <find-and-replace from="@(context.User.Id)" to="@(context.User.Name)" />
+            <inbound>
+                <find-and-replace from="@(context.User.Id)" to="@(context.User.Name)" />
+            </inbound>
         </policies>
         """,
         DisplayName = "Should compile find-and-replace policy with dynamic expressions in both parameters"
