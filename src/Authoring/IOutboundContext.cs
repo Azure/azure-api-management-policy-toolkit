@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -146,4 +146,11 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Policy in xml format.
     /// </param>
     void InlinePolicy(string policy);
+
+    /// <summary>
+    /// The find-and-replace policy replaces occurrences of a specified string with another string in the request or response.
+    /// </summary>
+    /// <param name="from">The string to be replaced. Policy expressions are allowed.</param>
+    /// <param name="to">The string to replace with. Policy expressions are allowed.</param>
+    void FindAndReplace(string from, string to);
 }

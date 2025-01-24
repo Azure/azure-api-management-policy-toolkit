@@ -22,6 +22,7 @@ In this document, you can find a list of implemented policies. For policy detail
 * choose
 * cors
 * emit-metric
+* find-and-replace
 * forward-request
 * ip-filter
 * json-to-xml
