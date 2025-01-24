@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Xml.Linq;
+
 using Azure.ApiManagement.PolicyToolkit.Authoring;
 using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
