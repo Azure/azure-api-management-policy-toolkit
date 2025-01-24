@@ -5,19 +5,20 @@
     "Solution",
     "Policy Toolkit"
   ],
-  "identity": "Azure.ApiManagement.PolicyToolkit.Templates.Solution",
+  "groupIdentity": "Azure.ApiManagement.PolicyToolkit.Templates.Solution",
+  "identity": "Azure.ApiManagement.PolicyToolkit.Templates.Solution.1.0",
   "name": "Azure API Management Policy Toolkit solution template",
-  "shortName": "azureapimpolicytoolkitsolution",
+  "shortName": "policytoolkitsolution",
   "tags": {
-    "language": "c#",
+    "language": "C#",
     "type": "solution"
   },
   "primaryOutputs": [
     {
-      "path": "src/Source.csproj"
+      "path": "src/Project.Source.csproj"
     },
     {
-      "path": "test/Test.csproj"
+      "path": "test/Project.Test.csproj"
     }
   ],
   "postActions": [
@@ -45,10 +46,10 @@
       ],
       "args": {
         "targetFiles": [
-          "test/Test.csproj"
+          "test/Project.Test.csproj"
         ],
         "referenceType": "project",
-        "reference": "src/Source.csproj"
+        "reference": "src/Project.Source.csproj"
       }
     },
     {
@@ -60,6 +61,20 @@
           "text": "Run 'dotnet restore'"
         }
       ]
+    },
+    {
+      "description": "Manually restore azure-apim-policy-compiler tool to make it available in command line",
+      "manualInstructions": [
+        {
+          "text": "Run following command to restore tool"
+        }
+      ],
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "args": {
+        "executable": "dotnet",
+        "args": "tool restore"
+      },
+      "continueOnError": true
     }
   ]
 }

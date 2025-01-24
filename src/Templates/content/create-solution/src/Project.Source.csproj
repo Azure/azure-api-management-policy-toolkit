@@ -1,10 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <RootNamespace Condition="'$(name)' != '$(name{-VALUE-FORMS-}safe_namespace)'">Company.Policies</RootNamespace>
-        <PackageVersion>1.0.0</PackageVersion>
-    </PropertyGroup>
-
-    <PropertyGroup>
         <TargetFramework>.net8</TargetFramework>
         <LangVersion>latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>

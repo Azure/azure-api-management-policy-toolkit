@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Microsoft",
+  "classifications": [
+    "Policy Toolkit",
+    "Policy",
+    "Class"
+  ],
+  "name": "Policy Toolkit Policy Class",
+  "generatorVersions": "[1.0.0.0-*)",
+  "description": "Creates a new Policy Toolkit policy class",
+  "groupIdentity": "Azure.ApiManagement.PolicyToolkit.Templates.Policy",
+  "identity": "Azure.ApiManagement.PolicyToolkit.Templates.Policy.1.0",
+  "shortName": "policytoolkitclass",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "PolicyDocument1",
+  "preferDefaultName": true,
+  "defaultName": "PolicyDocument1",
+  "primaryOutputs": [
+    {
+      "path": ".cs"
+    }
+  ],
+  "symbols": {
+    "DefaultNamespace": {
+      "type": "bind",
+      "binding": "msbuild:RootNamespace",
+      "replaces": "Company.PolicyProject1"
+    },
+    "Sections": {
+      "type": "parameter",
+      "datatype": "choice",
+      "description": "Select the sections kinds to include in the project.",
+      "displayName": "Sections",
+      "allowMultipleValues": true,
+      "enableQuotelessLiterals": true,
+      "defaultValue": "None",
+      "choices": [
+        {
+          "choice": "None",
+          "description": "No section methods",
+          "displayName": "None"
+        },
+        {
+          "choice": "Inbound",
+          "description": "Inbound section method"
+        },
+        {
+          "choice": "Backend",
+          "description": "Backend section method"
+        },
+        {
+          "choice": "Outbound",
+          "description": "Outbound section method"
+        },
+        {
+          "choice": "OnError",
+          "description": "OnError section method"
+        }
+      ]
+    }
+  },
+  "constraints": {
+    "csharp-only": {
+      "type": "project-capability",
+      "args": "CSharp"
+    }
+  }
+}
