@@ -21,8 +21,8 @@ public static class MockCacheLookupProvider
 
     public class Setup
     {
-        private readonly Func<GatewayContext, CacheLookupConfig, bool> _predicate;
         private readonly CacheLookupHandler _handler;
+        private readonly Func<GatewayContext, CacheLookupConfig, bool> _predicate;
 
         internal Setup(
             Func<GatewayContext, CacheLookupConfig, bool> predicate,
@@ -34,5 +34,15 @@ public static class MockCacheLookupProvider
 
         public void WithCallback(Action<GatewayContext, CacheLookupConfig> callback) =>
             _handler.CallbackSetup.Add((_predicate, callback).ToTuple());
+
+        public void WithCacheKey(Func<GatewayContext, CacheLookupConfig, string> callback)
+        {
+            _handler.CacheKeyProvider.Add((_predicate, callback).ToTuple());
+        }
+
+        public void WithCacheKey(string key)
+        {
+            WithCacheKey((_, _) => key);
+        }
     }
 }

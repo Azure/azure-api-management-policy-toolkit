@@ -1,19 +1,20 @@
 using System.Text;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 public class CacheInfo
 {
+    internal bool AllowPrivateResponseCaching;
     internal bool CacheSetup = false;
-
-    internal bool VaryByDeveloper = false;
-    internal bool VaryByDeveloperGroups = false;
     internal string CachingType = "prefer-external";
     internal string DownstreamCachingType = "none";
     internal bool MustRevalidate = true;
-    internal bool AllowPrivateResponseCaching = false;
+    internal bool ShouldBeCached = false;
+
+    internal bool VaryByDeveloper = false;
+    internal bool VaryByDeveloperGroups = false;
     internal string[]? VaryByHeaders;
     internal string[]? VaryByQueryParameters;
 
@@ -23,7 +24,7 @@ public class CacheInfo
         return this;
     }
 
-    internal CacheInfo WithExecutedCacheLookup(CacheLookupConfig config)
+    public CacheInfo WithExecutedCacheLookup(CacheLookupConfig config)
     {
         CacheSetup = true;
         VaryByDeveloper = config.VaryByDeveloper;

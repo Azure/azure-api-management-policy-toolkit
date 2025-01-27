@@ -5,28 +5,13 @@ using Azure.ApiManagement.PolicyToolkit.Authoring;
 using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Azure.ApiManagement.PolicyToolkit.Testing;
 using Azure.ApiManagement.PolicyToolkit.Testing.Document;
+using Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 namespace Test.Emulator.Emulator.Policies;
 
 [TestClass]
 public class CacheStoreTests
 {
-    class SimpleCacheStore : IDocument
-    {
-        public void Outbound(IOutboundContext context)
-        {
-            context.CacheStore(10);
-        }
-    }
-
-    class SimpleCacheStoreStoreResponse : IDocument
-    {
-        public void Outbound(IOutboundContext context)
-        {
-            context.CacheStore(10, true);
-        }
-    }
-
     [TestMethod]
     public void CacheStore_Callback()
     {
@@ -40,6 +25,18 @@ public class CacheStoreTests
         test.RunOutbound();
 
         executedCallback.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public void CacheStore_NotStoreWhenLookupWasNotExecuted()
+    {
+        TestDocument test = new SimpleCacheStore().AsTestDocument();
+        CacheStore cache = test.SetupCacheStore();
+        test.SetupOutbound().CacheStore().WithCacheKey("key");
+
+        test.RunOutbound();
+
+        cache.InternalCache.Should().NotContainKey("key");
     }
 
     [TestMethod]
@@ -60,6 +57,23 @@ public class CacheStoreTests
         response.StatusCode.Should().Be(contextResponse.StatusCode);
         response.StatusReason.Should().Be(contextResponse.StatusReason);
         response.Headers.Should().Equal(contextResponse.Headers);
+    }
+
+    [TestMethod]
+    public void CacheStore_StoreResponseInCache_WhenExternal()
+    {
+        TestDocument test = new SimpleCacheStore().AsTestDocument();
+        CacheStore cache = test.SetupCacheStore();
+        test.SetupCacheStore().WithExternalCacheSetup();
+        test.SetupCacheInfo().WithExecutedCacheLookup();
+        test.SetupOutbound().CacheStore().WithCacheKey("key");
+
+        test.RunOutbound();
+
+        CacheValue? cacheValue = cache.ExternalCache.Should().ContainKey("key").WhoseValue;
+        cacheValue.Duration.Should().Be(10);
+        cacheValue.Value.Should().BeAssignableTo<IResponse>()
+            .And.NotBeSameAs(test.Context.Response, "Should be a copy of response");
     }
 
     [TestMethod]
@@ -97,5 +111,34 @@ public class CacheStoreTests
         response.StatusCode.Should().Be(contextResponse.StatusCode);
         response.StatusReason.Should().Be(contextResponse.StatusReason);
         response.Headers.Should().Equal(contextResponse.Headers);
+    }
+
+    [TestMethod]
+    public void CacheStore_()
+    {
+        TestDocument test = new SimpleCacheStore().AsTestDocument();
+        test.SetupCacheInfo().WithExecutedCacheLookup(new CacheLookupConfig
+        {
+            VaryByDeveloper = true,
+            VaryByDeveloperGroups = true,
+            CachingType = "internal",
+            AllowPrivateResponseCaching = 
+        });
+    }
+
+    private class SimpleCacheStore : IDocument
+    {
+        public void Outbound(IOutboundContext context)
+        {
+            context.CacheStore(10);
+        }
+    }
+
+    private class SimpleCacheStoreStoreResponse : IDocument
+    {
+        public void Outbound(IOutboundContext context)
+        {
+            context.CacheStore(10, true);
+        }
     }
 }

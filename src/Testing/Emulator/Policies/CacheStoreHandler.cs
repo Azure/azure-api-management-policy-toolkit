@@ -45,13 +45,23 @@ internal class CacheStoreHandler : IPolicyHandler
             return;
         }
 
+        if (!context.Request.Method.Equals("GET", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return;
+        }
+
         var store = context.CacheStore.GetCache(context.CacheInfo.CachingType);
         if (store is null)
         {
             return;
         }
 
-        if (context.Response.StatusCode != 200 && !cacheResponse)
+        if (!cacheResponse || context.Response.StatusCode != 200)
+        {
+            return;
+        }
+
+        if (context.Response.Headers.ContainsKey("Authorization") && !context.CacheInfo.AllowPrivateResponseCaching)
         {
             return;
         }
@@ -61,6 +71,7 @@ internal class CacheStoreHandler : IPolicyHandler
         var key = CacheKeyProvider.Find(hook => hook.Item1(context, duration, cacheResponse))
                       ?.Item2(context, duration, cacheResponse)
                   ?? CacheInfo.CacheKey(context);
+
 
         store[key] = new CacheValue(cacheValue) { Duration = duration };
     }
