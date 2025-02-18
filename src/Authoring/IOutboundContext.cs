@@ -88,7 +88,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="duration"></param>
     /// <param name="cacheResponse"></param>
-    void CacheStore(uint duration, bool? cacheResponse);
+    void CacheStore(uint duration, bool? cacheResponse = null);
 
     /// <summary>
     /// TODO
