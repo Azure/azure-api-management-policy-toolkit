@@ -179,18 +179,18 @@ public class ApiOperationPolicy : IDocument
 {
     public void Inbound(IInboundContext context)
     {
-        if(IsCompanyIP(context.EpressionContext))
+        if(IsCompanyIP(context.ExpressionContext))
         {
-            c.AuthenticationBasic("{{username}}", "{{password}}");
+            context.AuthenticationBasic("{{username}}", "{{password}}");
         }
         else
         {
-            c.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig 
+            context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig 
             {
                 Resource = "https://graph.microsoft.com"
             });
         }
-        c.SetHeader("X-User-Id", GetUserId(context.ExpressionContext));
+        context.SetHeader("X-User-Id", GetUserId(context.ExpressionContext));
     }
     
     public static bool IsCompanyIP(IExpressionContext context)
