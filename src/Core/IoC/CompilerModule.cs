@@ -48,7 +48,7 @@ public static class CompilerModule
         return services
             .AddSingleton<BlockCompiler>()
             .AddSingleton<ISyntaxCompiler, IfStatementCompiler>()
-            .AddSingleton<ISyntaxCompiler, LocalDeclarationStatementCompiler>()
+            // .AddSingleton<ISyntaxCompiler, LocalDeclarationStatementCompiler>()
             .AddSingleton<ISyntaxCompiler, ExpressionStatementCompiler>();
     }
 }
