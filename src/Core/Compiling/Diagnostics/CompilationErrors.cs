@@ -61,7 +61,7 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
-    
+
     public readonly static DiagnosticDescriptor ValueShouldBe = new(
         "APIM9995",
         "Value should be",
@@ -72,7 +72,7 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
-    
+
     public readonly static DiagnosticDescriptor NotSupportedStatement = new(
         "APIM9994",
         "Not supported statement",
@@ -83,7 +83,7 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
-    
+
     public readonly static DiagnosticDescriptor ExpressionNotSupported = new(
         "APIM9993",
         "Not supported expression",
@@ -94,7 +94,7 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
-    
+
     public readonly static DiagnosticDescriptor MethodNotSupported = new(
         "APIM9992",
         "Not supported method",
@@ -131,7 +131,7 @@ public static class CompilationErrors
     public readonly static DiagnosticDescriptor PolicyArgumentIsNotOfRequiredType = new(
         "APIM2002",
         "Argument should be of required type",
-        "Argument for '{0}' policy should of type '{1}' but is not",
+        "Argument for '{0}' policy should be of type '{1}' but is not",
         "PolicyDocumentCompilation",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,

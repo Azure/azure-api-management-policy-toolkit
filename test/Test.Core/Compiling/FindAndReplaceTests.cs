@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.Api.Management.PolicyToolkit.Compiling;
+namespace Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class FindAndReplaceTests
