@@ -3,12 +3,12 @@
 
 using System.Reflection;
 
+using Azure.ApiManagement.PolicyToolkit.Compiling;
 using Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
-using Azure.ApiManagement.PolicyToolkit.IoC;
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Azure.ApiManagement.PolicyToolkit.IoC;
 
 public static class CompilerModule
 {
