@@ -13,9 +13,9 @@ namespace Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 
 public class IfStatementCompiler : ISyntaxCompiler
 {
-    ISyntaxCompiler _blockCompiler;
+    private readonly Lazy<BlockCompiler> _blockCompiler;
 
-    public IfStatementCompiler(ISyntaxCompiler blockCompiler)
+    public IfStatementCompiler(Lazy<BlockCompiler> blockCompiler)
     {
         this._blockCompiler = blockCompiler;
     }
@@ -60,7 +60,7 @@ public class IfStatementCompiler : ISyntaxCompiler
 
             var section = new XElement("when");
             var innerContext = new SubCompilationContext(context, section);
-            _blockCompiler.Compile(innerContext, block);
+            _blockCompiler.Value.Compile(innerContext, block);
             section.Add(new XAttribute("condition", CompilerUtils.FindCode(condition, context)));
             choose.Add(section);
 
@@ -73,7 +73,7 @@ public class IfStatementCompiler : ISyntaxCompiler
             var innerContext = new SubCompilationContext(context, section);
             if (currentIf.Else.Statement is BlockSyntax block)
             {
-                _blockCompiler.Compile(innerContext, block);
+                _blockCompiler.Value.Compile(innerContext, block);
                 choose.Add(section);
             }
             else

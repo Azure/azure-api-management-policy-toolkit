@@ -11,16 +11,14 @@ namespace Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 
 public class BlockCompiler : ISyntaxCompiler
 {
-    private IDictionary<SyntaxKind, ISyntaxCompiler> _compilers;
+    private readonly Dictionary<SyntaxKind, ISyntaxCompiler> _compilers = new();
 
     public BlockCompiler(IEnumerable<ISyntaxCompiler> compilers)
     {
-        _compilers = compilers.ToDictionary(c => c.Syntax);
-    }
-
-    public void AddCompiler(ISyntaxCompiler compiler)
-    {
-        _compilers.Add(compiler.Syntax, compiler);
+        foreach (ISyntaxCompiler compiler in compilers)
+        {
+            _compilers.Add(compiler.Syntax, compiler);
+        }
     }
 
     public SyntaxKind Syntax => SyntaxKind.Block;
