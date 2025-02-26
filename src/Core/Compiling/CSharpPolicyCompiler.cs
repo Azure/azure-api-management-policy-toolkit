@@ -1,12 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Reflection;
 using System.Xml.Linq;
 
 using Azure.ApiManagement.PolicyToolkit.Authoring;
 using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 using Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 
 using Microsoft.CodeAnalysis;
@@ -16,44 +14,19 @@ namespace Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public class CSharpPolicyCompiler
 {
-    private ClassDeclarationSyntax _document;
+    private readonly Lazy<BlockCompiler> _blockCompiler;
 
-    private BlockCompiler _blockCompiler;
-
-    public CSharpPolicyCompiler(ClassDeclarationSyntax document)
+    public CSharpPolicyCompiler(Lazy<BlockCompiler> blockCompiler)
     {
-        _document = document;
-        var handlers = Assembly.GetExecutingAssembly()
-            .GetTypes()
-            .Where(type =>
-                type is
-                {
-                    IsClass: true,
-                    IsAbstract: false,
-                    IsPublic: true,
-                    Namespace: "Azure.ApiManagement.PolicyToolkit.Compiling.Policy"
-                }
-                && typeof(IMethodPolicyHandler).IsAssignableFrom(type))
-            .Select(t => Activator.CreateInstance(t) as IMethodPolicyHandler)
-            .Where(h => h is not null)!
-            .ToArray<IMethodPolicyHandler>();
-        var invStatement = new ExpressionStatementCompiler(handlers);
-        var loc = new LocalDeclarationStatementCompiler([
-            new AuthenticationManageIdentityReturnValueCompiler()
-        ]);
-        _blockCompiler = new([
-            invStatement,
-            loc
-        ]);
-        _blockCompiler.AddCompiler(new IfStatementCompiler(_blockCompiler));
+        _blockCompiler = blockCompiler;
     }
 
-    public ICompilationResult Compile()
+    public ICompilationResult Compile(ClassDeclarationSyntax document)
     {
-        var methods = _document.DescendantNodes()
+        var methods = document.DescendantNodes()
             .OfType<MethodDeclarationSyntax>();
         var policyDocument = new XElement("policies");
-        var context = new CompilationContext(_document, policyDocument);
+        CompilationContext context = new(document, policyDocument);
 
         foreach (var method in methods)
         {
@@ -92,7 +65,7 @@ public class CSharpPolicyCompiler
 
         var sectionElement = new XElement(section);
         var sectionContext = new SubCompilationContext(context, sectionElement);
-        _blockCompiler.Compile(sectionContext, method.Body);
+        _blockCompiler.Value.Compile(sectionContext, method.Body);
         context.AddPolicy(sectionElement);
     }
 }

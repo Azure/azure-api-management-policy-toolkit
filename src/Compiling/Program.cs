@@ -13,6 +13,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 var config = new ConfigurationBuilder()
     .AddCommandLine(args)
@@ -21,6 +22,12 @@ var options = new CompilerOptions(config);
 
 var files = Directory.GetFiles(options.SourceFolder, "*.cs", SearchOption.AllDirectories)
     .Where(p => !Regex.IsMatch(p, @".*[\\/](obj|bin)[\\/].*"));
+
+ServiceCollection serviceCollection = new();
+using ServiceProvider serviceProvider = serviceCollection
+    .SetupCompiler()
+    .BuildServiceProvider();
+CSharpPolicyCompiler compiler = serviceProvider.GetRequiredService<CSharpPolicyCompiler>();
 
 int numberOfErrors = 0;
 
@@ -36,7 +43,7 @@ foreach (var file in files)
         .Where(c => c.AttributeLists.ContainsAttributeOfType("Document"));
     foreach (var document in documents)
     {
-        var result = new CSharpPolicyCompiler(document).Compile();
+        ICompilationResult result = compiler.Compile(document);
 
         var formatter = new DiagnosticFormatter();
         numberOfErrors += result.Diagnostics.Count;
@@ -70,11 +77,12 @@ foreach (var file in files)
         var targetFolder = Path.Combine(options.OutputFolder, fileRelativePath);
         var targetFile = Path.Combine(targetFolder, policyFileName);
         var directoryPath = Path.GetDirectoryName(targetFile);
-        
+
         if (directoryPath is not null && !Directory.Exists(directoryPath))
         {
             Directory.CreateDirectory(directoryPath);
         }
+
         File.WriteAllText(targetFile, xml);
         Console.Out.WriteLine($"File '{targetFile}' created");
     }
