@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Azure.ApiManagement.PolicyToolkit.Compiling;
+using Azure.ApiManagement.PolicyToolkit.IoC;
 using Azure.ApiManagement.PolicyToolkit.Serialization;
 
 using Microsoft.CodeAnalysis;
