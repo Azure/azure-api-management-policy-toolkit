@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.ApiManagement.PolicyToolkit.Compiling;
+using Azure.ApiManagement.PolicyToolkit.IoC;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
