@@ -7,13 +7,14 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Azure.ApiManagement.PolicyToolkit.Compiling;
+using Azure.ApiManagement.PolicyToolkit.IoC;
 using Azure.ApiManagement.PolicyToolkit.Serialization;
 
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 var config = new ConfigurationBuilder()
     .AddCommandLine(args)
@@ -25,15 +26,17 @@ var files = Directory.GetFiles(options.SourceFolder, "*.cs", SearchOption.AllDir
 
 ServiceCollection serviceCollection = new();
 using ServiceProvider serviceProvider = serviceCollection
+    .AddLogging(builder => builder.AddSimpleConsole())
     .SetupCompiler()
     .BuildServiceProvider();
+ILogger logger = serviceProvider.GetRequiredService<ILogger>();
 CSharpPolicyCompiler compiler = serviceProvider.GetRequiredService<CSharpPolicyCompiler>();
 
 int numberOfErrors = 0;
 
 foreach (var file in files)
 {
-    Console.Out.WriteLine($"File '{file}' Processing");
+    logger.LogInformation("Processing file '{}' ", file);
     var code = File.ReadAllText(file);
     var syntax = CSharpSyntaxTree.ParseText(code, path: file);
 
@@ -45,11 +48,10 @@ foreach (var file in files)
     {
         ICompilationResult result = compiler.Compile(document);
 
-        var formatter = new DiagnosticFormatter();
         numberOfErrors += result.Diagnostics.Count;
         foreach (var error in result.Diagnostics)
         {
-            Console.Error.WriteLine(formatter.Format(error));
+            logger.LogError(error.ToString());
         }
 
         var codeBuilder = new StringBuilder();
@@ -84,10 +86,17 @@ foreach (var file in files)
         }
 
         File.WriteAllText(targetFile, xml);
-        Console.Out.WriteLine($"File '{targetFile}' created");
+        logger.LogInformation("Created file '{}' ", targetFile);
     }
 
-    Console.Out.WriteLine($"File '{file}' processed");
+    logger.LogInformation("Processed file '{}' ", file);
 }
 
-return numberOfErrors;
+if (numberOfErrors > 0)
+{
+    logger.LogError("Compilation finished with {} errors", numberOfErrors);
+    return -1;
+}
+
+logger.LogInformation("Compilation finished successfully");
+return 0;
