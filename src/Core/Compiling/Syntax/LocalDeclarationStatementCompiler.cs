@@ -9,7 +9,7 @@ namespace Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 
 public class LocalDeclarationStatementCompiler : ISyntaxCompiler
 {
-    private IReadOnlyDictionary<string, IReturnValueMethodPolicyHandler> _handlers;
+    private readonly IReadOnlyDictionary<string, IReturnValueMethodPolicyHandler> _handlers;
 
     public LocalDeclarationStatementCompiler(IEnumerable<IReturnValueMethodPolicyHandler> handlers)
     {

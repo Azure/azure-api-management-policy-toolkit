@@ -277,6 +277,14 @@ public interface IInboundContext : IHaveExpressionContext
     void FindAndReplace(string from, string to);
 
     /// <summary>
+    ///     The retry policy executes its child policies once and then retries their execution until the retry condition
+    ///     becomes false or retry count is exhausted.
+    /// </summary>
+    /// <param name="config">Configuration of retry policy</param>
+    /// <param name="section">Child policies which should be retried</param>
+    void Retry(RetryConfig config, Action section);
+
+    /// <summary>
     /// The get-authorization-context policy retrieves an authorization context from a specified provider.
     /// </summary>
     /// <param name="config">The configuration for the get-authorization-context policy.</param>

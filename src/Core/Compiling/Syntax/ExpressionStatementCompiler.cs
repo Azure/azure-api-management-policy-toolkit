@@ -11,7 +11,7 @@ namespace Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 
 public class ExpressionStatementCompiler : ISyntaxCompiler
 {
-    private IReadOnlyDictionary<string, IMethodPolicyHandler> _handlers;
+    private readonly IReadOnlyDictionary<string, IMethodPolicyHandler> _handlers;
 
     public ExpressionStatementCompiler(IEnumerable<IMethodPolicyHandler> handlers)
     {
