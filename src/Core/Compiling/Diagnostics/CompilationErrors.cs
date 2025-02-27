@@ -131,7 +131,7 @@ public static class CompilationErrors
     public readonly static DiagnosticDescriptor PolicyArgumentIsNotOfRequiredType = new(
         "APIM2002",
         "Argument should be of required type",
-        "Argument for '{0}' policy should of type '{1}' but is not",
+        "Argument for '{0}' policy should be of type '{1}' but is not",
         "PolicyDocumentCompilation",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
