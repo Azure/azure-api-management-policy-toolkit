@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -296,4 +296,10 @@ public interface IInboundContext : IHaveExpressionContext
     ///     Policy expressions are allowed.
     /// </param>
     void Wait(Action section, string? waitFor = null);
+
+    /// <summary>
+    /// The get-authorization-context policy retrieves an authorization context from a specified provider.
+    /// </summary>
+    /// <param name="config">The configuration for the get-authorization-context policy.</param>
+    void GetAuthorizationContext(GetAuthorizationContextConfig config);
 }
