@@ -275,4 +275,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// <param name="from">The string to be replaced. Policy expressions are allowed.</param>
     /// <param name="to">The string to replace with. Policy expressions are allowed.</param>
     void FindAndReplace(string from, string to);
+
+    /// <summary>
+    /// The get-authorization-context policy retrieves an authorization context from a specified provider.
+    /// </summary>
+    /// <param name="config">The configuration for the get-authorization-context policy.</param>
+    void GetAuthorizationContext(GetAuthorizationContextConfig config);
 }
