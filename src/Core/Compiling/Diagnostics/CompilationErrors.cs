@@ -61,9 +61,9 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
-    
+
     public readonly static DiagnosticDescriptor ValueShouldBe = new(
-        "APIM9995",
+        "APIM9994",
         "Value should be",
         "Value for '{0}' policy should be '{1}' but is not",
         "PolicyDocumentCompilation",
@@ -72,9 +72,9 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
-    
+
     public readonly static DiagnosticDescriptor NotSupportedStatement = new(
-        "APIM9994",
+        "APIM9993",
         "Not supported statement",
         "Statement '{0}' is not supported in policy document",
         "PolicyDocumentCompilation",
@@ -83,9 +83,9 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
-    
+
     public readonly static DiagnosticDescriptor ExpressionNotSupported = new(
-        "APIM9993",
+        "APIM9992",
         "Not supported expression",
         "Expression of type '{0}' not supported in policy document. Only '{1}' is supported.",
         "PolicyDocumentCompilation",
@@ -94,9 +94,9 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
-    
+
     public readonly static DiagnosticDescriptor MethodNotSupported = new(
-        "APIM9992",
+        "APIM9991",
         "Not supported method",
         "Method '{0}' not supported in policy document",
         "PolicyDocumentCompilation",
