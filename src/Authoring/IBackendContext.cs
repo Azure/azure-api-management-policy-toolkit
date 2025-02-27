@@ -88,4 +88,17 @@ public interface IBackendContext : IHaveExpressionContext
     /// <param name="config">Configuration of retry policy</param>
     /// <param name="section">Child policies which should be retried</param>
     void Retry(RetryConfig config, Action section);
+
+    /// <summary>
+    ///     The wait policy executes its immediate child policies in parallel, and waits for either all or one of its immediate
+    ///     child policies to complete before it completes.
+    ///     The wait policy can have as its immediate child policies one or more of the following: send-request,
+    ///     cache-lookup-value, and choose policies.
+    /// </summary>
+    /// <param name="section">Child policies which should be awaited</param>
+    /// <param name="waitFor">
+    ///     Determines whether the wait policy waits for all immediate child policies to be completed or just one.
+    ///     Policy expressions are allowed.
+    /// </param>
+    void Wait(Action section, string? waitFor = null);
 }
