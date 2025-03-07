@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Xml.Linq;
 
 using Azure.ApiManagement.PolicyToolkit.Authoring;
