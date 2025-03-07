@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <PackageId>Azure.ApiManagement.PolicyToolkit.Templates</PackageId>
-        <PackageVersion>0.0.1</PackageVersion>
+        <VersionPrefix>1.0.0</VersionPrefix>
         <Authors>Microsoft</Authors>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
