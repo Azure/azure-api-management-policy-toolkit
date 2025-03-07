@@ -164,7 +164,7 @@ public class LogToEventHubTests
         """,
         DisplayName = "Should compile log-to-eventhub policy with expression in partition key"
     )]
-    public void ShouldCompileLlmSemanticCacheStorePolicy(string code, string expectedXml)
+    public void ShouldCompileLogToEventHubPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
