@@ -302,4 +302,11 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config">The configuration for the get-authorization-context policy.</param>
     void GetAuthorizationContext(GetAuthorizationContextConfig config);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    /// <param name="section"></param>
+    void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 }

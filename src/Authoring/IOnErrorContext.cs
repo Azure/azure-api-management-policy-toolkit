@@ -139,4 +139,11 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// <param name="config">Configuration of retry policy</param>
     /// <param name="section">Child policies which should be retried</param>
     void Retry(RetryConfig config, Action section);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    /// <param name="section"></param>
+    void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 }

@@ -101,4 +101,11 @@ public interface IBackendContext : IHaveExpressionContext
     ///     Policy expressions are allowed.
     /// </param>
     void Wait(Action section, string? waitFor = null);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    /// <param name="section"></param>
+    void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 }
