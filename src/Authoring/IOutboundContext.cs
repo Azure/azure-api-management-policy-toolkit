@@ -176,6 +176,13 @@ public interface IOutboundContext : IHaveExpressionContext
     void Wait(Action section, string? waitFor = null);
 
     /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    /// <param name="section"></param>
+    void LimitConcurrency(LimitConcurrencyConfig config, Action section);
+
+    /// <summary>
     ///     The log-to-eventhub policy sends messages in the specified format to an event hub defined by a Logger entity.
     ///     As its name implies, the policy is used for saving selected request or response context information for online or
     ///     offline analysis.
