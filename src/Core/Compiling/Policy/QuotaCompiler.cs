@@ -30,7 +30,7 @@ public class QuotaCompiler : IMethodPolicyHandler
         if (!isCallsAdded && !isBandwidthAdded)
         {
             context.Report(Diagnostic.Create(
-                CompilationErrors.OnlyOneOfTwoShouldBeDefined,
+                CompilationErrors.AtLeastOneOfTwoShouldBeDefined,
                 node.GetLocation(),
                 "quota",
                 nameof(QuotaConfig.Calls),
