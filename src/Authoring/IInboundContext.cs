@@ -317,4 +317,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void LogToEventHub(LogToEventHubConfig config);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void QuotaByKey(QuotaByKeyConfig config);
 }
