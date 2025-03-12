@@ -204,4 +204,15 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
+
+    public static readonly DiagnosticDescriptor RequiredParameterHasXmlErrors = new(
+        "APIM2008",
+        "Required parameter requires has XML errors",
+        "Required '{1}' parameter for '{0}' policy has XML errors: '{2}'",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        true,
+        "Description.",
+        "TODO",
+        ["APIM", "ApiManagement"]);
 }
