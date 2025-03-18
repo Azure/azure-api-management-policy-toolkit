@@ -6,16 +6,15 @@ using System.Xml.Linq;
 
 using Azure.ApiManagement.PolicyToolkit.Authoring;
 using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-using Azure.ApiManagement.PolicyToolkit.Serialization;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
-public class InlinePolicyCompiler : IMethodPolicyHandler
+public class CrossDomainCompiler : IMethodPolicyHandler
 {
-    public string MethodName => nameof(IInboundContext.InlinePolicy);
+    public string MethodName => nameof(IInboundContext.CrossDomain);
 
     public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
     {
@@ -29,7 +28,7 @@ public class InlinePolicyCompiler : IMethodPolicyHandler
             return;
         }
 
-        var expression = node.ArgumentList.Arguments[0].Expression;
+        ExpressionSyntax expression = node.ArgumentList.Arguments[0].Expression;
 
         if (expression is not LiteralExpressionSyntax literal)
         {
@@ -44,45 +43,18 @@ public class InlinePolicyCompiler : IMethodPolicyHandler
 
         try
         {
-            XElement xml = CreateRazorFromString(literal);
-            context.AddPolicy(xml);
+            XElement document = XElement.Parse(literal.Token.ValueText);
+            context.AddPolicy(new XElement("cross-domain", document));
         }
         catch (XmlException ex)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterHasXmlErrors,
                 literal.GetLocation(),
-                "InlinePolicy",
+                "cross-domain",
                 "policy",
                 ex.ToString()
             ));
         }
-    }
-
-    private static XElement CreateRazorFromString(LiteralExpressionSyntax literal)
-    {
-        var cleanXml = RazorCodeFormatter.ToCleanXml(literal.Token.ValueText, out var markerToCode);
-        var xml = XElement.Parse(cleanXml);
-
-        foreach (XElement element in xml.DescendantsAndSelf())
-        {
-            if (element.HasAttributes)
-            {
-                foreach (var a in element.Attributes())
-                {
-                    if (markerToCode.TryGetValue(a.Value, out var attributeCode))
-                    {
-                        a.Value = attributeCode;
-                    }
-                }
-            }
-
-            if (markerToCode.TryGetValue(element.Value, out var valueCode))
-            {
-                element.Value = valueCode;
-            }
-        }
-
-        return xml;
     }
 }
