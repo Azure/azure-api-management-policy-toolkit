@@ -311,21 +311,21 @@ public interface IInboundContext : IHaveExpressionContext
     void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 
     /// <summary>
-    ///     The log-to-eventhub policy sends messages in the specified format to an event hub defined by a Logger entity.
-    ///     As its name implies, the policy is used for saving selected request or response context information for online or
-    ///     offline analysis.
+    /// The log-to-eventhub policy sends messages in the specified format to an event hub defined by a Logger entity.
+    /// As its name implies, the policy is used for saving selected request or response context information for online or
+    /// offline analysis.
     /// </summary>
     /// <param name="config"></param>
     void LogToEventHub(LogToEventHubConfig config);
 
     /// <summary>
-    ///     TODO
+    /// TODO
     /// </summary>
     /// <param name="config"></param>
     void QuotaByKey(QuotaByKeyConfig config);
 
     /// <summary>
-    ///     TODO
+    /// TODO
     /// </summary>
     /// <param name="policy"></param>
     void CrossDomain(string policy);
@@ -335,4 +335,9 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void Proxy(ProxyConfig config);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    void RedirectContentUrls();
 }

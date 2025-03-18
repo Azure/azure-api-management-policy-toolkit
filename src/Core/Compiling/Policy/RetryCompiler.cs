@@ -21,7 +21,7 @@ public class RetryCompiler : IMethodPolicyHandler
         _blockCompiler = blockCompiler;
     }
 
-    public string MethodName { get; } = nameof(IInboundContext.Retry);
+    public string MethodName => nameof(IInboundContext.Retry);
 
     public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
     {
