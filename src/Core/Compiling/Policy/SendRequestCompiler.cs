@@ -66,40 +66,10 @@ public class SendRequestCompiler : IMethodPolicyHandler
 
         if (values.TryGetValue(nameof(SendRequestConfig.Proxy), out var proxy))
         {
-            HandleProxy(context, element, proxy);
+            ProxyCompiler.HandleProxy(context, element, proxy);
         }
 
         context.AddPolicy(element);
-    }
-
-    private void HandleProxy(ICompilationContext context, XElement element, InitializerValue value)
-    {
-        if (!value.TryGetValues<ProxyConfig>(out var values))
-        {
-            context.Report(Diagnostic.Create(
-                CompilationErrors.PolicyArgumentIsNotOfRequiredType,
-                value.Node.GetLocation(),
-                $"{element.Name}.proxy",
-                nameof(ProxyConfig)
-            ));
-            return;
-        }
-
-        var certificateElement = new XElement("proxy");
-        if (!certificateElement.AddAttribute(values, nameof(ProxyConfig.Url), "url"))
-        {
-            context.Report(Diagnostic.Create(
-                CompilationErrors.RequiredParameterNotDefined,
-                value.Node.GetLocation(),
-                $"{element.Name}.proxy",
-                nameof(ProxyConfig.Url)
-            ));
-            return;
-        }
-
-        certificateElement.AddAttribute(values, nameof(ProxyConfig.Username), "username");
-        certificateElement.AddAttribute(values, nameof(ProxyConfig.Password), "password");
-        element.Add(certificateElement);
     }
 
     private void HandleAuthentication(ICompilationContext context, XElement element, InitializerValue authentication)
@@ -173,10 +143,11 @@ public class SendRequestCompiler : IMethodPolicyHandler
         var certElement = new XElement("authentication-certificate");
         certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Password), "password");
 
-        if (new[] 
+        if (new[]
             {
                 certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Thumbprint), "thumbprint"),
-                certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.CertificateId), "certificate-id"),
+                certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.CertificateId),
+                    "certificate-id"),
                 certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Body), "body")
             }.Count(b => b) != 1)
         {
@@ -210,6 +181,7 @@ public class SendRequestCompiler : IMethodPolicyHandler
                 nameof(ManagedIdentityAuthenticationConfig.Resource)
             ));
         }
+
         certElement.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.ClientId), "client-id");
         certElement.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.OutputTokenVariableName),
             "output-token-variable-name");

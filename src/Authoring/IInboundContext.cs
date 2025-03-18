@@ -329,4 +329,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="policy"></param>
     void CrossDomain(string policy);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void Proxy(ProxyConfig config);
 }
