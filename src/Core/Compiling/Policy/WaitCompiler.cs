@@ -18,7 +18,7 @@ public class WaitCompiler : IMethodPolicyHandler
         _blockCompiler = blockCompiler;
     }
 
-    public string MethodName { get; } = nameof(IInboundContext.Wait);
+    public string MethodName => nameof(IInboundContext.Wait);
 
     public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
     {

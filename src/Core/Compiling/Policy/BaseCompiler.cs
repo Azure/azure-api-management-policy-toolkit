@@ -12,6 +12,7 @@ namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 public class BaseCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.Base);
+
     public void Handle(ICompilationContext context, InvocationExpressionSyntax _)
     {
         context.AddPolicy(new XElement("base"));
