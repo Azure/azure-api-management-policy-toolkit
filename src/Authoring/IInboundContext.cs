@@ -337,7 +337,12 @@ public interface IInboundContext : IHaveExpressionContext
     void Proxy(ProxyConfig config);
 
     /// <summary>
-    ///     TODO
+    /// TODO
+    /// </summary>
+    void RedirectContentUrls();
+
+    /// <summary>
+    /// TODO
     /// </summary>
     /// <param name="config"></param>
     void SendOneWayRequest(SendOneWayRequestConfig config);
