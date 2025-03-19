@@ -34,14 +34,39 @@ public class AuthenticationManagedIdentityCompiler : IMethodPolicyHandler
                 node.GetLocation(),
                 "authentication-managed-identity",
                 nameof(ManagedIdentityAuthenticationConfig.Resource)
-                ));
+            ));
             return;
         }
 
         element.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.ClientId), "client-id");
-        element.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.OutputTokenVariableName), "output-token-variable-name");
+        element.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.OutputTokenVariableName),
+            "output-token-variable-name");
         element.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.IgnoreError), "ignore-error");
 
         context.AddPolicy(element);
+    }
+
+    public static void HandleManagedIdentityAuthentication(
+        ICompilationContext context,
+        XElement element,
+        IReadOnlyDictionary<string, InitializerValue> values,
+        SyntaxNode node)
+    {
+        XElement certElement = new("authentication-managed-identity");
+        if (!certElement.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.Resource), "resource"))
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.RequiredParameterNotDefined,
+                node.GetLocation(),
+                $"{element.Name}.authentication-managed-identity",
+                nameof(ManagedIdentityAuthenticationConfig.Resource)
+            ));
+        }
+
+        certElement.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.ClientId), "client-id");
+        certElement.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.OutputTokenVariableName),
+            "output-token-variable-name");
+        certElement.AddAttribute(values, nameof(ManagedIdentityAuthenticationConfig.IgnoreError), "ignore-error");
+        element.Add(certElement);
     }
 }

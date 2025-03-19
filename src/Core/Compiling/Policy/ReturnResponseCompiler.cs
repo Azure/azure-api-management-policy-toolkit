@@ -33,7 +33,7 @@ public class ReturnResponseCompiler : IMethodPolicyHandler
 
         if (values.TryGetValue(nameof(ReturnResponseConfig.Headers), out var headers))
         {
-            SetHeaderCompiler.HandleHeaders(context, element, headers);
+            BaseSetHeaderCompiler.HandleHeaders(context, element, headers);
         }
 
         if (values.TryGetValue(nameof(ReturnResponseConfig.Body), out var body))
@@ -53,7 +53,7 @@ public class ReturnResponseCompiler : IMethodPolicyHandler
                 status.Node.GetLocation(),
                 $"{element.Name}.set-status",
                 nameof(StatusConfig)
-                ));
+            ));
             return;
         }
 
