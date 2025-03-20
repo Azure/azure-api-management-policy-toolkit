@@ -346,4 +346,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void SendOneWayRequest(SendOneWayRequestConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void Trace(TraceConfig config);
 }

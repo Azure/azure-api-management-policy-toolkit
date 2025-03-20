@@ -155,8 +155,8 @@ public interface IOutboundContext : IHaveExpressionContext
     void FindAndReplace(string from, string to);
 
     /// <summary>
-    ///     The retry policy executes its child policies once and then retries their execution until the retry condition
-    ///     becomes false or retry count is exhausted.
+    /// The retry policy executes its child policies once and then retries their execution until the retry condition
+    /// becomes false or retry count is exhausted.
     /// </summary>
     /// <param name="config">Configuration of retry policy</param>
     /// <param name="section">Child policies which should be retried</param>
@@ -200,4 +200,10 @@ public interface IOutboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void SendOneWayRequest(SendOneWayRequestConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void Trace(TraceConfig config);
 }

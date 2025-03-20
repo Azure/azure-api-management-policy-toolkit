@@ -118,8 +118,14 @@ public interface IBackendContext : IHaveExpressionContext
     void LogToEventHub(LogToEventHubConfig config);
 
     /// <summary>
-    ///     TODO
+    /// TODO
     /// </summary>
     /// <param name="config"></param>
     void SendOneWayRequest(SendOneWayRequestConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void Trace(TraceConfig config);
 }
