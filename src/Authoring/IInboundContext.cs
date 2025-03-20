@@ -331,13 +331,19 @@ public interface IInboundContext : IHaveExpressionContext
     void CrossDomain(string policy);
 
     /// <summary>
-    ///     TODO
+    /// TODO
     /// </summary>
     /// <param name="config"></param>
     void Proxy(ProxyConfig config);
 
     /// <summary>
-    ///     TODO
+    /// TODO
     /// </summary>
     void RedirectContentUrls();
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void Trace(TraceConfig config);
 }
