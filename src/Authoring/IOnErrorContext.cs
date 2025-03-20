@@ -133,25 +133,31 @@ public interface IOnErrorContext : IHaveExpressionContext
     void FindAndReplace(string from, string to);
 
     /// <summary>
-    ///     The retry policy executes its child policies once and then retries their execution until the retry condition
-    ///     becomes false or retry count is exhausted.
+    /// The retry policy executes its child policies once and then retries their execution until the retry condition
+    /// becomes false or retry count is exhausted.
     /// </summary>
     /// <param name="config">Configuration of retry policy</param>
     /// <param name="section">Child policies which should be retried</param>
     void Retry(RetryConfig config, Action section);
 
     /// <summary>
-    ///     TODO
+    /// TODO
     /// </summary>
     /// <param name="config"></param>
     /// <param name="section"></param>
     void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 
     /// <summary>
-    ///     The log-to-eventhub policy sends messages in the specified format to an event hub defined by a Logger entity.
-    ///     As its name implies, the policy is used for saving selected request or response context information for online or
-    ///     offline analysis.
+    /// The log-to-eventhub policy sends messages in the specified format to an event hub defined by a Logger entity.
+    /// As its name implies, the policy is used for saving selected request or response context information for online or
+    /// offline analysis.
     /// </summary>
     /// <param name="config"></param>
     void LogToEventHub(LogToEventHubConfig config);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void SendOneWayRequest(SendOneWayRequestConfig config);
 }

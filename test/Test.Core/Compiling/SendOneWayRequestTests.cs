@@ -1,10 +1,10 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
-public class SendRequestTests
+public class SendOneWayRequestTests
 {
     [TestMethod]
     [DataRow(
@@ -14,26 +14,26 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable"
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Mode = "copy"
                 });
             }
             public void Backend(IBackendContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable"
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Mode = "copy"
                 });
             }
             public void Outbound(IOutboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable"
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Mode = "copy"
                 });
             }
             public void OnError(IOnErrorContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable"
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Mode = "copy"
                 });
             }
         }
@@ -41,20 +41,20 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" />
+                <send-one-way-request mode="copy" />
             </inbound>
             <backend>
-                <send-request response-variable-name="variable" />
+                <send-one-way-request mode="copy" />
             </backend>
             <outbound>
-                <send-request response-variable-name="variable" />
+                <send-one-way-request mode="copy" />
             </outbound>
             <on-error>
-                <send-request response-variable-name="variable" />
+                <send-one-way-request mode="copy" />
             </on-error>
         </policies>
         """,
-        DisplayName = "Should compile send request policy in sections"
+        DisplayName = "Should compile send one way request policy in sections"
     )]
     [DataRow(
         """
@@ -63,31 +63,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
-                    Mode = "new",
-                });
-            }
-        }
-        """,
-        """
-        <policies>
-            <inbound>
-                <send-request response-variable-name="variable" mode="new" />
-            </inbound>
-        </policies>
-        """,
-        DisplayName = "Should compile send request policy with mode"
-    )]
-    [DataRow(
-        """
-        [Document]
-        public class PolicyDocument : IDocument
-        {
-            public void Inbound(IInboundContext context)
-            {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Mode = Exp(context.ExpressionContext),
                 });
             }
@@ -98,11 +74,11 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" mode="@("n" + "e" + "w")" />
+                <send-one-way-request mode="@("n" + "e" + "w")" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with expression in mode"
+        DisplayName = "Should compile send one way request policy with expression in mode"
     )]
     [DataRow(
         """
@@ -111,8 +87,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Timeout = 100,
                 });
             }
@@ -121,11 +96,11 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" timeout="100" />
+                <send-one-way-request timeout="100" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with timeout"
+        DisplayName = "Should compile send one way request policy with timeout"
     )]
     [DataRow(
         """
@@ -134,8 +109,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Timeout = Exp(context.ExpressionContext),
                 });
             }
@@ -146,11 +120,11 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" timeout="@(80 + 20)" />
+                <send-one-way-request timeout="@(80 + 20)" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with expression in timeout"
+        DisplayName = "Should compile send one way request policy with expression in timeout"
     )]
     [DataRow(
         """
@@ -159,31 +133,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
-                    IgnoreError = false,
-                });
-            }
-        }
-        """,
-        """
-        <policies>
-            <inbound>
-                <send-request response-variable-name="variable" ignore-error="false" />
-            </inbound>
-        </policies>
-        """,
-        DisplayName = "Should compile send request policy with ignore error"
-    )]
-    [DataRow(
-        """
-        [Document]
-        public class PolicyDocument : IDocument
-        {
-            public void Inbound(IInboundContext context)
-            {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Url = "https://test.example",
                 });
             }
@@ -192,13 +142,13 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <set-url>https://test.example</set-url>
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with url"
+        DisplayName = "Should compile send one way request policy with url"
     )]
     [DataRow(
         """
@@ -207,8 +157,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Method = "POST",
                 });
             }
@@ -217,13 +166,13 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <set-method>POST</set-method>
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with method"
+        DisplayName = "Should compile send one way request policy with method"
     )]
     [DataRow(
         """
@@ -232,8 +181,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Headers = [
                         new HeaderConfig {
                             Name = "content-type",
@@ -253,7 +201,7 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <set-header name="content-type" exists-action="append">
                         <value>plain/text</value>
                     </set-header>
@@ -261,11 +209,11 @@ public class SendRequestTests
                         <value>application/json</value>
                         <value>application/xml</value>
                     </set-header>
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with headers"
+        DisplayName = "Should compile send one way request policy with headers"
     )]
     [DataRow(
         """
@@ -274,8 +222,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Headers = [
                         new HeaderConfig {
                             Name = "content-type",
@@ -298,7 +245,7 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <set-header name="content-type" exists-action="append">
                         <value>plain/text</value>
                     </set-header>
@@ -306,11 +253,11 @@ public class SendRequestTests
                         <value>@("application" + "/" + "json")</value>
                         <value>application/xml</value>
                     </set-header>
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with expressions in headers"
+        DisplayName = "Should compile send one way request policy with expressions in headers"
     )]
     [DataRow(
         """
@@ -319,8 +266,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Body = new BodyConfig {
                         Template = "liquid",
                         XsiNil = "blank",
@@ -334,13 +280,13 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <set-body template="liquid" xsi-nil="blank" parse-date="false">body</set-body>
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with body"
+        DisplayName = "Should compile send one way request policy with body"
     )]
     [DataRow(
         """
@@ -349,8 +295,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Body = new BodyConfig {
                         Content = Exp(context.ExpressionContext),
                     },
@@ -362,13 +307,13 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <set-body>@("bo" + "dy")</set-body>
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with expression in body"
+        DisplayName = "Should compile send one way request policy with expression in body"
     )]
     [DataRow(
         """
@@ -377,8 +322,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Authentication = new CertificateAuthenticationConfig {
                         CertificateId = "example-domain-cert",
                     },
@@ -389,13 +333,13 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <authentication-certificate certificate-id="example-domain-cert" />
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with certificate authentication"
+        DisplayName = "Should compile send one way request policy with certificate authentication"
     )]
     [DataRow(
         """
@@ -404,8 +348,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Authentication = new ManagedIdentityAuthenticationConfig {
                         Resource = "test.example/resource",
                         ClientId = "example-client-id",
@@ -417,13 +360,13 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <authentication-managed-identity resource="test.example/resource" client-id="example-client-id" />
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with managed identity authentication"
+        DisplayName = "Should compile send one way request policy with managed identity authentication"
     )]
     [DataRow(
         """
@@ -432,8 +375,7 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Proxy = new ProxyConfig() {
                         Url = "proxy.example",
                         Username = "test-user",
@@ -446,13 +388,13 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable">
+                <send-one-way-request>
                     <proxy url="proxy.example" username="test-user" password="pass" />
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy with proxy"
+        DisplayName = "Should compile send one way request policy with proxy"
     )]
     [DataRow(
         """
@@ -461,11 +403,9 @@ public class SendRequestTests
         {
             public void Inbound(IInboundContext context)
             {
-                context.SendRequest(new SendRequestConfig {
-                    ResponseVariableName = "variable",
+                context.SendOneWayRequest(new SendOneWayRequestConfig {
                     Mode = "new",
                     Timeout = 100,
-                    IgnoreError = false,
                     Url = "https://test.example",
                     Method = "POST",
                     Headers = [
@@ -491,7 +431,7 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" mode="new" timeout="100" ignore-error="false">
+                <send-one-way-request mode="new" timeout="100">
                     <set-url>https://test.example</set-url>
                     <set-method>POST</set-method>
                     <set-header name="content-type">
@@ -503,13 +443,13 @@ public class SendRequestTests
                     </set-header>
                     <set-body>body</set-body>
                     <authentication-certificate certificate-id="example-domain-cert" />
-                </send-request>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile send request policy"
+        DisplayName = "Should compile send one way request policy"
     )]
-    public void ShouldCompileSendRequestPolicy(string code, string expectedXml)
+    public void ShouldCompileSendOneWayRequestPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }

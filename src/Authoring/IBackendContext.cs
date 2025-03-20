@@ -82,38 +82,44 @@ public interface IBackendContext : IHaveExpressionContext
     void FindAndReplace(string from, string to);
 
     /// <summary>
-    ///     The retry policy executes its child policies once and then retries their execution until the retry condition
-    ///     becomes false or retry count is exhausted.
+    /// The retry policy executes its child policies once and then retries their execution until the retry condition
+    /// becomes false or retry count is exhausted.
     /// </summary>
     /// <param name="config">Configuration of retry policy</param>
     /// <param name="section">Child policies which should be retried</param>
     void Retry(RetryConfig config, Action section);
 
     /// <summary>
-    ///     The wait policy executes its immediate child policies in parallel, and waits for either all or one of its immediate
-    ///     child policies to complete before it completes.
-    ///     The wait policy can have as its immediate child policies one or more of the following: send-request,
-    ///     cache-lookup-value, and choose policies.
+    /// The wait policy executes its immediate child policies in parallel, and waits for either all or one of its immediate
+    /// child policies to complete before it completes.
+    /// The wait policy can have as its immediate child policies one or more of the following: send-request,
+    /// cache-lookup-value, and choose policies.
     /// </summary>
     /// <param name="section">Child policies which should be awaited</param>
     /// <param name="waitFor">
-    ///     Determines whether the wait policy waits for all immediate child policies to be completed or just one.
-    ///     Policy expressions are allowed.
+    /// Determines whether the wait policy waits for all immediate child policies to be completed or just one.
+    /// Policy expressions are allowed.
     /// </param>
     void Wait(Action section, string? waitFor = null);
 
     /// <summary>
-    ///     TODO
+    /// TODO
     /// </summary>
     /// <param name="config"></param>
     /// <param name="section"></param>
     void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 
     /// <summary>
-    ///     The log-to-eventhub policy sends messages in the specified format to an event hub defined by a Logger entity.
-    ///     As its name implies, the policy is used for saving selected request or response context information for online or
-    ///     offline analysis.
+    /// The log-to-eventhub policy sends messages in the specified format to an event hub defined by a Logger entity.
+    /// As its name implies, the policy is used for saving selected request or response context information for online or
+    /// offline analysis.
     /// </summary>
     /// <param name="config"></param>
     void LogToEventHub(LogToEventHubConfig config);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void SendOneWayRequest(SendOneWayRequestConfig config);
 }
