@@ -50,11 +50,3 @@ public sealed record AsymmetricKeyConfig : KeyConfig
     public required string Modulus { get; init; }
     public required string Exponent { get; init; }
 }
-
-public record ClaimConfig
-{
-    public required string Name { get; init; }
-    public string? Match { get; init; }
-    public string? Separator { get; init; }
-    public string[]? Values { get; init; }
-}

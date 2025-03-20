@@ -35,8 +35,7 @@ public class TraceCompiler : IMethodPolicyHandler
             return;
         }
 
-        if (!values.TryGetValue(nameof(TraceConfig.Message), out InitializerValue? message) &&
-            message.Value is not null)
+        if (!values.TryGetValue(nameof(TraceConfig.Message), out InitializerValue? message) || message.Value is null)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,
@@ -53,16 +52,15 @@ public class TraceCompiler : IMethodPolicyHandler
 
         if (values.TryGetValue(nameof(TraceConfig.Metadata), out InitializerValue? metadata))
         {
-            IEnumerable<XElement> metadatas = HandleMetadata(context, metadata);
-            element.Add(metadatas.ToArray<object>());
+            element.Add(HandleMetadata(context, metadata).ToArray());
         }
 
         context.AddPolicy(element);
     }
 
-    private static IEnumerable<XElement> HandleMetadata(ICompilationContext context, InitializerValue metadata)
+    private static IEnumerable<object> HandleMetadata(ICompilationContext context, InitializerValue metadata)
     {
-        List<XElement> elements = new();
+        List<object> elements = new();
         foreach (InitializerValue data in metadata.UnnamedValues ?? [])
         {
             if (!data.TryGetValues<TraceMetadata>(out IReadOnlyDictionary<string, InitializerValue>? metadataValues))

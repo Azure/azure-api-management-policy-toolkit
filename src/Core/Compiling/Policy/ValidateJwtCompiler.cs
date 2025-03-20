@@ -59,12 +59,12 @@ public class ValidateJwtCompiler : IMethodPolicyHandler
 
         HandleKeys(context, element, values, nameof(ValidateJwtConfig.IssuerSigningKeys), "issuer-signing-keys");
         HandleKeys(context, element, values, nameof(ValidateJwtConfig.DescriptionKeys), "decryption-keys");
-        HandleList(element, values, nameof(ValidateJwtConfig.Audiences), "audiences", "audience");
-        HandleList(element, values, nameof(ValidateJwtConfig.Issuers), "issuers", "issuer");
+        GenericCompiler.HandleList(element, values, nameof(ValidateJwtConfig.Audiences), "audiences", "audience");
+        GenericCompiler.HandleList(element, values, nameof(ValidateJwtConfig.Issuers), "issuers", "issuer");
 
         if (values.TryGetValue(nameof(ValidateJwtConfig.RequiredClaims), out var requiredClaims))
         {
-            XElement claimsElement = HandleRequiredClaims(context, requiredClaims);
+            XElement claimsElement = ClaimsConfigCompiler.HandleRequiredClaims(context, requiredClaims);
             element.Add(claimsElement);
         }
 
@@ -103,51 +103,6 @@ public class ValidateJwtCompiler : IMethodPolicyHandler
         }
 
         return openIdElements.ToArray();
-    }
-
-    private static XElement HandleRequiredClaims(ICompilationContext context, InitializerValue requiredClaims)
-    {
-        var claimsElement = new XElement("required-claims");
-        foreach (var claim in requiredClaims.UnnamedValues ?? [])
-        {
-            if (!claim.TryGetValues<ClaimConfig>(out var claimValue))
-            {
-                context.Report(Diagnostic.Create(
-                    CompilationErrors.PolicyArgumentIsNotOfRequiredType,
-                    claim.Node.GetLocation(),
-                    "required-claims",
-                    nameof(ClaimConfig)
-                ));
-                continue;
-            }
-
-            var claimElement = new XElement("claim");
-            if (!claimElement.AddAttribute(claimValue, nameof(ClaimConfig.Name), "name"))
-            {
-                context.Report(Diagnostic.Create(
-                    CompilationErrors.RequiredParameterNotDefined,
-                    claim.Node.GetLocation(),
-                    "claim",
-                    nameof(ClaimConfig.Name)
-                ));
-                continue;
-            }
-
-            claimElement.AddAttribute(claimValue, nameof(ClaimConfig.Match), "match");
-            claimElement.AddAttribute(claimValue, nameof(ClaimConfig.Separator), "separator");
-
-            if (claimValue.TryGetValue(nameof(ClaimConfig.Values), out var valuesInitializer))
-            {
-                foreach (var value in valuesInitializer.UnnamedValues ?? [])
-                {
-                    claimElement.Add(new XElement("value", value.Value!));
-                }
-            }
-
-            claimsElement.Add(claimElement);
-        }
-
-        return claimsElement;
     }
 
     private static void HandleKeys(
@@ -238,27 +193,6 @@ public class ValidateJwtCompiler : IMethodPolicyHandler
             }
 
             listElement.Add(keyElement);
-        }
-
-        element.Add(listElement);
-    }
-
-    private static void HandleList(
-        XElement element,
-        IReadOnlyDictionary<string, InitializerValue> values,
-        string key,
-        string listName,
-        string elementName)
-    {
-        if (!values.TryGetValue(key, out var listInitializer))
-        {
-            return;
-        }
-
-        var listElement = new XElement(listName);
-        foreach (var initializer in listInitializer.UnnamedValues ?? [])
-        {
-            listElement.Add(new XElement(elementName, initializer.Value!));
         }
 
         element.Add(listElement);

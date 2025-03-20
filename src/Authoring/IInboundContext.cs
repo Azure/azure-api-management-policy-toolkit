@@ -352,4 +352,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void Trace(TraceConfig config);
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void ValidateAzureAdToken(ValidateAzureAdTokenConfig config);
 }
