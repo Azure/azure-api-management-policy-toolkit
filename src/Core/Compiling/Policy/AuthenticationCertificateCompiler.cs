@@ -29,7 +29,8 @@ public class AuthenticationCertificateCompiler : IMethodPolicyHandler
         if (new[]
             {
                 certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Thumbprint), "thumbprint"),
-                certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.CertificateId), "certificate-id"),
+                certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.CertificateId),
+                    "certificate-id"),
                 certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Body), "body")
             }.Count(x => x) != 1)
         {
@@ -46,5 +47,36 @@ public class AuthenticationCertificateCompiler : IMethodPolicyHandler
 
         certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Password), "password");
         context.AddPolicy(certElement);
+    }
+
+    public static void HandleCertificateAuthentication(
+        ICompilationContext context,
+        XElement element,
+        IReadOnlyDictionary<string, InitializerValue> values,
+        SyntaxNode node)
+    {
+        XElement certElement = new("authentication-certificate");
+        certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Password), "password");
+
+        if (new[]
+            {
+                certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Thumbprint), "thumbprint"),
+                certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.CertificateId),
+                    "certificate-id"),
+                certElement.AddAttribute(values, nameof(CertificateAuthenticationConfig.Body), "body")
+            }.Count(b => b) != 1)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.OnlyOneOfTreeShouldBeDefined,
+                node.GetLocation(),
+                $"{element.Name}.authentication-certificate",
+                nameof(CertificateAuthenticationConfig.Thumbprint),
+                nameof(CertificateAuthenticationConfig.CertificateId),
+                nameof(CertificateAuthenticationConfig.Body)
+            ));
+            return;
+        }
+
+        element.Add(certElement);
     }
 }
