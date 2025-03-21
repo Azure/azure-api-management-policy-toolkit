@@ -160,4 +160,10 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void SendOneWayRequest(SendOneWayRequestConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void ValidateHeaders(ValidateHeadersConfig config);
 }
