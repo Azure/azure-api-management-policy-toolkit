@@ -17,8 +17,7 @@ public class ValidateHeadersCompiler : IMethodPolicyHandler
 
     public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
     {
-        if (!node.TryExtractingConfigParameter<ValidateHeadersConfig>(context, "validate-headers",
-                out IReadOnlyDictionary<string, InitializerValue>? values))
+        if (!node.TryExtractingConfigParameter<ValidateHeadersConfig>(context, "validate-headers", out var values))
         {
             return;
         }
