@@ -206,4 +206,10 @@ public interface IOutboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void Trace(TraceConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void XmlToJson(XmlToJsonConfig config);
 }
