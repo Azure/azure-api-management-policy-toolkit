@@ -364,4 +364,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void ValidateClientCertificate(ValidateClientCertificateConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void XmlToJson(XmlToJsonConfig config);
 }

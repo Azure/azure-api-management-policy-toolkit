@@ -211,5 +211,11 @@ public interface IOutboundContext : IHaveExpressionContext
     /// TODO
     /// </summary>
     /// <param name="config"></param>
+    void ValidateClientCertificate(ValidateClientCertificateConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
     void ValidateHeaders(ValidateHeadersConfig config);
 }
