@@ -172,4 +172,10 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void ValidateHeaders(ValidateHeadersConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void ValidateContent(ValidateContentConfig config);
 }
