@@ -73,7 +73,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="name"></param>
     /// <param name="value"></param>
-    void SetVariable(string name, dynamic value);
+    void SetVariable(string name, object value);
 
     /// <summary>
     /// TODO
