@@ -382,4 +382,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void ValidateOdataRequest(ValidateOdataRequestConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void ValidateParameters(ValidateParametersConfig config);
 }
