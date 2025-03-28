@@ -118,9 +118,13 @@ public interface IInboundContext : IHaveExpressionContext
     void CacheLookupValue(CacheLookupValueConfig config);
 
     /// <summary>
-    /// TODO
+    /// Removes a value from the cache using a specified key.<br/>
+    /// This policy is used to remove an item from the cache based on its key.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-remove-value-policy">cache-remove-value</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the cache key and optional caching type.
+    /// </param>
     void CacheRemoveValue(CacheRemoveValueConfig config);
 
     /// <summary>
