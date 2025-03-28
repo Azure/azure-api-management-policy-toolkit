@@ -60,9 +60,12 @@ public interface IOutboundContext : IHaveExpressionContext
     void CacheStore(uint duration, bool? cacheResponse);
 
     /// <summary>
-    /// TODO
+    /// Stores a value in the cache using a specified key.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-store-value-policy">cache-store-value</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the cache key, value, duration, and optional caching type.
+    /// </param>
     void CacheStoreValue(CacheStoreValueConfig config);
 
     /// <summary>
