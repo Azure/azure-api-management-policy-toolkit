@@ -83,10 +83,16 @@ public interface IBackendContext : IHaveExpressionContext
     void InlinePolicy(string policy);
 
     /// <summary>
-    /// TODO
+    /// Limits the number of concurrent calls to a backend service.<br />
+    /// This policy helps protect the backend service from being overwhelmed by too many concurrent requests.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/limit-concurrency-policy">limit-concurrency</a> policy.
     /// </summary>
-    /// <param name="config"></param>
-    /// <param name="section"></param>
+    /// <param name="config">
+    /// Configuration specifying the maximum number of concurrent calls allowed and the behavior when the limit is reached.
+    /// </param>
+    /// <param name="section">
+    /// The policy section to be executed when the concurrency limit is not reached.
+    /// </param>
     void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 
     /// <summary>
