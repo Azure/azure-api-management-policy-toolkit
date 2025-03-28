@@ -15,26 +15,38 @@ public interface IInboundContext : IHaveExpressionContext
     /// <param name="values">
     /// Specifies the values of the header to be set or appended. Policy expressions are allowed.
     /// </param>
-    void AppendHeader(string name, params string[] values);
+    void AppendHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
-    /// 
+    /// Adds specified query parameter with values or appends values if parameter already exists.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy with exist-action="append".
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="values"></param>
-    void AppendQueryParameter(string name, params string[] values);
+    /// <param name="name">
+    /// Specifies name of the query parameter to be added. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be appended. Policy expressions are allowed.
+    /// </param>
+    void AppendQueryParameter([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
-    /// TODO
+    /// Authenticates with a backend service using Basic Authentication.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/authentication-basic-policy">authentication-basic</a> policy.
     /// </summary>
-    /// <param name="username"></param>
-    /// <param name="password"></param>
-    void AuthenticationBasic(string username, string password);
+    /// <param name="username">
+    /// Username used for authentication. Policy expressions are allowed.
+    /// </param>
+    /// <param name="password">
+    /// Password used for authentication. Policy expressions are allowed.
+    /// </param>
+    void AuthenticationBasic([ExpressionAllowed] string username, [ExpressionAllowed] string password);
 
     /// <summary>
-    /// TODO
+    /// Authenticates to the backend service using a client certificate.<br />
+    /// The client certificate is provided to the backend service during TLS handshake.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/authentication-certificate-policy">authentication-certificate</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">Configuration specifying how to find the client certificate. The certificate can be specified using a certificate thumbprint, a resource identifier, or directly as a base64-encoded value.</param>
     void AuthenticationCertificate(CertificateAuthenticationConfig config);
 
     /// <summary>
