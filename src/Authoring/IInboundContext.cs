@@ -187,9 +187,12 @@ public interface IInboundContext : IHaveExpressionContext
     void FindAndReplace([ExpressionAllowed] string from, [ExpressionAllowed] string to);
 
     /// <summary>
-    /// The get-authorization-context policy retrieves an authorization context from a specified provider.
+    /// Retrieves an authorization context from a specified provider.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/get-authorization-context-policy">get-authorization-context</a> policy.
     /// </summary>
-    /// <param name="config">The configuration for the get-authorization-context policy.</param>
+    /// <param name="config">
+    /// Configuration specifying the credential provider, connection resource identifier, context variable name, identity type, identity token, and error handling behavior.
+    /// </param>
     void GetAuthorizationContext(GetAuthorizationContextConfig config);
 
     /// <summary>
