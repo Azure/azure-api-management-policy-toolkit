@@ -136,9 +136,13 @@ public interface IInboundContext : IHaveExpressionContext
     void CheckHeader(CheckHeaderConfig config);
 
     /// <summary>
-    /// The cors policy adds cross-origin resource sharing (CORS) support to an operation or an API to allow cross-domain calls from browser-based clients.
+    /// Enables cross-origin resource sharing (CORS) for an API or API Management instance.<br/>
+    /// This policy adds CORS headers to responses and handles preflight OPTIONS requests.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cors-policy">cors</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying allowed origins, headers, methods, and other CORS settings.
+    /// </param>
     void Cors(CorsConfig config);
 
     /// <summary>
