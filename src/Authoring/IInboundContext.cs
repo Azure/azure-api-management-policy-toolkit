@@ -394,4 +394,16 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void XslTransform(XslTransformConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void AzureOpenAiTokenLimit(TokenLimitConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void LlmTokenLimit(TokenLimitConfig config);
 }
