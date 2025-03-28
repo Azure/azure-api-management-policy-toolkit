@@ -96,9 +96,15 @@ public interface IInboundContext : IHaveExpressionContext
     void Base();
 
     /// <summary>
-    /// TODO
+    /// Checks the gateway cache for a valid cached HTTP response for the current request.<br/>
+    /// If a valid cached response is not found, requests flow through the pipeline normally and response is cached before sending to caller.<br/>
+    /// When found, a cached response is immediately returned to caller, bypassing most of the pipeline processing.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-lookup-policy">cache-lookup</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying caching parameters including vary-by options, caching type, 
+    /// revalidation settings, and other cache control options.
+    /// </param>
     void CacheLookup(CacheLookupConfig config);
 
     /// <summary>
