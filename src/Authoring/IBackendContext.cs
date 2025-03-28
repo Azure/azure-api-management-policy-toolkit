@@ -59,9 +59,12 @@ public interface IBackendContext : IHaveExpressionContext
     void FindAndReplace([ExpressionAllowed] string from, [ExpressionAllowed] string to);
 
     /// <summary>
-    /// TODO
+    /// Forwards the incoming request to the backend service specified in the request context.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/forward-request-policy">forward-request</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Optional configuration specifying timeout settings, HTTP version, redirect behavior, buffering options, and error handling.
+    /// </param>
     void ForwardRequest(ForwardRequestConfig? config = null);
 
     /// <summary>
