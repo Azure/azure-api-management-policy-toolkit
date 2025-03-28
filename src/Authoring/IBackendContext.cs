@@ -27,9 +27,14 @@ public interface IBackendContext : IHaveExpressionContext
     void CacheStoreValue(CacheStoreValueConfig config);
 
     /// <summary>
-    /// TODO
+    /// Emits custom metrics to Azure Monitor for tracking API usage patterns and performance.<br/>
+    /// The metrics are accessible through Azure Monitor metrics explorer with the configured dimensions and namespace.<br/>
+    /// This policy is useful for custom monitoring and can be used for visualization, alerting, and analysis.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/emit-metric-policy">emit-metric</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the metric name, dimensions, optional namespace, and optional value.
+    /// </param>
     void EmitMetric(EmitMetricConfig config);
 
     /// <summary>
