@@ -221,9 +221,12 @@ public interface IInboundContext : IHaveExpressionContext
     void InvokeDarpBinding(InvokeDarpBindingConfig config);
 
     /// <summary>
-    /// TODO
+    /// Filters (allows/denies) calls from specific IP addresses and/or ranges.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/ip-filter-policy">ip-filter</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the action to take (allow or deny), IP addresses, and/or IP address ranges.
+    /// </param>
     void IpFilter(IpFilterConfig config);
 
     /// <summary>
