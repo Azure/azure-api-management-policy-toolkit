@@ -92,9 +92,14 @@ public interface IOnErrorContext : IHaveExpressionContext
     void LogToEventHub(LogToEventHubConfig config);
 
     /// <summary>
-    /// TODO
+    /// Returns a mocked response to the caller of the API.<br/>
+    /// This policy terminates the pipeline processing and returns the specified mocked response directly to the caller.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/mock-response-policy">mock-response</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Optional configuration specifying status code, content type, headers, and other response characteristics.
+    /// When null, returns a default empty 200 OK response.
+    /// </param>
     void MockResponse(MockResponseConfig? config = null);
 
     /// <summary>
