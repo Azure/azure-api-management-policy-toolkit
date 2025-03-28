@@ -50,15 +50,21 @@ public interface IInboundContext : IHaveExpressionContext
     void AuthenticationCertificate(CertificateAuthenticationConfig config);
 
     /// <summary>
-    /// TODO
+    /// Authenticates with a backend service using a managed identity to obtain an access token from Azure Active Directory.<br />
+    /// The policy can use either a system-assigned or user-assigned managed identity.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/authentication-managed-identity-policy">authentication-managed-identity</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">Configuration specifying the resource for which to request a token, optional client ID for user-assigned identity, and other settings.</param>
     void AuthenticationManagedIdentity(ManagedIdentityAuthenticationConfig config);
 
     /// <summary>
-    /// TODO
+    /// Emits metrics about token usage from Azure OpenAI service calls.<br/>
+    /// This policy can be used to monitor and analyze token usage patterns.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-emit-token-metric-policy">azure-openai-emit-token-metric</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the dimensions to include with the metric and optionally the namespace to use.
+    /// </param>
     void AzureOpenAiEmitTokenMetric(EmitTokenMetricConfig config);
 
     /// <summary>
@@ -180,9 +186,14 @@ public interface IInboundContext : IHaveExpressionContext
     void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 
     /// <summary>
-    /// TODO
+    /// Emits metrics about token usage from Language Model service calls.<br/>
+    /// This policy captures and records token usage information for monitoring and analysis purposes.<br/>
+    /// Use this policy to track token consumption across LLM operations with custom dimensions.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-emit-token-metric-policy">llm-emit-token-metric</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the dimensions to include with the metric and optionally the namespace to use.
+    /// </param>
     void LlmEmitTokenMetric(EmitTokenMetricConfig config);
 
     /// <summary>
