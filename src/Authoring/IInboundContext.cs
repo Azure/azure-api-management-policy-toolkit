@@ -68,9 +68,14 @@ public interface IInboundContext : IHaveExpressionContext
     void AzureOpenAiEmitTokenMetric(EmitTokenMetricConfig config);
 
     /// <summary>
-    /// TODO
+    /// Searches a cache for semantically similar Azure OpenAI prompts and returns cached responses if found.<br/>
+    /// Uses vector embeddings to match prompt similarity against cached items based on a threshold.<br/>
+    /// When a match is found, the policy short-circuits the request and returns the cached response.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-semantic-cache-lookup-policy">azure-openai-semantic-cache-lookup</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the similarity threshold, embedding backend, and other cache parameters.
+    /// </param>
     void AzureOpenAiSemanticCacheLookup(SemanticCacheLookupConfig config);
 
     /// <summary>
@@ -197,9 +202,14 @@ public interface IInboundContext : IHaveExpressionContext
     void LlmEmitTokenMetric(EmitTokenMetricConfig config);
 
     /// <summary>
-    /// TODO
+    /// Searches a cache for semantically similar LLM prompts and returns cached responses if found.<br/>
+    /// Uses vector embeddings to match prompt similarity against cached items based on a threshold.<br/>
+    /// When a match is found, the policy short-circuits the request and returns the cached response.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-semantic-cache-lookup-policy">llm-semantic-cache-lookup</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the similarity threshold, embedding backend, and other cache parameters.
+    /// </param>
     void LlmSemanticCacheLookup(SemanticCacheLookupConfig config);
 
     /// <summary>

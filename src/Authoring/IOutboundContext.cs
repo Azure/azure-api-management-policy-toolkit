@@ -100,10 +100,14 @@ public interface IOutboundContext : IHaveExpressionContext
     void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 
     /// <summary>
-    /// TODO
+    /// Stores the current LLM request and response in the semantic cache for future lookup.<br/>
+    /// This policy must be placed in the outbound section to capture both the request and response.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-semantic-cache-lookup-policy">llm-semantic-cache-store</a> policy.
     /// </summary>
-    /// <param name="duration"></param>
-    void LlmSemanticCacheStore(uint duration);
+    /// <param name="duration">
+    /// Duration in seconds for which the cached entry is valid. Policy expressions are allowed.
+    /// </param>
+    void LlmSemanticCacheStore([ExpressionAllowed] uint duration);
 
     /// <summary>
     /// The log-to-eventhub policy sends messages in the specified format to an event hub defined by a Logger entity.
