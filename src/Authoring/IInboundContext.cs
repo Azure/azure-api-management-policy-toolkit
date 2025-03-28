@@ -199,7 +199,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// The policy inserts the policy fragment as-is at the location you select in the policy definition.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/include-fragment-policy">include-fragment</a> policy.
     /// </summary>
-    /// <param name="fragmentId">A string. Specifies the identifier (name) of a policy fragment created in the API Management instance. Policy expressions aren't allowed.</param>
+    /// <param name="fragmentId">A string. Specifies the identifier (name) of a policy fragment created in the API Management instance. Policy expressions are not allowed.</param>
     void IncludeFragment(string fragmentId);
 
     /// <summary>
@@ -211,9 +211,13 @@ public interface IInboundContext : IHaveExpressionContext
     void InlinePolicy(string policy);
 
     /// <summary>
-    /// TODO
+    /// Invokes a Dapr binding with the specified configuration.<br/>
+    /// This policy allows you to interact with Dapr bindings to trigger external resources or services.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/invoke-dapr-binding-policy">invoke-dapr-binding</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the Dapr binding name, operation, metadata, and other settings.
+    /// </param>
     void InvokeDarpBinding(InvokeDarpBindingConfig config);
 
     /// <summary>
