@@ -96,9 +96,12 @@ public interface IOnErrorContext : IHaveExpressionContext
     void InvokeDarpBinding(InvokeDarpBindingConfig config);
 
     /// <summary>
-    /// TODO
+    /// Converts JSON content to XML format.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/json-to-xml-policy">json-to-xml</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying how to convert JSON to XML, including options for applying the policy, considering the Accept header, parsing dates, and more.
+    /// </param>
     void JsonToXml(JsonToXmlConfig config);
 
     /// <summary>
