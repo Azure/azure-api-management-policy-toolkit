@@ -388,4 +388,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void ValidateParameters(ValidateParametersConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void XslTransform(XslTransformConfig config);
 }

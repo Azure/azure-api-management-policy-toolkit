@@ -230,4 +230,10 @@ public interface IOutboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void ValidateStatusCode(ValidateStatusCodeConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void XslTransform(XslTransformConfig config);
 }
