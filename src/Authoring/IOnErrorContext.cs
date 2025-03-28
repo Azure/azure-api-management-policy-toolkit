@@ -184,4 +184,10 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void ValidateStatusCode(ValidateStatusCodeConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void InvokeDarpBinding(InvokeDarpBindingConfig config);
 }

@@ -406,4 +406,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void LlmTokenLimit(TokenLimitConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void InvokeDarpBinding(InvokeDarpBindingConfig config);
 }
