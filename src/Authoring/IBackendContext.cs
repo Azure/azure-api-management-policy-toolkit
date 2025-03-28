@@ -14,32 +14,13 @@ public interface IBackendContext : IHaveExpressionContext
     /// TODO
     /// </summary>
     /// <param name="config"></param>
-    void ForwardRequest(ForwardRequestConfig? config = null);
-
-    /// <summary>
-    /// TODO
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="value"></param>
-    void SetVariable(string name, object value);
+    void CacheLookupValue(CacheLookupValueConfig config);
 
     /// <summary>
     /// TODO
     /// </summary>
     /// <param name="config"></param>
-    void SendRequest(SendRequestConfig config);
-
-    /// <summary>
-    /// TODO
-    /// </summary>
-    /// <param name="config"></param>
-    void ReturnResponse(ReturnResponseConfig config);
-
-    /// <summary>
-    /// TODO
-    /// </summary>
-    /// <param name="config"></param>
-    void SetBackendService(SetBackendServiceConfig config);
+    void CacheStoreValue(CacheStoreValueConfig config);
 
     /// <summary>
     /// TODO
@@ -48,16 +29,17 @@ public interface IBackendContext : IHaveExpressionContext
     void EmitMetric(EmitMetricConfig config);
 
     /// <summary>
-    /// TODO
+    /// The find-and-replace policy replaces occurrences of a specified string with another string in the request or response.
     /// </summary>
-    /// <param name="config"></param>
-    void CacheLookupValue(CacheLookupValueConfig config);
+    /// <param name="from">The string to be replaced. Policy expressions are allowed.</param>
+    /// <param name="to">The string to replace with. Policy expressions are allowed.</param>
+    void FindAndReplace(string from, string to);
 
     /// <summary>
     /// TODO
     /// </summary>
     /// <param name="config"></param>
-    void CacheStoreValue(CacheStoreValueConfig config);
+    void ForwardRequest(ForwardRequestConfig? config = null);
 
     /// <summary>
     /// The policy inserts the policy fragment as-is at the location you select in the policy definition.<br />
@@ -73,34 +55,6 @@ public interface IBackendContext : IHaveExpressionContext
     /// Policy in xml format.
     /// </param>
     void InlinePolicy(string policy);
-
-    /// <summary>
-    /// The find-and-replace policy replaces occurrences of a specified string with another string in the request or response.
-    /// </summary>
-    /// <param name="from">The string to be replaced. Policy expressions are allowed.</param>
-    /// <param name="to">The string to replace with. Policy expressions are allowed.</param>
-    void FindAndReplace(string from, string to);
-
-    /// <summary>
-    /// The retry policy executes its child policies once and then retries their execution until the retry condition
-    /// becomes false or retry count is exhausted.
-    /// </summary>
-    /// <param name="config">Configuration of retry policy</param>
-    /// <param name="section">Child policies which should be retried</param>
-    void Retry(RetryConfig config, Action section);
-
-    /// <summary>
-    /// The wait policy executes its immediate child policies in parallel, and waits for either all or one of its immediate
-    /// child policies to complete before it completes.
-    /// The wait policy can have as its immediate child policies one or more of the following: send-request,
-    /// cache-lookup-value, and choose policies.
-    /// </summary>
-    /// <param name="section">Child policies which should be awaited</param>
-    /// <param name="waitFor">
-    /// Determines whether the wait policy waits for all immediate child policies to be completed or just one.
-    /// Policy expressions are allowed.
-    /// </param>
-    void Wait(Action section, string? waitFor = null);
 
     /// <summary>
     /// TODO
@@ -121,7 +75,46 @@ public interface IBackendContext : IHaveExpressionContext
     /// TODO
     /// </summary>
     /// <param name="config"></param>
+    void ReturnResponse(ReturnResponseConfig config);
+
+    /// <summary>
+    /// The retry policy executes its child policies once and then retries their execution until the retry condition
+    /// becomes false or retry count is exhausted.
+    /// </summary>
+    /// <param name="config">Configuration of retry policy</param>
+    /// <param name="section">Child policies which should be retried</param>
+    void Retry(RetryConfig config, Action section);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
     void SendOneWayRequest(SendOneWayRequestConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void SendRequest(SendRequestConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void SetBackendService(SetBackendServiceConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void SetStatus(StatusConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="value"></param>
+    void SetVariable(string name, object value);
 
     /// <summary>
     /// TODO
@@ -130,8 +123,15 @@ public interface IBackendContext : IHaveExpressionContext
     void Trace(TraceConfig config);
 
     /// <summary>
-    /// TODO
+    /// The wait policy executes its immediate child policies in parallel, and waits for either all or one of its immediate
+    /// child policies to complete before it completes.
+    /// The wait policy can have as its immediate child policies one or more of the following: send-request,
+    /// cache-lookup-value, and choose policies.
     /// </summary>
-    /// <param name="config"></param>
-    void SetStatus(StatusConfig config);
+    /// <param name="section">Child policies which should be awaited</param>
+    /// <param name="waitFor">
+    /// Determines whether the wait policy waits for all immediate child policies to be completed or just one.
+    /// Policy expressions are allowed.
+    /// </param>
+    void Wait(Action section, string? waitFor = null);
 }
