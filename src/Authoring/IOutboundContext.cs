@@ -53,11 +53,16 @@ public interface IOutboundContext : IHaveExpressionContext
     void CacheRemoveValue(CacheRemoveValueConfig config);
 
     /// <summary>
-    /// TODO
+    /// Stores responses in the specified cache. This policy can be applied in cases where response content remains static for a period of time.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-store-policy">cache-store</a> policy.
     /// </summary>
-    /// <param name="duration"></param>
-    /// <param name="cacheResponse"></param>
-    void CacheStore(uint duration, bool? cacheResponse);
+    /// <param name="duration">
+    /// Specifies the duration in seconds that the response should be cached. Policy expressions are allowed.
+    /// </param>
+    /// <param name="cacheResponse">
+    /// Indicates whether the response should be cached. If set to false, the response will not be cached. Policy expressions are allowed.
+    /// </param>
+    void CacheStore([ExpressionAllowed] uint duration, [ExpressionAllowed] bool? cacheResponse);
 
     /// <summary>
     /// Stores a value in the cache using a specified key.<br/>
