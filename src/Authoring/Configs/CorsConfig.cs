@@ -4,48 +4,58 @@
 namespace Azure.ApiManagement.PolicyToolkit.Authoring;
 
 /// <summary>
-/// The cors policy adds cross-origin resource sharing (CORS) support to an operation or an API to allow cross-domain calls from browser-based clients.
+/// Configuration for the CORS (Cross-Origin Resource Sharing) policy that enables web applications running in different domains
+/// to make requests to your API.<br/>
+/// For more information, see <a href="https://learn.microsoft.com/en-us/azure/api-management/cors-policy">CORS policy</a>.
 /// </summary>
 public record CorsConfig
 {
     /// <summary>
-    /// The Access-Control-Allow-Credentials header in the preflight response will be set to the value of this attribute and affect the client's ability to submit credentials in cross-domain requests. Policy expressions are allowed.
+    /// Specifies whether access to the resource should be allowed with credentials (such as cookies, authorization headers, or TLS client certificates).<br/>
+    /// When set to true, browsers will send and allow credentials with cross-origin requests.<br/>
+    /// Policy expressions are allowed.
     /// </summary>
+    [ExpressionAllowed]
     public bool? AllowCredentials { get; init; }
 
     /// <summary>
-    /// Controls the processing of cross-origin requests that don't match the policy settings. Policy expressions are allowed.
-    /// When OPTIONS request is processed as a preflight request and Origin header doesn't match policy settings:
-    /// - If the attribute is set to true, immediately terminate the request with an empty 200 OK response
-    /// - If the attribute is set to false, check inbound for other in-scope cors policies that are direct children of the inbound element and apply them. If no cors policies are found, terminate the request with an empty 200 OK response.
-    /// When GET or HEAD request includes the Origin header (and therefore is processed as a simple cross-origin request), and doesn't match policy settings:
-    /// - If the attribute is set to true, immediately terminate the request with an empty 200 OK response.
-    /// - If the attribute is set to false, allow the request to proceed normally and don't add CORS headers to the response
+    /// Specifies whether preflight OPTIONS requests will be terminated automatically without forwarding to the backend.<br/>
+    /// Default value is "true". Set to "false" to pass OPTIONS requests to the backend.<br/>
+    /// Policy expressions are allowed.
     /// </summary>
+    [ExpressionAllowed]
     public string? TerminateUnmatchedRequest { get; init; }
 
     /// <summary>
-    /// Contains origin elements that describe the allowed origins for cross-domain requests. allowed-origins can contain either a single origin element that specifies * to allow any origin, or one or more origin elements that contain a URI.
+    /// List of origins allowed to make cross-origin calls to your API.<br/>
+    /// Wild card '*' is supported to allow all origins, but only one wildcard entry is allowed.<br/>
+    /// Each origin is typically of the form "scheme://host:port" where port may be omitted.
     /// </summary>
     public required string[] AllowedOrigins { get; init; }
 
     /// <summary>
-    /// This element is required if methods other than GET or POST are allowed. Contains method elements that specify the supported HTTP verbs. The value * indicates all methods.
+    /// Methods (HTTP verbs) allowed to be used for cross-origin requests.<br/>
+    /// Wild card '*' is supported to allow all methods.
     /// </summary>
     public string[]? AllowedMethods { get; init; }
 
     /// <summary>
-    /// The Access-Control-Max-Age header in the preflight response will be set to the value of this attribute and affect the user agent's ability to cache the preflight response. Policy expressions are allowed.
+    /// Maximum time in seconds that a browser should cache the preflight request results.<br/>
+    /// Longer cache times can improve performance by reducing the number of preflight requests.<br/>
+    /// Policy expressions are allowed.
     /// </summary>
+    [ExpressionAllowed]
     public uint? PreflightResultMaxAge { get; init; }
 
     /// <summary>
-    /// This element contains header elements specifying names of the headers that can be included in the request.
+    /// Headers that can be included in the cross-origin request.<br/>
+    /// Wild card '*' is supported to allow all headers.
     /// </summary>
     public required string[] AllowedHeaders { get; init; }
 
     /// <summary>
-    /// This element contains header elements specifying names of the headers that will be accessible by the client.
+    /// Headers that can be accessed by client-side JavaScript in the response.<br/>
+    /// By default, browsers only expose a limited set of response headers to JavaScript code.
     /// </summary>
     public string[]? ExposeHeaders { get; init; }
 }
