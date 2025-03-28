@@ -43,6 +43,10 @@ public class SetBackendServiceCompiler : IMethodPolicyHandler
         element.AddAttribute(values, nameof(SetBackendServiceConfig.SfPartitionKey), "sf-partition-key");
         element.AddAttribute(values, nameof(SetBackendServiceConfig.SfListenerName), "sf-listener-name");
 
+        element.AddAttribute(values, nameof(SetBackendServiceConfig.DaprAppId), "dapr-app-id");
+        element.AddAttribute(values, nameof(SetBackendServiceConfig.DaprMethod), "dapr-method");
+        element.AddAttribute(values, nameof(SetBackendServiceConfig.DaprNamespace), "dapr-namespace");
+
         context.AddPolicy(element);
     }
 }
