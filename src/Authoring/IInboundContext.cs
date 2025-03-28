@@ -179,11 +179,12 @@ public interface IInboundContext : IHaveExpressionContext
     void EmitMetric(EmitMetricConfig config);
 
     /// <summary>
-    /// The find-and-replace policy replaces occurrences of a specified string with another string in the request or response.
+    /// Replaces occurrences of a specified string with another string in the request or response body.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/find-and-replace-policy">find-and-replace</a> policy.
     /// </summary>
-    /// <param name="from">The string to be replaced. Policy expressions are allowed.</param>
-    /// <param name="to">The string to replace with. Policy expressions are allowed.</param>
-    void FindAndReplace(string from, string to);
+    /// <param name="from">The string value to find. Policy expressions are allowed.</param>
+    /// <param name="to">The replacement string value. Policy expressions are allowed.</param>
+    void FindAndReplace([ExpressionAllowed] string from, [ExpressionAllowed] string to);
 
     /// <summary>
     /// The get-authorization-context policy retrieves an authorization context from a specified provider.
