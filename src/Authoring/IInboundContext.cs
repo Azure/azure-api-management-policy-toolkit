@@ -79,9 +79,15 @@ public interface IInboundContext : IHaveExpressionContext
     void AzureOpenAiSemanticCacheLookup(SemanticCacheLookupConfig config);
 
     /// <summary>
-    /// TODO
+    /// Limits tokens used by Azure OpenAI services to prevent overconsumption.<br/>
+    /// This policy can enforce rate limits (tokens per minute) and/or quotas (tokens per period).<br/>
+    /// Helps protect backend services and manage costs by controlling token usage.<br/>
+    /// Can estimate prompt token count and track consumption via custom headers or variables.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-token-limit-policy">azure-openai-token-limit</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the counter key, rate limits, quotas, and optional header/variable names for tracking token usage.
+    /// </param>
     void AzureOpenAiTokenLimit(TokenLimitConfig config);
 
     /// <summary>
@@ -213,9 +219,15 @@ public interface IInboundContext : IHaveExpressionContext
     void LlmSemanticCacheLookup(SemanticCacheLookupConfig config);
 
     /// <summary>
-    /// TODO
+    /// Limits tokens used by Language Model services to prevent overconsumption.<br/>
+    /// This policy can enforce rate limits (tokens per minute) and/or quotas (tokens per period).<br/>
+    /// Helps protect backend services and manage costs by controlling token usage.<br/>
+    /// Can estimate prompt token count and track consumption via custom headers or variables.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-token-limit-policy">llm-token-limit</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the counter key, rate limits, quotas, and optional header/variable names for tracking token usage.
+    /// </param>
     void LlmTokenLimit(TokenLimitConfig config);
 
     /// <summary>
