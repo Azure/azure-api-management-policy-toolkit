@@ -118,10 +118,13 @@ public interface IOutboundContext : IHaveExpressionContext
     void InvokeDarpBinding(InvokeDarpBindingConfig config);
 
     /// <summary>
-    /// TODO
+    /// Converts a response containing JSON to JSONP format.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/jsonp-policy">jsonp</a> policy.
     /// </summary>
-    /// <param name="callbackParameterName"></param>
-    void JsonP(string callbackParameterName);
+    /// <param name="callbackParameterName">
+    /// Specifies the query parameter name whose value provides the name of the callback function.
+    /// </param>
+    void JsonP([ExpressionAllowed] string callbackParameterName);
 
     /// <summary>
     /// Converts JSON content to XML format.<br />
