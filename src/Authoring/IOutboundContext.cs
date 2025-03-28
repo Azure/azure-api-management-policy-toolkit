@@ -17,10 +17,15 @@ public interface IOutboundContext : IHaveExpressionContext
     void AppendHeader(string name, params string[] values);
 
     /// <summary>
-    /// TODO
+    /// Stores the current Azure OpenAI request and response in the semantic cache for future lookup.<br/>
+    /// This policy must be placed in the outbound section to capture both the request and response.<br/>
+    /// When stored, the entries can later be found by the azure-openai-semantic-cache-lookup policy.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-semantic-cache-store-policy">azure-openai-semantic-cache-store</a> policy.
     /// </summary>
-    /// <param name="duration"></param>
-    void AzureOpenAiSemanticCacheStore(uint duration);
+    /// <param name="duration">
+    /// Duration in seconds for which the cached entry is valid. Policy expressions are allowed.
+    /// </param>
+    void AzureOpenAiSemanticCacheStore([ExpressionAllowed] uint duration);
 
     /// <summary>
     /// The base policy used to specify when parent scope policy should be executed
@@ -102,7 +107,8 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <summary>
     /// Stores the current LLM request and response in the semantic cache for future lookup.<br/>
     /// This policy must be placed in the outbound section to capture both the request and response.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-semantic-cache-lookup-policy">llm-semantic-cache-store</a> policy.
+    /// When stored, the entries can later be found by the llm-semantic-cache-lookup policy.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-semantic-cache-store-policy">llm-semantic-cache-store</a> policy.
     /// </summary>
     /// <param name="duration">
     /// Duration in seconds for which the cached entry is valid. Policy expressions are allowed.
