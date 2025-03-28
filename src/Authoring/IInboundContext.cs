@@ -146,9 +146,14 @@ public interface IInboundContext : IHaveExpressionContext
     void Cors(CorsConfig config);
 
     /// <summary>
-    /// TODO
+    /// Enables cross-domain calls from Adobe Flash and Microsoft Silverlight browser-based clients.<br/>
+    /// This policy adds appropriate CORS headers to allow browser-based clients to make cross-domain requests.<br/>
+    /// It creates a cross-domain policy XML document that is consumed by Silverlight and Flash clients.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cross-domain-policy">cross-domain</a> policy.
     /// </summary>
-    /// <param name="policy"></param>
+    /// <param name="policy">
+    /// XML-formatted cross-domain policy document that specifies allowed domains. Policy expressions are not allowed.
+    /// </param>
     void CrossDomain(string policy);
 
     /// <summary>
