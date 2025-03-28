@@ -137,9 +137,13 @@ public interface IInboundContext : IHaveExpressionContext
     void CacheStoreValue(CacheStoreValueConfig config);
 
     /// <summary>
-    /// TODO
+    /// Enforces existence and value of an HTTP header in the request.<br/>
+    /// If the check fails, the policy terminates request processing and returns the specified HTTP status code and error message to the caller.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/check-header-policy">check-header</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the header name, expected values, case sensitivity, and the HTTP status code and error message to return if the check fails.
+    /// </param>
     void CheckHeader(CheckHeaderConfig config);
 
     /// <summary>
