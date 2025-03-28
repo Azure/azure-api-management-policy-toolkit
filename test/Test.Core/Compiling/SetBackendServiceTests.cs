@@ -57,18 +57,18 @@ public class SetBackendServiceTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.SetBackendService(new SetBackendServiceConfig { BaseUrl = "http://contoso.example/api" });
+                context.SetBackendService(new SetBackendServiceConfig { BackendId = "id" });
             }
         }
         """,
         """
         <policies>
             <inbound>
-                <set-backend-service base-url="http://contoso.example/api" />
+                <set-backend-service backend-id="id" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile set backend service policy with base url"
+        DisplayName = "Should compile set backend service policy with backend-id"
     )]
     [DataRow(
         """
@@ -303,6 +303,175 @@ public class SetBackendServiceTests
         </policies>
         """,
         DisplayName = "Should compile set backend service policy with expression in sf listener name"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
+                    BackendId = "dapr",
+                    DaprAppId = "app1"
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="dapr" dapr-app-id="app1" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with dapr app id"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
+                    BackendId = "dapr",
+                    DaprAppId = Exp(context.ExpressionContext)
+                });
+            }
+            public string Exp(ExpressionContext context)
+                => context.User.Email.EndsWith("@contoso.example") ? "app1" : "app2";
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="dapr" dapr-app-id="@(context.User.Email.EndsWith("@contoso.example") ? "app1" : "app2")" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with expression in dapr app id"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
+                    BackendId = "dapr",
+                    DaprMethod = "method1"
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="dapr" dapr-method="method1" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with dapr method"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
+                    BackendId = "dapr",
+                    DaprMethod = Exp(context.ExpressionContext)
+                });
+            }
+            public string Exp(ExpressionContext context)
+                => context.User.Email.EndsWith("@contoso.example") ? "method1" : "method2";
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="dapr" dapr-method="@(context.User.Email.EndsWith("@contoso.example") ? "method1" : "method2")" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with expression in dapr method"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
+                    BackendId = "dapr",
+                    DaprNamespace = "namespace1"
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="dapr" dapr-namespace="namespace1" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with dapr namespace"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
+                    BackendId = "dapr",
+                    DaprNamespace = Exp(context.ExpressionContext)
+                });
+            }
+            public string Exp(ExpressionContext context)
+                => context.User.Email.EndsWith("@contoso.example") ? "namespace1" : "namespace2";
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="dapr" dapr-namespace="@(context.User.Email.EndsWith("@contoso.example") ? "namespace1" : "namespace2")" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with expression in dapr namespace"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
+                    BackendId = "dapr",
+                    DaprAppId = "app1",
+                    DaprMethod = "method1",
+                    DaprNamespace = "namespace1"
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="dapr" dapr-app-id="app1" dapr-method="method1" dapr-namespace="namespace1" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with all dapr properties"
     )]
     public void ShouldCompileSetBackendServicePolicy(string code, string expectedXml)
     {

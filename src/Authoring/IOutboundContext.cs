@@ -235,5 +235,11 @@ public interface IOutboundContext : IHaveExpressionContext
     /// TODO
     /// </summary>
     /// <param name="config"></param>
+    void XslTransform(XslTransformConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
     void InvokeDarpBinding(InvokeDarpBindingConfig config);
 }
