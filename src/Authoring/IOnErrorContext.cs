@@ -23,9 +23,13 @@ public interface IOnErrorContext : IHaveExpressionContext
     void Base();
 
     /// <summary>
-    /// TODO
+    /// Retrieves a value from the cache using a key and stores it in a variable for later use.<br/>
+    /// Used to efficiently access cached values in policy expressions.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-lookup-value-policy">cache-lookup-value</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the cache key, variable name, optional default value, and optional caching type.
+    /// </param>
     void CacheLookupValue(CacheLookupValueConfig config);
 
     /// <summary>
