@@ -307,9 +307,12 @@ public interface IInboundContext : IHaveExpressionContext
     void MockResponse(MockResponseConfig? config = null);
 
     /// <summary>
-    /// TODO
+    /// Configures a proxy server for forwarding requests.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/proxy-policy">proxy</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the proxy server URL, and optionally the username and password for authentication.
+    /// </param>
     void Proxy(ProxyConfig config);
 
     /// <summary>
