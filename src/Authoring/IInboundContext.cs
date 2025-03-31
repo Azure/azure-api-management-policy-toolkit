@@ -577,9 +577,12 @@ public interface IInboundContext : IHaveExpressionContext
     void ValidateContent(ValidateContentConfig config);
 
     /// <summary>
-    /// TODO
+    /// Validates a JWT (JSON Web Token) in the request.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-jwt-policy">validate-jwt</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the validation parameters, including token location, validation settings, and expected claims.
+    /// </param>
     void ValidateJwt(ValidateJwtConfig config);
 
     /// <summary>
