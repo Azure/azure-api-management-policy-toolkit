@@ -334,9 +334,12 @@ public interface IInboundContext : IHaveExpressionContext
     void Quota(QuotaConfig config);
 
     /// <summary>
-    /// TODO
+    /// Enforces a quota on the number of calls or bandwidth usage within a specified renewal period, based on a key.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/quota-by-key-policy">quota-by-key</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the counter key, renewal period, and optional calls, bandwidth, increment condition, increment count, and first period start.
+    /// </param>
     void QuotaByKey(QuotaByKeyConfig config);
 
     /// <summary>
