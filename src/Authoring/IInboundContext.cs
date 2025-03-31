@@ -343,9 +343,13 @@ public interface IInboundContext : IHaveExpressionContext
     void QuotaByKey(QuotaByKeyConfig config);
 
     /// <summary>
-    /// TODO
+    /// Limits the call rate to a backend service to prevent overuse and protect backend resources.<br/>
+    /// This policy enforces a limit on the number of calls allowed within a specified renewal period.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/rate-limit-policy">rate-limit</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the maximum number of calls allowed, renewal period, and optional headers or variables for tracking remaining calls and retry information.
+    /// </param>
     void RateLimit(RateLimitConfig config);
 
     /// <summary>
