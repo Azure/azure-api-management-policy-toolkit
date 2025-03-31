@@ -12,11 +12,13 @@ public record ValidateHeadersConfig
     /// <summary>
     /// Action to take for specified headers. Possible values are "allow" or "deny".
     /// </summary>
+    [ExpressionAllowed]
     public required string SpecifiedHeaderAction { get; init; }
 
     /// <summary>
     /// Action to take for unspecified headers. Possible values are "allow" or "deny".
     /// </summary>
+    [ExpressionAllowed]
     public required string UnspecifiedHeaderAction { get; init; }
 
     /// <summary>
@@ -43,5 +45,6 @@ public record ValidateHeader
     /// <summary>
     /// Action to take for this header. Possible values are "allow" or "deny".
     /// </summary>
+    [ExpressionAllowed]
     public required string Action { get; init; }
 }

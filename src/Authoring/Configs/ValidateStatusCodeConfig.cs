@@ -12,6 +12,7 @@ public record ValidateStatusCodeConfig
     /// <summary>
     /// Action to take for unspecified status codes. Possible values are "allow" or "deny".
     /// </summary>
+    [ExpressionAllowed]
     public required string UnspecifiedStatusCodeAction { get; init; }
 
     /// <summary>
@@ -38,5 +39,6 @@ public record ValidateStatusCode
     /// <summary>
     /// Action to take for this status code. Possible values are "allow" or "deny".
     /// </summary>
+    [ExpressionAllowed]
     public required string Action { get; init; }
 }

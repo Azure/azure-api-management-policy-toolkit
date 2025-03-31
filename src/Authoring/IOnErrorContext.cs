@@ -15,7 +15,7 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// <param name="values">
     /// Specifies the values of the header to be set or appended. Policy expressions are allowed.
     /// </param>
-    void AppendHeader(string name, params string[] values);
+    void AppendHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
     /// The base policy used to specify when parent scope policy should be executed
@@ -145,7 +145,7 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// <param name="name">
     /// Specifies name of the header to be deleted. Policy expressions are allowed.
     /// </param>
-    void RemoveHeader(string name);
+    void RemoveHeader([ExpressionAllowed] string name);
 
     /// <summary>
     /// Aborts pipeline execution and returns the specified response directly to the caller.<br/>

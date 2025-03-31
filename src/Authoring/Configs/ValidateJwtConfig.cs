@@ -11,46 +11,55 @@ public record ValidateJwtConfig
     /// <summary>
     /// Specifies the name of the HTTP header that contains the JWT.
     /// </summary>
+    [ExpressionAllowed]
     public string? HeaderName { get; init; }
 
     /// <summary>
     /// Specifies the name of the query parameter that contains the JWT.
     /// </summary>
+    [ExpressionAllowed]
     public string? QueryParameterName { get; init; }
 
     /// <summary>
     /// Specifies the JWT token value directly.
     /// </summary>
+    [ExpressionAllowed]
     public string? TokenValue { get; init; }
 
     /// <summary>
     /// Specifies the HTTP status code to return if validation fails.
     /// </summary>
+    [ExpressionAllowed]
     public int? FailedValidationHttpCode { get; init; }
 
     /// <summary>
     /// Specifies the error message to return if validation fails.
     /// </summary>
+    [ExpressionAllowed]
     public string? FailedValidationErrorMessage { get; init; }
 
     /// <summary>
     /// Specifies whether the token must have an expiration time.
     /// </summary>
+    [ExpressionAllowed]
     public bool? RequireExpirationTime { get; init; }
 
     /// <summary>
     /// Specifies the required scheme for the token.
     /// </summary>
+    [ExpressionAllowed]
     public string? RequireScheme { get; init; }
 
     /// <summary>
     /// Specifies whether the token must be signed.
     /// </summary>
+    [ExpressionAllowed]
     public bool? RequireSignedTokens { get; init; }
 
     /// <summary>
     /// Specifies the allowed clock skew in seconds.
     /// </summary>
+    [ExpressionAllowed]
     public int? ClockSkew { get; init; }
 
     /// <summary>
@@ -76,11 +85,13 @@ public record ValidateJwtConfig
     /// <summary>
     /// Specifies the allowed audiences.
     /// </summary>
+    [ExpressionAllowed]
     public string[]? Audiences { get; init; }
 
     /// <summary>
     /// Specifies the allowed issuers.
     /// </summary>
+    [ExpressionAllowed]
     public string[]? Issuers { get; init; }
 
     /// <summary>

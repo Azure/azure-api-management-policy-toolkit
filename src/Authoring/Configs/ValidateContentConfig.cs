@@ -12,16 +12,19 @@ public record ValidateContentConfig
     /// <summary>
     /// Action to take when the content type is unspecified.
     /// </summary>
+    [ExpressionAllowed]
     public required string UnspecifiedContentTypeAction { get; init; }
 
     /// <summary>
     /// Maximum allowed size of the content in bytes.
     /// </summary>
+    [ExpressionAllowed]
     public required int MaxSize { get; init; }
 
     /// <summary>
     /// Action to take when the content size exceeds the maximum allowed size.
     /// </summary>
+    [ExpressionAllowed]
     public required string SizeExceededAction { get; init; }
 
     /// <summary>

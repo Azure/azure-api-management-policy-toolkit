@@ -14,7 +14,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <param name="values">
     /// Specifies the values of the header to be set or appended. Policy expressions are allowed.
     /// </param>
-    void AppendHeader(string name, params string[] values);
+    void AppendHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
     /// Stores the current Azure OpenAI request and response in the semantic cache for future lookup.<br/>
@@ -194,7 +194,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <param name="name">
     /// Specifies name of the header to be deleted. Policy expressions are allowed.
     /// </param>
-    void RemoveHeader(string name);
+    void RemoveHeader([ExpressionAllowed] string name);
 
     /// <summary>
     /// Aborts pipeline execution and returns the specified response directly to the caller.<br/>
@@ -245,7 +245,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <param name="config">
     /// Optional configuration specifying template, xsi:nil, and parse date settings.
     /// </param>
-    void SetBody(string body, SetBodyConfig? config = null);
+    void SetBody([ExpressionAllowed] string body, SetBodyConfig? config = null);
 
     /// <summary>
     /// Adds header of specified name with values or overrides values if header already exists.<br />
@@ -349,7 +349,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Determines whether the wait policy waits for all immediate child policies to be completed or just one.<br/>
     /// Policy expressions are allowed.
     /// </param>
-    void Wait(Action section, string? waitFor = null);
+    void Wait(Action section, [ExpressionAllowed] string? waitFor = null);
 
     /// <summary>
     /// TODO

@@ -204,5 +204,5 @@ public interface IBackendContext : IHaveExpressionContext
     /// Determines whether the wait policy waits for all immediate child policies to be completed or just one.<br/>
     /// Policy expressions are allowed.
     /// </param>
-    void Wait(Action section, string? waitFor = null);
+    void Wait(Action section, [ExpressionAllowed] string? waitFor = null);
 }
