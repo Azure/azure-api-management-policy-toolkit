@@ -124,11 +124,15 @@ public interface IBackendContext : IHaveExpressionContext
     void ReturnResponse(ReturnResponseConfig config);
 
     /// <summary>
-    /// The retry policy executes its child policies once and then retries their execution until the retry condition
-    /// becomes false or retry count is exhausted.
+    /// Executes its child policies once and then retries their execution until the retry condition becomes false or retry count is exhausted.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/retry-policy">retry</a> policy.
     /// </summary>
-    /// <param name="config">Configuration of retry policy</param>
-    /// <param name="section">Child policies which should be retried</param>
+    /// <param name="config">
+    /// Configuration specifying retry conditions, retry count, intervals, and other retry behavior settings.
+    /// </param>
+    /// <param name="section">
+    /// Child policies which should be retried.
+    /// </param>
     void Retry(RetryConfig config, Action section);
 
     /// <summary>
