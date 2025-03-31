@@ -252,6 +252,16 @@ public interface IInboundContext : IHaveExpressionContext
     void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 
     /// <summary>
+    /// Evaluates the content safety of a prompt using a Language Model (LLM) service.<br/>
+    /// This policy can be used to ensure that prompts adhere to specified safety standards.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-content-safety-policy">llm-content-safety</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the backend service ID, optional shield prompt setting, content safety categories, and block lists.
+    /// </param>
+    void LlmContentSafety(LlmContentSafetyConfig config);
+
+    /// <summary>
     /// Emits metrics about token usage from Language Model service calls.<br/>
     /// This policy captures and records token usage information for monitoring and analysis purposes.<br/>
     /// Use this policy to track token consumption across LLM operations with custom dimensions.<br/>
