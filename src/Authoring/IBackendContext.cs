@@ -184,9 +184,12 @@ public interface IBackendContext : IHaveExpressionContext
     void SetVariable(string name, [ExpressionAllowed] object value);
 
     /// <summary>
-    /// TODO
+    /// Adds a trace message to the trace log.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/trace-policy">trace</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the trace source, message, severity, and optional metadata.
+    /// </param>
     void Trace(TraceConfig config);
 
     /// <summary>
