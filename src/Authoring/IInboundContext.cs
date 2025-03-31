@@ -627,8 +627,13 @@ public interface IInboundContext : IHaveExpressionContext
     void XmlToJson(XmlToJsonConfig config);
 
     /// <summary>
-    /// TODO
+    /// Transforms XML in request or response body using XSL transform (XSLT).<br/>
+    /// Can transform XML in the request body, response body, or a context variable.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xsl-transform-policy">xsl-transform</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the transformation parameters, including where to apply the transformation (request, response, or variable),
+    /// the XSL stylesheet to use, content type, and error handling options.
+    /// </param>
     void XslTransform(XslTransformConfig config);
 }
