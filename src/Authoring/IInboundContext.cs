@@ -410,11 +410,18 @@ public interface IInboundContext : IHaveExpressionContext
     void Retry(RetryConfig config, Action section);
 
     /// <summary>
-    /// TODO
+    /// Rewrites the request URL to the specified template.<br/>
+    /// This policy modifies the request URL by rewriting the URI path and optionally copying unmatched query parameters.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/rewrite-uri-policy">rewrite-uri</a> policy.
     /// </summary>
-    /// <param name="template"></param>
-    /// <param name="copyUnmatchedParams"></param>
-    void RewriteUri(string template, bool copyUnmatchedParams = true);
+    /// <param name="template">
+    /// Specifies the URI template to rewrite the request URL to. Policy expressions are allowed.
+    /// </param>
+    /// <param name="copyUnmatchedParams">
+    /// Optional. Specifies whether to copy unmatched query parameters from the original request URL to the rewritten URL.
+    /// Default value is true. Policy expressions are allowed.
+    /// </param>
+    void RewriteUri([ExpressionAllowed] string template, [ExpressionAllowed] bool copyUnmatchedParams = true);
 
     /// <summary>
     /// TODO
