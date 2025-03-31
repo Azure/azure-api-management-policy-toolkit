@@ -211,9 +211,12 @@ public interface IOnErrorContext : IHaveExpressionContext
     void SetHeaderIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
-    /// TODO
+    /// Sets the HTTP method for the request.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-method-policy">set-method</a> policy.
     /// </summary>
-    /// <param name="method"></param>
+    /// <param name="method">
+    /// Specifies the HTTP method to set for the request.
+    /// </param>
     void SetMethod(string method);
 
     /// <summary>
