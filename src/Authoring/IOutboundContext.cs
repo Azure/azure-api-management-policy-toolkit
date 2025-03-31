@@ -302,9 +302,12 @@ public interface IOutboundContext : IHaveExpressionContext
     void Trace(TraceConfig config);
 
     /// <summary>
-    /// TODO
+    /// Validates the client certificate presented in the request.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-client-certificate-policy">validate-client-certificate</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the validation parameters, including revocation, trust, validity period, and identities.
+    /// </param>
     void ValidateClientCertificate(ValidateClientCertificateConfig config);
 
     /// <summary>
