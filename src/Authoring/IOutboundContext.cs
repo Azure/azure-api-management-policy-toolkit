@@ -311,9 +311,12 @@ public interface IOutboundContext : IHaveExpressionContext
     void ValidateClientCertificate(ValidateClientCertificateConfig config);
 
     /// <summary>
-    /// TODO
+    /// Validates the content of the request or response against specified rules.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-content-policy">validate-content</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the validation rules, including content type, size limits, and schema validation.
+    /// </param>
     void ValidateContent(ValidateContentConfig config);
 
     /// <summary>
