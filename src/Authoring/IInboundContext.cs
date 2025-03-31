@@ -586,9 +586,12 @@ public interface IInboundContext : IHaveExpressionContext
     void ValidateJwt(ValidateJwtConfig config);
 
     /// <summary>
-    /// TODO
+    /// Validates an OData request to ensure it conforms to OData protocol specifications.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-odata-request-policy">validate-odata-request</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the validation parameters, including OData version, size limits, and error handling.
+    /// </param>
     void ValidateOdataRequest(ValidateOdataRequestConfig config);
 
     /// <summary>
