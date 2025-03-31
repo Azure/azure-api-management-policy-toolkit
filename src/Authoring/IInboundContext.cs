@@ -433,9 +433,12 @@ public interface IInboundContext : IHaveExpressionContext
     void SendOneWayRequest(SendOneWayRequestConfig config);
 
     /// <summary>
-    /// TODO
+    /// Sends an HTTP request to a specified URL and optionally waits for a response.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/send-request-policy">send-request</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the request details including URL, method, headers, body, authentication, and proxy settings.
+    /// </param>
     void SendRequest(SendRequestConfig config);
 
     /// <summary>
