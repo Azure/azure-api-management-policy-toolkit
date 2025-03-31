@@ -325,9 +325,12 @@ public interface IInboundContext : IHaveExpressionContext
     void PublishToDarp(PublishToDarpConfig config);
 
     /// <summary>
-    /// TODO
+    /// Enforces a quota on the number of calls or bandwidth usage within a specified renewal period.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/quota-policy">quota</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the quota limits, renewal period, and optional API and operation-specific quotas.
+    /// </param>
     void Quota(QuotaConfig config);
 
     /// <summary>
