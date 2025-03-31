@@ -236,10 +236,15 @@ public interface IOutboundContext : IHaveExpressionContext
     void SendRequest(SendRequestConfig config);
 
     /// <summary>
-    /// TODO
+    /// Sets or replaces the request or response body with the specified value.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-body-policy">set-body</a> policy.
     /// </summary>
-    /// <param name="body"></param>
-    /// <param name="config"></param>
+    /// <param name="body">
+    /// The value to set as the body. Policy expressions are allowed.
+    /// </param>
+    /// <param name="config">
+    /// Optional configuration specifying template, xsi:nil, and parse date settings.
+    /// </param>
     void SetBody(string body, SetBodyConfig? config = null);
 
     /// <summary>
