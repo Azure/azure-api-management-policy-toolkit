@@ -520,9 +520,12 @@ public interface IInboundContext : IHaveExpressionContext
     void SetQueryParameterIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
-    /// TODO
+    /// Sets the HTTP status code and reason phrase for the response.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-status-policy">set-status</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the status code and reason phrase.
+    /// </param>
     void SetStatus(StatusConfig config);
 
     /// <summary>
