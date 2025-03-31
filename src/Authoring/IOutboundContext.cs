@@ -248,7 +248,8 @@ public interface IOutboundContext : IHaveExpressionContext
     void SetBody(string body, SetBodyConfig? config = null);
 
     /// <summary>
-    /// Adds header of specified name with values or overrides values if header already exists.
+    /// Adds header of specified name with values or overrides values if header already exists.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
     /// </summary>
     /// <param name="name">
     /// Specifies name of the header to be added. Policy expressions are allowed.
@@ -256,10 +257,11 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <param name="values">
     /// Specifies the values of the header to be set. Policy expressions are allowed.
     /// </param>
-    void SetHeader(string name, params string[] values);
+    void SetHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
-    /// Sets header of specified name and values if header not already exist.
+    /// Sets header of specified name and values if header not already exist.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
     /// </summary>
     /// <param name="name">
     /// Specifies name of the header to be added. Policy expressions are allowed.
@@ -267,7 +269,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <param name="values">
     /// Specifies the values of the header to be set. Policy expressions are allowed.
     /// </param>
-    void SetHeaderIfNotExist(string name, params string[] values);
+    void SetHeaderIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
     /// TODO

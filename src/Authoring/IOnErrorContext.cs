@@ -196,7 +196,7 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// <param name="values">
     /// Specifies the values of the header to be set. Policy expressions are allowed.
     /// </param>
-    void SetHeader(string name, params string[] values);
+    void SetHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
     /// Sets header of specified name and values if header not already exist.<br />
@@ -208,7 +208,7 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// <param name="values">
     /// Specifies the values of the header to be set. Policy expressions are allowed.
     /// </param>
-    void SetHeaderIfNotExist(string name, params string[] values);
+    void SetHeaderIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
     /// TODO
