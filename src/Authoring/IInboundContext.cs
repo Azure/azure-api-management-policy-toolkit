@@ -595,23 +595,27 @@ public interface IInboundContext : IHaveExpressionContext
     void ValidateOdataRequest(ValidateOdataRequestConfig config);
 
     /// <summary>
-    /// TODO
+    /// Validates the parameters of the request against specified rules.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-parameters-policy">validate-parameters</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the validation rules for headers, query parameters, and path parameters, including actions for specified and unspecified parameters.
+    /// </param>
     void ValidateParameters(ValidateParametersConfig config);
 
     /// <summary>
-    ///     The wait policy executes its immediate child policies in parallel, and waits for either all or one of its immediate
-    ///     child policies to complete before it completes.
-    ///     The wait policy can have as its immediate child policies one or more of the following: send-request,
-    ///     cache-lookup-value, and choose policies.
+    /// Executes its immediate child policies in parallel, and waits for either all or one of its immediate
+    /// child policies to complete before it completes.<br/>
+    /// The wait policy can have as its immediate child policies one or more of the following: send-request,
+    /// cache-lookup-value, and choose policies.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/wait-policy">wait</a> policy.
     /// </summary>
-    /// <param name="section">Child policies which should be awaited</param>
+    /// <param name="section">Child policies which should be awaited.</param>
     /// <param name="waitFor">
-    ///     Determines whether the wait policy waits for all immediate child policies to be completed or just one.
-    ///     Policy expressions are allowed.
+    /// Determines whether the wait policy waits for all immediate child policies to be completed or just one.<br/>
+    /// Policy expressions are allowed.
     /// </param>
-    void Wait(Action section, string? waitFor = null);
+    void Wait(Action section, [ExpressionAllowed] string? waitFor = null);
 
     /// <summary>
     /// TODO
