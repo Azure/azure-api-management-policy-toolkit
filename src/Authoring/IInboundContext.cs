@@ -363,7 +363,10 @@ public interface IInboundContext : IHaveExpressionContext
     void RateLimitByKey(RateLimitByKeyConfig config);
 
     /// <summary>
-    /// TODO
+    /// Redirects URLs in the response content to a specified hostname and scheme.<br/>
+    /// This policy rewrites URLs in the response body to point to the gateway URL instead of the backend service URL.<br/>
+    /// Useful when backend services return absolute URLs that need to be redirected through the API Management gateway.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/redirect-content-urls-policy">redirect-content-urls</a> policy.
     /// </summary>
     void RedirectContentUrls();
 
