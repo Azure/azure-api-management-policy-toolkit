@@ -197,9 +197,12 @@ public interface IOutboundContext : IHaveExpressionContext
     void RemoveHeader(string name);
 
     /// <summary>
-    /// TODO
+    /// Aborts pipeline execution and returns the specified response directly to the caller.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/return-response-policy">return-response</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the response details including status code, headers, body, or a response variable.
+    /// </param>
     void ReturnResponse(ReturnResponseConfig config);
 
     /// <summary>

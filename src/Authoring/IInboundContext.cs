@@ -377,18 +377,24 @@ public interface IInboundContext : IHaveExpressionContext
     /// <param name="name">
     /// Specifies name of the header to be deleted. Policy expressions are allowed.
     /// </param>
-    void RemoveHeader(string name);
+    void RemoveHeader([ExpressionAllowed] string name);
 
     /// <summary>
-    /// 
+    /// Deletes query parameter of specified name.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy with exist-action="delete".
     /// </summary>
-    /// <param name="name"></param>
-    void RemoveQueryParameter(string name);
+    /// <param name="name">
+    /// Specifies name of the query parameter to be deleted. Policy expressions are allowed.
+    /// </param>
+    void RemoveQueryParameter([ExpressionAllowed] string name);
 
     /// <summary>
-    /// TODO
+    /// Aborts pipeline execution and returns the specified response directly to the caller.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/return-response-policy">return-response</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the response details including status code, headers, body, or a response variable.
+    /// </param>
     void ReturnResponse(ReturnResponseConfig config);
 
     /// <summary>
