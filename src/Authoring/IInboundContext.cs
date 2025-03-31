@@ -550,9 +550,12 @@ public interface IInboundContext : IHaveExpressionContext
     void Trace(TraceConfig config);
 
     /// <summary>
-    /// TODO
+    /// Validates the Azure Active Directory token in the request.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-azure-ad-token-policy">validate-azure-ad-token</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the validation parameters, including tenant ID, token location, validation settings, and expected claims.
+    /// </param>
     void ValidateAzureAdToken(ValidateAzureAdTokenConfig config);
 
     /// <summary>
