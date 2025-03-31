@@ -320,15 +320,21 @@ public interface IOutboundContext : IHaveExpressionContext
     void ValidateContent(ValidateContentConfig config);
 
     /// <summary>
-    /// TODO
+    /// Validates the headers in the request against specified rules.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-headers-policy">validate-headers</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the validation rules for headers, including actions for specified and unspecified headers.
+    /// </param>
     void ValidateHeaders(ValidateHeadersConfig config);
 
     /// <summary>
-    /// TODO
+    /// Validates the status code in the response against specified rules.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-status-code-policy">validate-status-code</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the validation rules for status codes, including actions for specified and unspecified status codes.
+    /// </param>
     void ValidateStatusCode(ValidateStatusCodeConfig config);
 
     /// <summary>
