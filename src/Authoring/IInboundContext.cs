@@ -618,9 +618,12 @@ public interface IInboundContext : IHaveExpressionContext
     void Wait(Action section, [ExpressionAllowed] string? waitFor = null);
 
     /// <summary>
-    /// TODO
+    /// Converts XML content to JSON format.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xml-to-json-policy">xml-to-json</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying how to convert XML to JSON, including options for applying the policy, considering the Accept header, and more.
+    /// </param>
     void XmlToJson(XmlToJsonConfig config);
 
     /// <summary>
