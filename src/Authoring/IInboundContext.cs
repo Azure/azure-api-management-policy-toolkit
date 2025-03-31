@@ -496,18 +496,28 @@ public interface IInboundContext : IHaveExpressionContext
     void SetMethod(string method);
 
     /// <summary>
-    /// 
+    /// Sets or replaces the value of a query parameter in the request URL.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy.
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="values"></param>
-    void SetQueryParameter(string name, params string[] values);
+    /// <param name="name">
+    /// Specifies the name of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    void SetQueryParameter([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
-    /// 
+    /// Sets the value of a query parameter in the request URL if it does not already exist.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy.
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="values"></param>
-    void SetQueryParameterIfNotExist(string name, params string[] values);
+    /// <param name="name">
+    /// Specifies the name of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    void SetQueryParameterIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
     /// TODO
