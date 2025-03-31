@@ -281,11 +281,16 @@ public interface IOutboundContext : IHaveExpressionContext
     void SetStatus(StatusConfig config);
 
     /// <summary>
-    /// TODO
+    /// Sets a variable with the specified name and value.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-variable-policy">set-variable</a> policy.
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="value"></param>
-    void SetVariable(string name, object value);
+    /// <param name="name">
+    /// Specifies the name of the variable to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="value">
+    /// Specifies the value of the variable to be set. Policy expressions are allowed.
+    /// </param>
+    void SetVariable(string name, [ExpressionAllowed] object value);
 
     /// <summary>
     /// TODO
