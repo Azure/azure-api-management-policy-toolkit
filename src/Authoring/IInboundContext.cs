@@ -636,3 +636,4 @@ public interface IInboundContext : IHaveExpressionContext
     /// the XSL stylesheet to use, content type, and error handling options.
     /// </param>
     void XslTransform(XslTransformConfig config);
+}
