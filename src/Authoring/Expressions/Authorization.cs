@@ -4,25 +4,25 @@
 namespace Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
 /// <summary>
-/// Represents an authorization object with access token and claims.
+/// Represents an authorization object containing an access token and related claims.
 /// </summary>
 public class Authorization
 {
     /// <summary>
-    /// Gets the bearer access token to authorize a backend HTTP request.
+    /// Gets the access token used to authorize a backend HTTP request.
     /// </summary>
     public string AccessToken { get; }
 
     /// <summary>
-    /// Gets the claims returned from the authorization server's token response API.
+    /// Gets a dictionary containing claims associated with the access token.
     /// </summary>
     public IReadOnlyDictionary<string, object> Claims { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Authorization"/> class.
     /// </summary>
-    /// <param name="accessToken">The bearer access token.</param>
-    /// <param name="claims">The claims returned from the authorization server's token response API.</param>
+    /// <param name="accessToken">The access token used to authorize a backend HTTP request.</param>
+    /// <param name="claims">A dictionary containing claims associated with the access token.</param>
     public Authorization(string accessToken, IReadOnlyDictionary<string, object> claims)
     {
         AccessToken = accessToken;

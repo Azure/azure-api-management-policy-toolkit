@@ -4,77 +4,67 @@
 namespace Azure.ApiManagement.PolicyToolkit.Authoring;
 
 /// <summary>
-/// TODO
+/// Configuration for the quota policy, specifying the quota limits, renewal period, and optional API and operation-specific quotas.
 /// </summary>
 public record QuotaConfig : BaseQuotaConfig
 {
     /// <summary>
-    /// TODO
+    /// Specifies the renewal period for the quota in seconds. Policy expressions are not allowed.
     /// </summary>
     public required int RenewalPeriod { get; init; }
 
     /// <summary>
-    /// TODO
+    /// Specifies the API-specific quotas.
     /// </summary>
     public ApiQuota[]? Apis { get; init; }
 }
 
 /// <summary>
-/// TODO
+/// Configuration for API-specific quotas.
 /// </summary>
 public record ApiQuota : EntityQuotaConfig
 {
     /// <summary>
-    /// TODO
+    /// Specifies the operation-specific quotas.
     /// </summary>
     public OperationQuota[]? Operations { get; init; }
 }
 
 /// <summary>
-/// TODO
+/// Configuration for operation-specific quotas.
 /// </summary>
 public record OperationQuota : EntityQuotaConfig
 {
 }
 
+/// <summary>
+/// Base configuration for quotas, specifying the quota limits.
+/// </summary>
 public abstract record EntityQuotaConfig : BaseQuotaConfig
 {
     /// <summary>
-    /// TODO
+    /// Specifies the name of the entity (API or operation).
     /// </summary>
     public string? Name { get; init; }
 
     /// <summary>
-    /// TODO
+    /// Specifies the ID of the entity (API or operation).
     /// </summary>
     public string? Id { get; init; }
-
-    public EntityQuotaConfig()
-    {
-        if (Name is null && Id is null)
-        {
-            throw new ArgumentNullException($"{nameof(Name)} or {nameof(Id)} need to be specified");
-        }
-    }
 }
 
+/// <summary>
+/// Base configuration for quotas, specifying the quota limits.
+/// </summary>
 public abstract record BaseQuotaConfig
 {
     /// <summary>
-    /// TODO
+    /// Specifies the maximum number of calls allowed within the renewal period.
     /// </summary>
     public int? Calls { get; init; }
 
     /// <summary>
-    /// TODO
+    /// Specifies the maximum bandwidth allowed within the renewal period in kilobytes.
     /// </summary>
     public int? Bandwidth { get; init; }
-
-    public BaseQuotaConfig()
-    {
-        if (this.Calls is null && this.Bandwidth is null)
-        {
-            throw new ArgumentNullException($"{nameof(Calls)} or {nameof(Bandwidth)} need to be specified");
-        }
-    }
 }
