@@ -353,9 +353,13 @@ public interface IInboundContext : IHaveExpressionContext
     void RateLimit(RateLimitConfig config);
 
     /// <summary>
-    /// TODO
+    /// Limits the call rate by a specified key to prevent overuse and protect backend resources.<br/>
+    /// This policy enforces a limit on the number of calls allowed within a specified renewal period, based on a key.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/rate-limit-by-key-policy">rate-limit-by-key</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the maximum number of calls allowed, renewal period, counter key, and optional increment conditions, headers, or variables for tracking remaining calls and retry information.
+    /// </param>
     void RateLimitByKey(RateLimitByKeyConfig config);
 
     /// <summary>
