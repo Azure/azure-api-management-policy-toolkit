@@ -128,4 +128,10 @@ public interface IBackendContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void Trace(TraceConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void SetStatus(StatusConfig config);
 }

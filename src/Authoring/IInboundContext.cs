@@ -418,4 +418,10 @@ public interface IInboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void PublishToDarp(PublishToDarpConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void SetStatus(StatusConfig config);
 }

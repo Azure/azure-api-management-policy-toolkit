@@ -242,4 +242,10 @@ public interface IOutboundContext : IHaveExpressionContext
     /// </summary>
     /// <param name="config"></param>
     void InvokeDarpBinding(InvokeDarpBindingConfig config);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="config"></param>
+    void SetStatus(StatusConfig config);
 }
