@@ -424,9 +424,12 @@ public interface IInboundContext : IHaveExpressionContext
     void RewriteUri([ExpressionAllowed] string template, [ExpressionAllowed] bool copyUnmatchedParams = true);
 
     /// <summary>
-    /// TODO
+    /// Sends a one-way HTTP request to a specified URL without waiting for a response.
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/send-one-way-request-policy">send-one-way-request</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the request mode, timeout, URL, method, headers, body, authentication, and proxy settings.
+    /// </param>
     void SendOneWayRequest(SendOneWayRequestConfig config);
 
     /// <summary>
