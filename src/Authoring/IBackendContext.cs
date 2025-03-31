@@ -154,9 +154,12 @@ public interface IBackendContext : IHaveExpressionContext
     void SendRequest(SendRequestConfig config);
 
     /// <summary>
-    /// TODO
+    /// Sets the backend service for the request.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-backend-service-policy">set-backend-service</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying the backend service details, including base URL, backend ID, Service Fabric settings, and Dapr settings.
+    /// </param>
     void SetBackendService(SetBackendServiceConfig config);
 
     /// <summary>
