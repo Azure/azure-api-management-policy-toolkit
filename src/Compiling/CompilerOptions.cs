@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System.Xml;
@@ -31,6 +31,6 @@ public class CompilerOptions
         OutputFolder = Path.GetFullPath(OutputFolder);
 
         FileExtension = configuration["ext"] ?? "xml";
-        Format = bool.TryParse(configuration["format"] ?? "false", out var fmt) && fmt;
+        Format = bool.TryParse(configuration["format"] ?? "true", out var fmt) && fmt;
     }
 }
