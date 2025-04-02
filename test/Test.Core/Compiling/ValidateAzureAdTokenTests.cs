@@ -319,54 +319,6 @@ public class ValidateAzureAdTokenTests
                 context.ValidateAzureAdToken(new ValidateAzureAdTokenConfig
                 {
                     TenantId = "{{aad-tenant-id}}",
-                    AllowProtectedForwardedTokens = true
-                });
-            }
-        }
-        """,
-        """
-        <policies>
-            <inbound>
-                <validate-azure-ad-token tenant-id="{{aad-tenant-id}}" allow-protected-forwarded-tokens="true" />
-            </inbound>
-        </policies>
-        """,
-        DisplayName = "Should compile validate-azure-ad-token policy with allow-protected-forwarded-tokens"
-    )]
-    [DataRow(
-        """
-        [Document]
-        public class PolicyDocument : IDocument
-        {
-            public void Inbound(IInboundContext context) {
-                context.ValidateAzureAdToken(new ValidateAzureAdTokenConfig
-                {
-                    TenantId = "{{aad-tenant-id}}",
-                    AllowProtectedForwardedTokens = GetAllowProtectedForwardedTokens(context.ExpressionContext)
-                });
-            }
-            bool GetAllowProtectedForwardedTokens(IExpressionContext context) => (bool)context.Variable["allow-protected-forwarded-tokens"];
-        }
-        """,
-        """
-        <policies>
-            <inbound>
-                <validate-azure-ad-token tenant-id="{{aad-tenant-id}}" allow-protected-forwarded-tokens="@((bool)context.Variable["allow-protected-forwarded-tokens"])" />
-            </inbound>
-        </policies>
-        """,
-        DisplayName =
-            "Should compile validate-azure-ad-token policy with expression in allow-protected-forwarded-tokens"
-    )]
-    [DataRow(
-        """
-        [Document]
-        public class PolicyDocument : IDocument
-        {
-            public void Inbound(IInboundContext context) {
-                context.ValidateAzureAdToken(new ValidateAzureAdTokenConfig
-                {
-                    TenantId = "{{aad-tenant-id}}",
                     BackendApplicationIds = ["app-1", "app-2"]
                 });
             }

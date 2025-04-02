@@ -51,12 +51,6 @@ public record ValidateAzureAdTokenConfig
     public string? OutputTokenVariableName { get; init; }
 
     /// <summary>
-    /// Indicates whether to allow protected forwarded tokens.
-    /// </summary>
-    [ExpressionAllowed]
-    public bool? AllowProtectedForwardedTokens { get; init; }
-
-    /// <summary>
     /// The application IDs of the backend services.
     /// </summary>
     public string[]? BackendApplicationIds { get; init; }

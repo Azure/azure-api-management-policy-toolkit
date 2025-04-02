@@ -43,8 +43,6 @@ public class ValidateAzureAdTokenCompiler : IMethodPolicyHandler
             "failed-validation-httpcode");
         element.AddAttribute(values, nameof(ValidateAzureAdTokenConfig.FailedValidationErrorMessage),
             "failed-validation-error-message");
-        element.AddAttribute(values, nameof(ValidateAzureAdTokenConfig.AllowProtectedForwardedTokens),
-            "allow-protected-forwarded-tokens");
         element.AddAttribute(values, nameof(ValidateAzureAdTokenConfig.OutputTokenVariableName),
             "output-token-variable-name");
 
