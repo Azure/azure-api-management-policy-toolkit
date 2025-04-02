@@ -57,16 +57,6 @@ public record ValidateAzureAdTokenConfig
     public bool? AllowProtectedForwardedTokens { get; init; }
 
     /// <summary>
-    /// Indicates whether to allow proof of possession tokens.
-    /// </summary>
-    public bool? AllowProofOfPossessionTokes { get; init; }
-
-    /// <summary>
-    /// The name of the variable to store the proof of possession token.
-    /// </summary>
-    public string? OutputPftTokenVariableName { get; init; }
-
-    /// <summary>
     /// The application IDs of the backend services.
     /// </summary>
     public string[]? BackendApplicationIds { get; init; }
