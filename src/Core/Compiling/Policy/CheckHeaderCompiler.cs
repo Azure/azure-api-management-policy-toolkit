@@ -14,7 +14,7 @@ public class CheckHeaderCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.CheckHeader);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CheckHeaderConfig>(context, "check-header", out var values))
         {

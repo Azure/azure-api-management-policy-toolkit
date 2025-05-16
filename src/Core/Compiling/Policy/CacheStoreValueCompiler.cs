@@ -14,7 +14,7 @@ public class CacheStoreValueCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.CacheStoreValue);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CacheStoreValueConfig>(context, "cache-store-value", out var values))
         {

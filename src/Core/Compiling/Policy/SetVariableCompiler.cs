@@ -14,7 +14,7 @@ public class SetVariableCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.SetVariable);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (node.ArgumentList.Arguments.Count != 2)
         {

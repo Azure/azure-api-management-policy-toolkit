@@ -10,8 +10,8 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Assertions;
 public static class AssertionExtensions
 {
     [Pure]
-    public static CompilationResultAssertion Should(this ICompilationResult compilationResult)
+    public static CompilationResultAssertion Should(this IDocumentCompilationResult documentCompilationResult)
     {
-        return new CompilationResultAssertion(compilationResult);
+        return new CompilationResultAssertion(documentCompilationResult);
     }
 }

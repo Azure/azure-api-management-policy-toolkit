@@ -14,7 +14,7 @@ public class AuthenticationCertificateCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.AuthenticationCertificate);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CertificateAuthenticationConfig>(
                 context,
@@ -49,7 +49,7 @@ public class AuthenticationCertificateCompiler : IMethodPolicyHandler
     }
 
     public static void HandleCertificateAuthentication(
-        ICompilationContext context,
+        IDocumentCompilationContext context,
         XElement element,
         IReadOnlyDictionary<string, InitializerValue> values,
         SyntaxNode node)

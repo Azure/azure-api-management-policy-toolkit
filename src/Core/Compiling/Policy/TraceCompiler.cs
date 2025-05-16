@@ -14,7 +14,7 @@ public class TraceCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.Trace);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<TraceConfig>(context, "trace",
                 out IReadOnlyDictionary<string, InitializerValue>? values))
@@ -57,7 +57,7 @@ public class TraceCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static IEnumerable<object> HandleMetadata(ICompilationContext context, InitializerValue metadata)
+    private static IEnumerable<object> HandleMetadata(IDocumentCompilationContext context, InitializerValue metadata)
     {
         List<object> elements = new();
         foreach (InitializerValue data in metadata.UnnamedValues ?? [])

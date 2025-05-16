@@ -12,7 +12,7 @@ public class BaseCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.Base);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax _)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax _)
     {
         context.AddPolicy(new XElement("base"));
     }

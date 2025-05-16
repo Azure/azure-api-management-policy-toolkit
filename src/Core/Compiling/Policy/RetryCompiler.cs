@@ -22,7 +22,7 @@ public class RetryCompiler : IMethodPolicyHandler
 
     public string MethodName => nameof(IInboundContext.Retry);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (node.ArgumentList.Arguments.Count != 2)
         {
@@ -99,7 +99,7 @@ public class RetryCompiler : IMethodPolicyHandler
         element.AddAttribute(config, nameof(RetryConfig.Delta), "delta");
         element.AddAttribute(config, nameof(RetryConfig.FirstFastRetry), "first-fast-retry");
 
-        SubCompilationContext subContext = new(context, element);
+        SubDocumentCompilationContext subContext = new(context, element);
         _blockCompiler.Value.Compile(subContext, lambda.Block);
 
         context.AddPolicy(element);

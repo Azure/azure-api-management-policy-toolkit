@@ -12,7 +12,7 @@ public class ValidateOdataRequestCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.ValidateOdataRequest);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ValidateOdataRequestConfig>(context, "validate-odata-request",
                 out var values))

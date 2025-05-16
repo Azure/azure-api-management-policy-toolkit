@@ -14,7 +14,7 @@ public class SendOneWayRequestCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.SendOneWayRequest);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<SendOneWayRequestConfig>(context, "send-one-way-request",
                 out IReadOnlyDictionary<string, InitializerValue>? values))
@@ -60,7 +60,8 @@ public class SendOneWayRequestCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private void HandleAuthentication(ICompilationContext context, XElement element, InitializerValue authentication)
+    private void HandleAuthentication(IDocumentCompilationContext context, XElement element,
+        InitializerValue authentication)
     {
         IReadOnlyDictionary<string, InitializerValue>? values = authentication.NamedValues;
         if (values is null)

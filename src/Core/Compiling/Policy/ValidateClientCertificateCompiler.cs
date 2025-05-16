@@ -14,7 +14,7 @@ public class ValidateClientCertificateCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.ValidateClientCertificate);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ValidateClientCertificateConfig>(context, "validate-client-certificate",
                 out IReadOnlyDictionary<string, InitializerValue>? values))
@@ -40,7 +40,7 @@ public class ValidateClientCertificateCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static XElement HandleIdentities(ICompilationContext context, InitializerValue identitiesValue)
+    private static XElement HandleIdentities(IDocumentCompilationContext context, InitializerValue identitiesValue)
     {
         XElement identities = new("identities");
         foreach (InitializerValue identityValue in identitiesValue.UnnamedValues ?? [])

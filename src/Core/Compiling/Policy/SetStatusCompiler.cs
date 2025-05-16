@@ -14,7 +14,7 @@ public class SetStatusCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.SetStatus);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<StatusConfig>(context, "set-status", out var values))
         {
@@ -39,7 +39,7 @@ public class SetStatusCompiler : IMethodPolicyHandler
         context.AddPolicy(statusElement);
     }
 
-    public static void HandleStatus(ICompilationContext context, XElement element, InitializerValue status)
+    public static void HandleStatus(IDocumentCompilationContext context, XElement element, InitializerValue status)
     {
         if (!status.TryGetValues<StatusConfig>(out var config))
         {

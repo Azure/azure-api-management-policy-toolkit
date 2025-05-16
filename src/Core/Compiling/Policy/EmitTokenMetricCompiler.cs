@@ -27,7 +27,7 @@ public abstract class BaseEmitTokenMetricCompiler : IMethodPolicyHandler
         MethodName = methodName;
     }
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<EmitTokenMetricConfig>(context, _policyName, out var values))
         {

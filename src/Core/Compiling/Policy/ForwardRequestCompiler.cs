@@ -26,7 +26,7 @@ public class ForwardRequestCompiler : IMethodPolicyHandler
 
     public string MethodName => nameof(IBackendContext.ForwardRequest);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (node.ArgumentList.Arguments.Count > 1)
         {

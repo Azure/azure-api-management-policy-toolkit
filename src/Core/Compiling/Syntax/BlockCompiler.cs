@@ -22,7 +22,7 @@ public class BlockCompiler : ISyntaxCompiler
 
     public SyntaxKind Syntax => SyntaxKind.Block;
 
-    public void Compile(ICompilationContext context, SyntaxNode node)
+    public void Compile(IDocumentCompilationContext context, SyntaxNode node)
     {
         var block = node as BlockSyntax ?? throw new NullReferenceException();
 

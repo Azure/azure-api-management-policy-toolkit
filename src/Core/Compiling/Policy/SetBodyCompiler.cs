@@ -14,7 +14,7 @@ public class SetBodyCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.SetBody);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
         if (arguments.Count is > 2 or 0)
@@ -78,7 +78,7 @@ public class SetBodyCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    public static void HandleBody(ICompilationContext context, XElement element, InitializerValue body)
+    public static void HandleBody(IDocumentCompilationContext context, XElement element, InitializerValue body)
     {
         if (!body.TryGetValues<BodyConfig>(out var config))
         {

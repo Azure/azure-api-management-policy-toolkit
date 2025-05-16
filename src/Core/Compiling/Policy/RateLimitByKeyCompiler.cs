@@ -14,7 +14,7 @@ public class RateLimitByKeyCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.RateLimitByKey);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<RateLimitByKeyConfig>(context, "rate-limit-by-key", out var values))
         {

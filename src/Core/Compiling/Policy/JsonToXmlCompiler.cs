@@ -14,7 +14,7 @@ public class JsonToXmlCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.JsonToXml);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<JsonToXmlConfig>(context, "json-to-xml", out var values))
         {

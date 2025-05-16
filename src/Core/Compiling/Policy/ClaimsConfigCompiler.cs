@@ -11,7 +11,7 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public static class ClaimsConfigCompiler
 {
-    public static XElement HandleRequiredClaims(ICompilationContext context, InitializerValue requiredClaims)
+    public static XElement HandleRequiredClaims(IDocumentCompilationContext context, InitializerValue requiredClaims)
     {
         XElement claimsElement = new("required-claims");
         foreach (InitializerValue claim in requiredClaims.UnnamedValues ?? [])

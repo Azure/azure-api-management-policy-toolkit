@@ -14,7 +14,7 @@ public class JsonPCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IOutboundContext.JsonP);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
         if (arguments.Count != 1)

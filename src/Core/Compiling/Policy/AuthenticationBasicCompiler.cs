@@ -14,7 +14,7 @@ public class AuthenticationBasicCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.AuthenticationBasic);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (node.ArgumentList.Arguments.Count != 2)
         {
@@ -32,7 +32,7 @@ public class AuthenticationBasicCompiler : IMethodPolicyHandler
     }
 
     public static void HandleBasicAuthentication(
-        ICompilationContext context,
+        IDocumentCompilationContext context,
         XElement element,
         IReadOnlyDictionary<string, InitializerValue> values,
         SyntaxNode node)

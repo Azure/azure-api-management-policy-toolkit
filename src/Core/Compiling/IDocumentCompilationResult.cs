@@ -7,10 +7,8 @@ using Microsoft.CodeAnalysis;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
-public interface ICompilationContext
+public interface IDocumentCompilationResult
 {
-    void AddPolicy(XNode element);
-    void Report(Diagnostic diagnostic);
-
-    SyntaxNode SyntaxRoot { get; }
+    XElement Document { get; }
+    IReadOnlyList<Diagnostic> Diagnostics { get; }
 }

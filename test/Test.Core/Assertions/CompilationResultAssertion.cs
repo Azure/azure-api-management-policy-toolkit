@@ -8,9 +8,9 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Assertions;
 
-public class CompilationResultAssertion : ObjectAssertions<ICompilationResult, CompilationResultAssertion>
+public class CompilationResultAssertion : ObjectAssertions<IDocumentCompilationResult, CompilationResultAssertion>
 {
-    public CompilationResultAssertion(ICompilationResult value) : base(value)
+    public CompilationResultAssertion(IDocumentCompilationResult value) : base(value)
     {
     }
 

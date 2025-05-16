@@ -19,7 +19,7 @@ public class WaitCompiler : IMethodPolicyHandler
 
     public string MethodName => nameof(IInboundContext.Wait);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (node.ArgumentList.Arguments.Count is > 2 or < 1)
         {
@@ -59,7 +59,7 @@ public class WaitCompiler : IMethodPolicyHandler
             element.Add(new XAttribute("for", value));
         }
 
-        SubCompilationContext subContext = new(context, element);
+        SubDocumentCompilationContext subContext = new(context, element);
         _blockCompiler.Value.Compile(subContext, lambda.Block);
 
         context.AddPolicy(element);

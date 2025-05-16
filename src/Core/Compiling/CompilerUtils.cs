@@ -12,7 +12,7 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public static class CompilerUtils
 {
-    public static string ProcessParameter(this ExpressionSyntax expression, ICompilationContext context)
+    public static string ProcessParameter(this ExpressionSyntax expression, IDocumentCompilationContext context)
     {
         switch (expression)
         {
@@ -43,7 +43,7 @@ public static class CompilerUtils
         }
     }
 
-    public static string FindCode(this InvocationExpressionSyntax syntax, ICompilationContext context)
+    public static string FindCode(this InvocationExpressionSyntax syntax, IDocumentCompilationContext context)
     {
         if (syntax.Expression is not IdentifierNameSyntax identifierSyntax)
         {
@@ -77,7 +77,7 @@ public static class CompilerUtils
 
     public static InitializerValue Process(
         this ObjectCreationExpressionSyntax creationSyntax,
-        ICompilationContext context)
+        IDocumentCompilationContext context)
     {
         var result = new Dictionary<string, InitializerValue>();
         if (creationSyntax.Initializer is null)
@@ -113,7 +113,7 @@ public static class CompilerUtils
 
     public static InitializerValue Process(
         this ArrayCreationExpressionSyntax creationSyntax,
-        ICompilationContext context)
+        IDocumentCompilationContext context)
     {
         var expressions = creationSyntax.Initializer?.Expressions ?? [];
         var result = expressions
@@ -130,7 +130,7 @@ public static class CompilerUtils
 
     public static InitializerValue Process(
         this CollectionExpressionSyntax collectionSyntax,
-        ICompilationContext context)
+        IDocumentCompilationContext context)
     {
         var result = collectionSyntax.Elements
             .OfType<ExpressionElementSyntax>()
@@ -142,7 +142,7 @@ public static class CompilerUtils
 
     public static InitializerValue Process(
         this ImplicitArrayCreationExpressionSyntax creationSyntax,
-        ICompilationContext context)
+        IDocumentCompilationContext context)
     {
         var result = creationSyntax.Initializer.Expressions
             .Select(expression => expression.ProcessExpression(context))
@@ -153,7 +153,7 @@ public static class CompilerUtils
 
     public static InitializerValue ProcessExpression(
         this ExpressionSyntax expression,
-        ICompilationContext context)
+        IDocumentCompilationContext context)
     {
         return expression switch
         {
@@ -179,7 +179,7 @@ public static class CompilerUtils
 
     public static bool TryExtractingConfigParameter<T>(
         this InvocationExpressionSyntax node,
-        ICompilationContext context,
+        IDocumentCompilationContext context,
         string policy,
         [NotNullWhen(true)] out IReadOnlyDictionary<string, InitializerValue>? values)
     {
@@ -198,7 +198,7 @@ public static class CompilerUtils
     }
 
     public static bool TryExtractingConfig<T>(this ExpressionSyntax syntax,
-        ICompilationContext context,
+        IDocumentCompilationContext context,
         string policy,
         [NotNullWhen(true)] out IReadOnlyDictionary<string, InitializerValue>? values)
     {

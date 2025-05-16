@@ -14,7 +14,7 @@ public class GetAuthorizationContextCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.GetAuthorizationContext);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<GetAuthorizationContextConfig>(
                 context,
