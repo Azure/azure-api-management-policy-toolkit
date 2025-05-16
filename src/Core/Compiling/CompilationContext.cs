@@ -10,6 +10,8 @@ namespace Azure.ApiManagement.PolicyToolkit.Compiling;
 public class CompilationContext : ICompilationContext, ICompilationResult
 {
     private readonly IList<Diagnostic> _diagnostics = new List<Diagnostic>();
+
+    private readonly Compilation compilation;
     private readonly XElement _rootElement;
 
     public CompilationContext(SyntaxNode syntaxRoot, XElement rootElement)

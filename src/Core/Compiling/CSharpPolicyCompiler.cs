@@ -9,6 +9,7 @@ using Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.MSBuild;
 
 namespace Azure.ApiManagement.PolicyToolkit.Compiling;
 
@@ -19,6 +20,52 @@ public class CSharpPolicyCompiler
     public CSharpPolicyCompiler(Lazy<BlockCompiler> blockCompiler)
     {
         _blockCompiler = blockCompiler;
+    }
+
+    public async Task<ICompilationResult> CompileProject(string projectPath,
+        CancellationToken cancellationToken = default(CancellationToken))
+    {
+        var workspace = MSBuildWorkspace.Create();
+        var project = await workspace.OpenProjectAsync(projectPath, cancellationToken: cancellationToken);
+        if (!project.SupportsCompilation)
+        {
+            throw new Exception("Cannot compile project which does not support compilation");
+        }
+
+        var compilation = await project.GetCompilationAsync(cancellationToken);
+        if (compilation is null)
+        {
+            throw new NullReferenceException("Compilation is null");
+        }
+
+        foreach (var diag in compilation.GetDiagnostics())
+        {
+            // TODO: Handle diagnostics
+        }
+
+        foreach (var syntaxTree in compilation.SyntaxTrees)
+        {
+            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            // syntaxTree.FilePath;
+            var root = syntaxTree.GetRoot();
+
+            var documentAttributeSymbol =
+                semanticModel.Compilation.GetTypeByMetadataName(typeof(DocumentAttribute).FullName);
+
+            var documents = root
+                .DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .Where(c => c.AttributeLists
+                    .SelectMany(a => a.Attributes)
+                    .FirstOrDefault(attribute =>
+                        SymbolEqualityComparer.Default.Equals(semanticModel.GetTypeInfo(attribute).Type,
+                            documentAttributeSymbol)) != null
+                );
+            foreach (var document in documents)
+            {
+                Compile(document);
+            }
+        }
     }
 
     public ICompilationResult Compile(ClassDeclarationSyntax document)

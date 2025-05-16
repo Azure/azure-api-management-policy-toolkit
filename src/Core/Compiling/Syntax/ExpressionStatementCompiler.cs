@@ -23,8 +23,7 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
     public void Compile(ICompilationContext context, SyntaxNode node)
     {
         var statement = node as ExpressionStatementSyntax ?? throw new NullReferenceException(nameof(node));
-        var invocation = statement.Expression as InvocationExpressionSyntax;
-        if (invocation == null)
+        if (statement.Expression is not InvocationExpressionSyntax invocation)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.ExpressionNotSupported,
@@ -35,8 +34,7 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
             return;
         }
 
-        var memberAccess = invocation.Expression as MemberAccessExpressionSyntax;
-        if (memberAccess == null)
+        if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.ExpressionNotSupported,
