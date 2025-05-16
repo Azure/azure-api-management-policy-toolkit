@@ -3,12 +3,11 @@
 
 using System.IdentityModel.Tokens.Jwt;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
-using Azure.ApiManagement.PolicyToolkit.Testing;
-using Azure.ApiManagement.PolicyToolkit.Testing.Document;
-using Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Test.Emulator.Emulator.Policies;

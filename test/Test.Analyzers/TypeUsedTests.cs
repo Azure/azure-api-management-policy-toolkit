@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Analyzers;
-using Azure.ApiManagement.PolicyToolkit.Analyzers.Test;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers.Test;
 
-namespace Azure.ApiManagement.PolicyToolkit.Test.Analyzers;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Test.Analyzers;
 
 [TestClass]
 public class TypeUsedTests
@@ -18,27 +18,27 @@ public class TypeUsedTests
     public async Task Should()
     {
         await VerifyAsync(
-"""
-public static class ExpressionLibrary
-{
-    [Expression]
-    public static string Method(IExpressionContext context)
-    { 
-        if(context.Request.Headers.TryGetValue("Authorization", out var value))
-        {
-            return value[0];
-        } else 
-        {
-            return "";
-        }
-    }
+            """
+            public static class ExpressionLibrary
+            {
+                [Expression]
+                public static string Method(IExpressionContext context)
+                { 
+                    if(context.Request.Headers.TryGetValue("Authorization", out var value))
+                    {
+                        return value[0];
+                    } else 
+                    {
+                        return "";
+                    }
+                }
 
-    public static string Good(IExpressionContext context)
-    { 
-        return "test".GetType().FullName;
-    }
-}
-"""
+                public static string Good(IExpressionContext context)
+                { 
+                    return "test".GetType().FullName;
+                }
+            }
+            """
         );
     }
 }

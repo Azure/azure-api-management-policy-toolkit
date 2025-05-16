@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 public static class ArgumentsExtensions
 {

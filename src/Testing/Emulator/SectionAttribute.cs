@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
 public class SectionAttribute(string scope) : Attribute

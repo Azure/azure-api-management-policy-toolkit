@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class SetHeaderCompilationTests
@@ -145,7 +145,7 @@ public class SetHeaderCompilationTests
                 {
                     context.SetHeader(NameFromExpression(context.ExpressionContext), "1");
                 }
-            
+
                 public string NameFromExpression(IExpressionContext context) => "name" + context.RequestId;
             }
             """;
@@ -186,7 +186,7 @@ public class SetHeaderCompilationTests
                 {
                     context.SetHeader("X-Header", "1", ValueFromExpression(context.ExpressionContext), "2");
                 }
-            
+
                 public string ValueFromExpression(IExpressionContext context) => "value" + context.RequestId;
             }
             """;

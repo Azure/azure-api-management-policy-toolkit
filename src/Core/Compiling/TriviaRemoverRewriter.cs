@@ -4,7 +4,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public class TriviaRemoverRewriter : CSharpSyntaxRewriter
 {

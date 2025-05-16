@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class CheckHeaderTests
@@ -53,7 +53,7 @@ public class CheckHeaderTests
                     Values = ["expected-value"]
                 });
             }
-        
+
             string GetHeaderName(IExpressionContext context) => context.Variables["headerName"].ToString();
         }
         """,
@@ -84,7 +84,7 @@ public class CheckHeaderTests
                     Values = ["value"]
                 });
             }
-        
+
             int GetHttpCode(IExpressionContext context) => (int)context.Variables["httpCode"];
         }
         """,
@@ -115,7 +115,7 @@ public class CheckHeaderTests
                     Values = ["value"]
                 });
             }
-        
+
             string GetErrorMessage(IExpressionContext context) => context.Variables["errorMessage"].ToString();
         }
         """,
@@ -146,7 +146,7 @@ public class CheckHeaderTests
                     Values = ["value"]
                 });
             }
-        
+
             bool GetIgnoreCase(IExpressionContext context) => (bool)context.Variables["ignoreCase"];
         }
         """,
@@ -177,7 +177,7 @@ public class CheckHeaderTests
                     Values = [GetValue(context.ExpressionContext)]
                 });
             }
-        
+
             string GetValue(IExpressionContext context) => context.Variables["headerValue"].ToString();
         }
         """,

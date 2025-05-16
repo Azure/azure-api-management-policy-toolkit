@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class GetAuthorizationContextTests
@@ -74,7 +74,7 @@ public class GetAuthorizationContextTests
                     ContextVariableName = GetContextVariableName(context.ExpressionContext)
                 });
             }
-        
+
             private string GetProviderId(IExpressionContext context) => context.Variables["provider-id"];
             private string GetAuthorizationId(IExpressionContext context) => context.Variables["authorization-id"];
             private string GetContextVariableName(IExpressionContext context) => context.Variables["context-variable-name"];
@@ -106,7 +106,7 @@ public class GetAuthorizationContextTests
                     IgnoreError = GetIgnoreError(context.ExpressionContext)
                 });
             }
-        
+
             private string GetProviderId(IExpressionContext context) => context.Variables["provider-id"];
             private string GetAuthorizationId(IExpressionContext context) => context.Variables["authorization-id"];
             private string GetContextVariableName(IExpressionContext context) => context.Variables["context-variable-name"];

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Serialization;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
 [TestClass]
 public class RazorCodeFormatterTests
@@ -117,24 +117,25 @@ public class RazorCodeFormatterTests
     {
         var code =
             """
-            <element att1="@(var a=1;)">
-                <v>@{
-                if (context.Request.IpAddress.StartsWith("10.0.0."))
-                {
-                    return "a";
-                }
-                else
-                {
-                    return "b";
-                }
-                }</v>
-            <element>
-            """.ReplaceLineEndings();
+                <element att1="@(var a=1;)">
+                    <v>@{
+                    if (context.Request.IpAddress.StartsWith("10.0.0."))
+                    {
+                        return "a";
+                    }
+                    else
+                    {
+                        return "b";
+                    }
+                    }</v>
+                <element>
+                """.ReplaceLineEndings();
         var result = RazorCodeFormatter.ToCleanXml(code, out var markerToCode);
 
         markerToCode.Should().HaveCount(2);
         markerToCode.Should().ContainValue("@(var a = 1;)");
-        markerToCode.Should().ContainValue("""@{if (context.Request.IpAddress.StartsWith("10.0.0.")){return "a";}else{return "b";}}""");
+        markerToCode.Should()
+            .ContainValue("""@{if (context.Request.IpAddress.StartsWith("10.0.0.")){return "a";}else{return "b";}}""");
         result.Should().Match("""
                               <element att1="*">
                                   <v>*</v>

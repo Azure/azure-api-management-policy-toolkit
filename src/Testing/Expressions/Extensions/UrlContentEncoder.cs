@@ -4,9 +4,9 @@
 using System.Text;
 using System.Text.Encodings.Web;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class UrlContentEncoder : IUrlContentEncoder
 {

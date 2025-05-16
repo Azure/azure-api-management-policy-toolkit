@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 
 internal class SectionContextProxy<TSection> : DispatchProxy where TSection : class
 {
@@ -76,7 +76,7 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
                 {
                     IsClass: true,
                     IsAbstract: false,
-                    Namespace: "Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies"
+                    Namespace: "Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies"
                 }
                 && typeof(IPolicyHandler).IsAssignableFrom(type)
                 && type.GetCustomAttributes<SectionAttribute>().Any(att => att.Scope == targetScope))

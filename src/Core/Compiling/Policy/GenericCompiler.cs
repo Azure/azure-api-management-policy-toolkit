@@ -3,7 +3,7 @@
 
 using System.Xml.Linq;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public static class GenericCompiler
 {

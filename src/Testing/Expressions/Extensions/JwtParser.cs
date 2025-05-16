@@ -3,22 +3,21 @@
 
 using System.Net.Http.Headers;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
-using Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
 using Microsoft.IdentityModel.JsonWebTokens;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class JwtParser : IJwtParser
 {
     private const string BearerPrefix = "Bearer";
     readonly JsonWebTokenHandler _handler = new JsonWebTokenHandler();
-    
+
     public Jwt? Parse(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)
-            || !AuthenticationHeaderValue.TryParse(value, out var header) 
+            || !AuthenticationHeaderValue.TryParse(value, out var header)
             || !header.Scheme.Equals(BearerPrefix, StringComparison.OrdinalIgnoreCase)
             || !_handler.CanReadToken(header.Parameter))
         {
@@ -52,6 +51,7 @@ public class JwtParser : IJwtParser
         public IEnumerable<string> Audiences => _jwt.Audiences;
 
         private IReadOnlyDictionary<string, string[]>? _claims;
+
         public IReadOnlyDictionary<string, string[]> Claims => _claims ??= _jwt.Claims
             .GroupBy(c => c.Type)
             .ToDictionary(g => g.Key,

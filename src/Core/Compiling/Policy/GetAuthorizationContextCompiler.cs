@@ -3,13 +3,12 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class GetAuthorizationContextCompiler : IMethodPolicyHandler
 {
@@ -49,7 +48,8 @@ public class GetAuthorizationContextCompiler : IMethodPolicyHandler
             return;
         }
 
-        if (!element.AddAttribute(values, nameof(GetAuthorizationContextConfig.ContextVariableName), "context-variable-name"))
+        if (!element.AddAttribute(values, nameof(GetAuthorizationContextConfig.ContextVariableName),
+                "context-variable-name"))
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,

@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace Azure.ApiManagement.PolicyToolkit.Analyzers;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
@@ -47,7 +47,9 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
         "Newtonsoft.Json.Linq.JObject",
     };
 
-    private const string ContextParamType = "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IExpressionContext";
+    private const string ContextParamType =
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IExpressionContext";
+
     private const string ContextParamName = "context";
 
     private static void AnalyzeMethod(SyntaxNodeAnalysisContext context)
@@ -82,7 +84,6 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
 
         CheckParameters(context, method.ParameterList);
     }
-
 
 
     private static void AnalyzeLambda(SyntaxNodeAnalysisContext context)

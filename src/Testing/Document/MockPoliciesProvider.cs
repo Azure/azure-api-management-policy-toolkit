@@ -1,9 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Document;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
 public class MockPoliciesProvider<TSection> where TSection : class
 {

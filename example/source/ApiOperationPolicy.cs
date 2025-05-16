@@ -1,5 +1,5 @@
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
 using Newtonsoft.Json.Linq;
 

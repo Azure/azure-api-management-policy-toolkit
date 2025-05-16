@@ -3,17 +3,17 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class CacheLookupValueCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.CacheLookupValue);
+
     public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CacheLookupValueConfig>(context, "cache-lookup-value", out var values))
@@ -22,7 +22,7 @@ public class CacheLookupValueCompiler : IMethodPolicyHandler
         }
 
         var element = new XElement("cache-lookup-value");
-        
+
         if (!element.AddAttribute(values, nameof(CacheLookupValueConfig.Key), "key"))
         {
             context.Report(Diagnostic.Create(
@@ -33,7 +33,7 @@ public class CacheLookupValueCompiler : IMethodPolicyHandler
             ));
             return;
         }
-        
+
         if (!element.AddAttribute(values, nameof(CacheLookupValueConfig.VariableName), "variable-name"))
         {
             context.Report(Diagnostic.Create(
@@ -44,10 +44,10 @@ public class CacheLookupValueCompiler : IMethodPolicyHandler
             ));
             return;
         }
-        
+
         element.AddAttribute(values, nameof(CacheLookupValueConfig.CachingType), "caching-type");
         element.AddAttribute(values, nameof(CacheLookupValueConfig.DefaultValue), "default-value");
-        
+
         context.AddPolicy(element);
     }
 }

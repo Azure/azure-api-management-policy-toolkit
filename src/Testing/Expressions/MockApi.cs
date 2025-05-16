@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class MockApi : IApi
 {
@@ -17,6 +17,8 @@ public class MockApi : IApi
     public MockUrl ServiceUrl { get; set; } = new MockUrl();
     IUrl IApi.ServiceUrl => ServiceUrl;
 
-    public MockSubscriptionKeyParameterNames SubscriptionKeyParameterNames { get; set; } = new MockSubscriptionKeyParameterNames();
+    public MockSubscriptionKeyParameterNames SubscriptionKeyParameterNames { get; set; } =
+        new MockSubscriptionKeyParameterNames();
+
     ISubscriptionKeyParameterNames IApi.SubscriptionKeyParameterNames => SubscriptionKeyParameterNames;
 }

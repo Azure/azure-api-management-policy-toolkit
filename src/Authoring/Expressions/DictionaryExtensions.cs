@@ -1,9 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
 
-namespace Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
 public static class DictionaryExtensions
 {
@@ -35,6 +35,6 @@ public static class DictionaryExtensions
         return string.IsNullOrEmpty(content) ? null : $"?{content}";
     }
 
-    public static string? ToFormUrlEncodedContent(this IDictionary<string, IList<string>>? dictionary) 
+    public static string? ToFormUrlEncodedContent(this IDictionary<string, IList<string>>? dictionary)
         => ImplementationContext.Default.GetService<IUrlContentEncoder>().Encode(dictionary);
 }

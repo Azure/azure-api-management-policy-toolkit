@@ -1,9 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 [
     Section(nameof(IInboundContext)),
@@ -21,7 +21,7 @@ internal class BaseHandler : IPolicyHandler
     public string PolicyName => nameof(IInboundContext.Base);
 
     public object? Handle(GatewayContext context, object?[]? args)
-    { 
+    {
         var callbackHook = CallbackHooks.Find(hook => hook.Item1(context));
         callbackHook?.Item2(context);
         return null;

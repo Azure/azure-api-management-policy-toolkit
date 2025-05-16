@@ -1,4 +1,4 @@
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class MockMessage
 {

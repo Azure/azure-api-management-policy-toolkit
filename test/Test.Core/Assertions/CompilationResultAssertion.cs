@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Compiling;
-
 using FluentAssertions.Execution;
 using FluentAssertions.Primitives;
 
-namespace Azure.ApiManagement.PolicyToolkit.Assertions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
+
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Assertions;
 
 public class CompilationResultAssertion : ObjectAssertions<ICompilationResult, CompilationResultAssertion>
 {
@@ -24,7 +24,8 @@ public class CompilationResultAssertion : ObjectAssertions<ICompilationResult, C
         return new AndConstraint<CompilationResultAssertion>(this);
     }
 
-    public AndConstraint<CompilationResultAssertion> DocumentEquivalentTo(string expectedXml, string because = "", params object[] becauseArgs)
+    public AndConstraint<CompilationResultAssertion> DocumentEquivalentTo(string expectedXml, string because = "",
+        params object[] becauseArgs)
     {
         Subject.Document.Should().BeEquivalentTo(expectedXml, because, becauseArgs);
         return new AndConstraint<CompilationResultAssertion>(this);

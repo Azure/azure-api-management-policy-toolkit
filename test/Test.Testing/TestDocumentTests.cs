@@ -3,13 +3,13 @@
 
 using System.Text;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
-using Azure.ApiManagement.PolicyToolkit.Testing.Document;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
 using Newtonsoft.Json.Linq;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 
 [TestClass]
 public class TestDocumentTests

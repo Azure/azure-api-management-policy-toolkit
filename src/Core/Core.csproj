@@ -6,7 +6,7 @@
 
         <IsPackable>false</IsPackable>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-        <RootNamespace>Azure.ApiManagement.PolicyToolkit</RootNamespace>
+        <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

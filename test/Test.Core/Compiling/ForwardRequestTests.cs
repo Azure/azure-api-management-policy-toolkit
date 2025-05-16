@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class ForwardRequestTests
@@ -23,7 +23,7 @@ public class ForwardRequestTests
         </policies>
         """,
         DisplayName = "Should compile forward request policy without arguments"
-        )]
+    )]
     [DataRow(
         """
         [Document]

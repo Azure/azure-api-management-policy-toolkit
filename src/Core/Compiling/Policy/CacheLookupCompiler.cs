@@ -3,13 +3,12 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class CacheLookupCompiler : IMethodPolicyHandler
 {
@@ -49,7 +48,8 @@ public class CacheLookupCompiler : IMethodPolicyHandler
         element.AddAttribute(values, nameof(CacheLookupConfig.CachingType), "caching-type");
         element.AddAttribute(values, nameof(CacheLookupConfig.DownstreamCachingType), "downstream-caching-type");
         element.AddAttribute(values, nameof(CacheLookupConfig.MustRevalidate), "must-revalidate");
-        element.AddAttribute(values, nameof(CacheLookupConfig.AllowPrivateResponseCaching), "allow-private-response-caching");
+        element.AddAttribute(values, nameof(CacheLookupConfig.AllowPrivateResponseCaching),
+            "allow-private-response-caching");
 
         if (values.TryGetValue(nameof(CacheLookupConfig.VaryByHeaders), out var headers) &&
             headers.UnnamedValues is not null)

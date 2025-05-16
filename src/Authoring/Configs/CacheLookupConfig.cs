@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Authoring;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 /// <summary>
 /// Configuration for the cache-lookup policy which checks the API Management cache for a valid cached response.

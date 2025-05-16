@@ -1,4 +1,4 @@
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class WaitTests
@@ -18,7 +18,7 @@ public class WaitTests
                         });
                     });
             }
-        
+
             public void Backend(IBackendContext context)
             {
                 context.Wait(() =>
@@ -28,7 +28,7 @@ public class WaitTests
                         });
                     });
             }
-        
+
             public void Outbound(IOutboundContext context)
             {
                 context.Wait(() =>

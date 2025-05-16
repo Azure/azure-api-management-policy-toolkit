@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class LimitConcurrencyTests
@@ -24,7 +24,7 @@ public class LimitConcurrencyTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             public void Backend(IBackendContext context)
             {
                 context.LimitConcurrency(new LimitConcurrencyConfig()
@@ -52,7 +52,7 @@ public class LimitConcurrencyTests
                         });
                     });
             }
-        
+
             public void OnError(IOnErrorContext context)
             {
                 context.LimitConcurrency(new LimitConcurrencyConfig()

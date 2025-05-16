@@ -5,7 +5,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace Azure.ApiManagement.PolicyToolkit.Serialization;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
 public sealed class CustomXmlWriter : IDisposable
 {

@@ -1,19 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <PackageId>Azure.ApiManagement.PolicyToolkit.Testing</PackageId>
-        <VersionPrefix>1.0.0</VersionPrefix>
+        <Version>1.0.0</Version>
+        <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Testing</PackageId>
         <Authors>Microsoft</Authors>
+        <Company>Microsoft Corporation</Company>
+        <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+        <Product>Azure API Management Policy Toolkit</Product>
+        <PackageIcon>pkgicon.png</PackageIcon>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
-        <PackageProjectUrl>https://github.com/Azure/azure-api-management-policy-toolkit</PackageProjectUrl>
         <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
+        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
         <Description>
             Azure API Management Policy Toolkit Testing is a library which helps in testing expressions and policy documents created in code.
             Read more about it at https://github.com/Azure/azure-api-management-policy-toolkit
         </Description>
         <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Policy Testing;Policy Expression Testing</PackageTags>
+        <NeutralLanguage>en-US</NeutralLanguage>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -25,7 +30,7 @@
         <IncludeBuildOutput>true</IncludeBuildOutput>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
-        <RootNamespace>Azure.ApiManagement.PolicyToolkit.Testing</RootNamespace>
+        <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Testing</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -36,5 +41,10 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Authoring\Authoring.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 </Project>

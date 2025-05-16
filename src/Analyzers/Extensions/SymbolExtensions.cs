@@ -3,7 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 
-namespace Azure.ApiManagement.PolicyToolkit.Analyzers;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
 
 public static class SymbolExtensions
 {

@@ -1,20 +1,22 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
+using System.Runtime.CompilerServices;
+
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
 
 public class ImplementationContext
 {
     public static readonly ImplementationContext Default = new ImplementationContext();
 
     private readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
-    
+
     public void SetService<T>(T service)
     {
         _services[typeof(T)] = service ?? throw new NullReferenceException("service cannot be null");
     }
-    
-    public T GetService<T>([System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+
+    public T GetService<T>([CallerMemberName] string memberName = "")
     {
         if (_services.TryGetValue(typeof(T), out var service))
         {
@@ -26,5 +28,4 @@ public class ImplementationContext
             : $" Please set {nameof(T)} before calling {memberName} method.";
         throw new NullReferenceException($"Implementation for {nameof(T)} is not set.{methodMessage}");
     }
-    
 }

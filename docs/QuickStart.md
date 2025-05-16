@@ -42,7 +42,7 @@ We will cover the following topics:
 5. Add Azure API Management policy toolkit library by running
     ```shell
     cd ./Contoso.Apis.Policies
-    dotnet add package Azure.ApiManagement.PolicyToolkit.Authoring
+    dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
     ```
 
 6. Open the solution in your IDE of choice. We

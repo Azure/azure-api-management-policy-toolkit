@@ -3,7 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 
 public static class CompilationErrors
 {

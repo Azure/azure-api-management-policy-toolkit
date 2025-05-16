@@ -3,17 +3,17 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class CacheRemoveValueCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.CacheRemoveValue);
+
     public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CacheRemoveValueConfig>(context, "cache-remove-value", out var values))
@@ -22,7 +22,7 @@ public class CacheRemoveValueCompiler : IMethodPolicyHandler
         }
 
         var element = new XElement("cache-remove-value");
-        
+
         if (!element.AddAttribute(values, nameof(CacheRemoveValueConfig.Key), "key"))
         {
             context.Report(Diagnostic.Create(
@@ -33,9 +33,9 @@ public class CacheRemoveValueCompiler : IMethodPolicyHandler
             ));
             return;
         }
-        
+
         element.AddAttribute(values, nameof(CacheRemoveValueConfig.CachingType), "caching-type");
-        
+
         context.AddPolicy(element);
     }
 }

@@ -5,7 +5,7 @@ using System.Xml;
 
 using Microsoft.Extensions.Configuration;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public class CompilerOptions
 {

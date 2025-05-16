@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+
 public class MockGroup : IGroup
 {
     public string Id { get; set; } = "ZKK26R31mv";

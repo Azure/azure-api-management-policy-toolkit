@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class AuthenticationBasicTests
@@ -36,7 +36,7 @@ public class AuthenticationBasicTests
             { 
                 context.AuthenticationBasic(Username(context.ExpressionContext), Password(context.ExpressionContext));
             }
-        
+
             public string Username(IExpressionContext context) => context.Subscription.Id;
             public string Password(IExpressionContext context) => context.Subscription.Key;
         }

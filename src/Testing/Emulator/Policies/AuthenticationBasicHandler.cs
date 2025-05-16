@@ -3,9 +3,9 @@
 
 using System.Text;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 [Section(nameof(IInboundContext))]
 internal class AuthenticationBasicHandler : PolicyHandler<string, string>

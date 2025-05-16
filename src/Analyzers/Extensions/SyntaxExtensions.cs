@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Analyzers;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
 
 public static class SyntaxExtensions
 {
@@ -23,7 +23,7 @@ public static class SyntaxExtensions
     }
 
     private const string ExpressionAttribute =
-        "Azure.ApiManagement.PolicyToolkit.Authoring.ExpressionAttribute";
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.ExpressionAttribute";
 
     public static bool ContainsExpressionAttribute(this SyntaxList<AttributeListSyntax> syntax, SemanticModel model)
     {

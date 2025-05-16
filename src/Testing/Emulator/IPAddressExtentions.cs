@@ -4,7 +4,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 
 public static class IPAddressExtensions
 {

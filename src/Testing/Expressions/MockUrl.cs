@@ -3,9 +3,9 @@
 
 using System.Web;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class MockUrl : IUrl
 {

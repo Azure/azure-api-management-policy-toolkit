@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
 /// <summary>
 /// Represents an authorization object containing an access token and related claims.

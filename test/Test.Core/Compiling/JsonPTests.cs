@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class JsonPTests
@@ -50,5 +50,4 @@ public class JsonPTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
-    
 }

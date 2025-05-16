@@ -5,7 +5,7 @@ using System.Xml.Linq;
 
 using Microsoft.CodeAnalysis;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public interface ICompilationResult
 {

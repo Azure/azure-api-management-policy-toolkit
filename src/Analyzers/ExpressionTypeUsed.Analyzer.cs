@@ -2,14 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Collections.Immutable;
-using System.Text.RegularExpressions;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace Azure.ApiManagement.PolicyToolkit.Analyzers;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class TypeUsedAnalyzer : DiagnosticAnalyzer
@@ -18,20 +16,22 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
 
     public override void Initialize(AnalysisContext context)
     {
-        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze | GeneratedCodeAnalysisFlags.ReportDiagnostics);
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze |
+                                               GeneratedCodeAnalysisFlags.ReportDiagnostics);
         context.EnableConcurrentExecution();
 
         context.RegisterSyntaxNodeAction(AnalyzeNode, SyntaxKind.InvocationExpression,
-                SyntaxKind.SimpleMemberAccessExpression,
-                SyntaxKind.ElementAccessExpression,
-                SyntaxKind.ObjectCreationExpression,
-                SyntaxKind.ObjectInitializerExpression,
-                SyntaxKind.AnonymousObjectCreationExpression);
+            SyntaxKind.SimpleMemberAccessExpression,
+            SyntaxKind.ElementAccessExpression,
+            SyntaxKind.ObjectCreationExpression,
+            SyntaxKind.ObjectInitializerExpression,
+            SyntaxKind.AnonymousObjectCreationExpression);
     }
 
     private readonly static IReadOnlySet<string> AllowedTypes = new HashSet<string>()
     {
-        #region  mslib
+        #region mslib
+
         "System.Array",
         "System.BitConverter",
         "System.Boolean",
@@ -151,9 +151,11 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "System.Xml.Linq.XProcessingInstruction",
         "System.Xml.Linq.XText",
         "System.Xml.XmlNodeType",
+
         #endregion mslib
-        
+
         #region Newtonsoft.Json
+
         "Newtonsoft.Json.Formatting",
         "Newtonsoft.Json.JsonConvert",
         "Newtonsoft.Json.Linq.Extensions",
@@ -166,49 +168,114 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "Newtonsoft.Json.Linq.JToken",
         "Newtonsoft.Json.Linq.JTokenType",
         "Newtonsoft.Json.Linq.JValue",
+
         #endregion Newtonsoft.Json
 
-        #region Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IApi",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IExpressionContext",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IContextApi",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IDeployment",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IGroup",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ILastError",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IMessageBody",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IOperation",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IPrivateEndpointConnection",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IProduct",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IRequest",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IResponse",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ISubscription",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ISubscriptionKeyParameterNames",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUrl",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUser",
-        "Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUserIdentity",
-        #endregion Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
+        #region Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
+
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IApi",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IExpressionContext",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IContextApi",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IDeployment",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IGroup",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ILastError",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IMessageBody",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IOperation",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IPrivateEndpointConnection",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IProduct",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IRequest",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IResponse",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ISubscription",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ISubscriptionKeyParameterNames",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUrl",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUser",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUserIdentity",
+
+        #endregion Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
     };
 
-    private readonly static IReadOnlyDictionary<string, IReadOnlySet<string>> AllowedInTypes = new Dictionary<string, IReadOnlySet<String>>()
-    {
-        { "Newtonsoft.Json.JsonConvert", new HashSet<string>() { "SerializeObject", "DeserializeObject" } },
-        { "System.DateTime", new HashSet<string>() { ".ctor", "Add", "AddDays", "AddHours", "AddMilliseconds", "AddMinutes", "AddMonths", "AddSeconds", "AddTicks", "AddYears", "Date", "Day", "DayOfWeek", "DayOfYear", "DaysInMonth", "Hour", "IsDaylightSavingTime", "IsLeapYear", "MaxValue", "Millisecond", "Minute", "MinValue", "Month", "Now", "Parse", "Second", "Subtract", "Ticks", "TimeOfDay", "Today", "ToString", "UtcNow", "Year" } },
-        { "System.DateTimeKind", new HashSet<string>() { "Utc" } },
-        { "System.Enum", new HashSet<string>() { "Parse", "TryParse", "ToString" } },
-        { "System.Net.IPAddress", new HashSet<string>() { "AddressFamily", "Equals", "GetAddressBytes", "IsLoopback", "Parse", "TryParse", "ToString"} },
-        { "System.Security.Cryptography.X509Certificates.X500DistinguishedName", new HashSet<string>() { "Name" } },
-        { "System.Text.RegularExpressions.Capture", new HashSet<string>() { "Index", "Length", "Value" } },
-        { "System.Text.RegularExpressions.CaptureCollection", new HashSet<string>() { "Count", "Item" } },
-        { "System.Text.RegularExpressions.Group", new HashSet<string>() { "Captures", "Success" } },
-        { "System.Text.RegularExpressions.GroupCollection", new HashSet<string>() { "Count", "Item" } },
-        { "System.Text.RegularExpressions.Match", new HashSet<string>() { "Empty", "Groups", "Result" } },
-        { "System.Text.RegularExpressions.Regex", new HashSet<string>() { ".ctor", "IsMatch", "Match", "Matches", "Replace", "Unescape", "Split" } },
-    };
+    private readonly static IReadOnlyDictionary<string, IReadOnlySet<string>> AllowedInTypes =
+        new Dictionary<string, IReadOnlySet<String>>()
+        {
+            { "Newtonsoft.Json.JsonConvert", new HashSet<string>() { "SerializeObject", "DeserializeObject" } },
+            {
+                "System.DateTime", new HashSet<string>()
+                {
+                    ".ctor",
+                    "Add",
+                    "AddDays",
+                    "AddHours",
+                    "AddMilliseconds",
+                    "AddMinutes",
+                    "AddMonths",
+                    "AddSeconds",
+                    "AddTicks",
+                    "AddYears",
+                    "Date",
+                    "Day",
+                    "DayOfWeek",
+                    "DayOfYear",
+                    "DaysInMonth",
+                    "Hour",
+                    "IsDaylightSavingTime",
+                    "IsLeapYear",
+                    "MaxValue",
+                    "Millisecond",
+                    "Minute",
+                    "MinValue",
+                    "Month",
+                    "Now",
+                    "Parse",
+                    "Second",
+                    "Subtract",
+                    "Ticks",
+                    "TimeOfDay",
+                    "Today",
+                    "ToString",
+                    "UtcNow",
+                    "Year"
+                }
+            },
+            { "System.DateTimeKind", new HashSet<string>() { "Utc" } },
+            { "System.Enum", new HashSet<string>() { "Parse", "TryParse", "ToString" } },
+            {
+                "System.Net.IPAddress",
+                new HashSet<string>()
+                {
+                    "AddressFamily",
+                    "Equals",
+                    "GetAddressBytes",
+                    "IsLoopback",
+                    "Parse",
+                    "TryParse",
+                    "ToString"
+                }
+            },
+            { "System.Security.Cryptography.X509Certificates.X500DistinguishedName", new HashSet<string>() { "Name" } },
+            { "System.Text.RegularExpressions.Capture", new HashSet<string>() { "Index", "Length", "Value" } },
+            { "System.Text.RegularExpressions.CaptureCollection", new HashSet<string>() { "Count", "Item" } },
+            { "System.Text.RegularExpressions.Group", new HashSet<string>() { "Captures", "Success" } },
+            { "System.Text.RegularExpressions.GroupCollection", new HashSet<string>() { "Count", "Item" } },
+            { "System.Text.RegularExpressions.Match", new HashSet<string>() { "Empty", "Groups", "Result" } },
+            {
+                "System.Text.RegularExpressions.Regex", new HashSet<string>()
+                {
+                    ".ctor",
+                    "IsMatch",
+                    "Match",
+                    "Matches",
+                    "Replace",
+                    "Unescape",
+                    "Split"
+                }
+            },
+        };
 
-    private readonly static IReadOnlyDictionary<string, IReadOnlySet<string>> DisallowedInTypes = new Dictionary<string, IReadOnlySet<String>>()
-    {
-        { "System.Xml.Linq.XDocument", new HashSet<string>() { "Load" } },
-    };
+    private readonly static IReadOnlyDictionary<string, IReadOnlySet<string>> DisallowedInTypes =
+        new Dictionary<string, IReadOnlySet<String>>()
+        {
+            { "System.Xml.Linq.XDocument", new HashSet<string>() { "Load" } },
+        };
 
     private static void AnalyzeNode(SyntaxNodeAnalysisContext context)
     {
@@ -234,11 +301,14 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         {
             if (AllowedInTypes.TryGetValue(typeName, out var allowed) && !allowed.Contains(nodeSymbol.Name))
             {
-                context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.DisallowedMember, node.GetLocation(), nodeSymbol.Name));
+                context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.DisallowedMember, node.GetLocation(),
+                    nodeSymbol.Name));
             }
-            else if (DisallowedInTypes.TryGetValue(typeName, out var disallowed) && disallowed.Contains(nodeSymbol.Name))
+            else if (DisallowedInTypes.TryGetValue(typeName, out var disallowed) &&
+                     disallowed.Contains(nodeSymbol.Name))
             {
-                context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.DisallowedMember, node.GetLocation(), nodeSymbol.Name));
+                context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.DisallowedMember, node.GetLocation(),
+                    nodeSymbol.Name));
             }
         }
         else
@@ -246,6 +316,4 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.DisallowedType, node.GetLocation(), typeName));
         }
     }
-
-
 }

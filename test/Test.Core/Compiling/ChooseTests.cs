@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class ChooseTests
@@ -125,7 +125,7 @@ public class ChooseTests
                     context.Base();
                 }
             }
-        
+
             bool Exp(IExpressionContext context) => 1 > 0;
         }
         """,

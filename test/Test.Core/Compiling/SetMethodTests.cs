@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class SetMethodTests
@@ -40,7 +40,7 @@ public class SetMethodTests
             public void Inbound(IInboundContext context) {
                 context.SetMethod(Exp(context.ExpressionContext));
             }
-        
+
             public string Exp(IExpressionContext context) => "PO" + "ST";
         }
         """,

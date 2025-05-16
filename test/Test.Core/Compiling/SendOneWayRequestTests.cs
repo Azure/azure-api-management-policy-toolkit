@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class SendOneWayRequestTests
@@ -67,7 +67,7 @@ public class SendOneWayRequestTests
                     Mode = Exp(context.ExpressionContext),
                 });
             }
-        
+
             private string Exp(IExpressionContext context) => "n" + "e" + "w";
         }
         """,
@@ -113,7 +113,7 @@ public class SendOneWayRequestTests
                     Timeout = Exp(context.ExpressionContext),
                 });
             }
-        
+
             private int Exp(IExpressionContext context) => 80 + 20;
         }
         """,
@@ -237,7 +237,7 @@ public class SendOneWayRequestTests
                     ],
                 });
             }
-        
+
             private string ExpAction(IExpressionContext context) => "over" + "ride";
             private string ExpValue(IExpressionContext context) => "application" + "/" + "json";
         }

@@ -1,6 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 public class CertificateStore
 {

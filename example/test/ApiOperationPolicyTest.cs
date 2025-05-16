@@ -1,8 +1,8 @@
 using System.Text;
 
-using Azure.ApiManagement.PolicyToolkit.Testing;
-using Azure.ApiManagement.PolicyToolkit.Testing.Document;
-using Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 using Contoso.Apis;
 

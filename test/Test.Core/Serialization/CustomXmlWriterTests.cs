@@ -5,15 +5,14 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace Azure.ApiManagement.PolicyToolkit.Serialization;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
 [TestClass]
 public class CustomXmlWriterTests
 {
     private static XmlWriterSettings TestSettings = new XmlWriterSettings()
     {
-        OmitXmlDeclaration = true,
-        ConformanceLevel = ConformanceLevel.Fragment,
+        OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Fragment,
     };
 
     [TestMethod]
