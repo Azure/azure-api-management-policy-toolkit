@@ -15,7 +15,8 @@ public static class CompilerModule
     {
         return services
             .AddLazyResolution()
-            .AddSingleton<CSharpPolicyCompiler>()
+            .AddSingleton<DocumentCompiler>()
+            .AddSingleton<DirectoryCompiler>()
             .AddMethodPolicyHandlers()
             .AddSyntaxCompilers();
     }

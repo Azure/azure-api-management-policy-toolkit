@@ -14,7 +14,7 @@ public class CompilerOptions
     public bool Format { get; }
     public string FileExtension { get; }
 
-    public XmlWriterSettings XmlWriterSettings => new XmlWriterSettings()
+    public XmlWriterSettings XmlWriterSettings => new()
     {
         OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Fragment, Indent = Format
     };
@@ -33,4 +33,13 @@ public class CompilerOptions
         FileExtension = configuration["ext"] ?? "xml";
         Format = bool.TryParse(configuration["format"] ?? "true", out var fmt) && fmt;
     }
+
+    public DirectoryCompilerOptions ToDirectoryCompilerOptions() => new()
+    {
+        SourceFolder = SourceFolder,
+        OutputFolder = OutputFolder,
+        CodeFormat = Format,
+        FileExtension = FileExtension,
+        XmlWriterSettings = XmlWriterSettings,
+    };
 }
