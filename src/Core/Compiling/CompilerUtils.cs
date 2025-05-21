@@ -230,12 +230,19 @@ public static class CompilerUtils
         return true;
     }
 
-    public static string ExtractDocumentFileName(this ClassDeclarationSyntax document)
+    public static string ExtractDocumentFileName(this ClassDeclarationSyntax document, string extension)
     {
         var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType("Document");
         var attributeArgumentExpression =
             attributeSyntax?.ArgumentList?.Arguments.FirstOrDefault()?.Expression as LiteralExpressionSyntax;
-        return attributeArgumentExpression?.Token.ValueText ?? document.Identifier.ValueText;
+        var path = attributeArgumentExpression?.Token.ValueText ?? document.Identifier.ValueText;
+        var currentExtension = Path.GetExtension(path);
+        if (string.IsNullOrWhiteSpace(currentExtension))
+        {
+            path = $"{path}.{extension}";
+        }
+
+        return path;
     }
 
     public static T Normalize<T>(T node) where T : SyntaxNode

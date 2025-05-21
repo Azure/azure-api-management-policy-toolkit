@@ -17,6 +17,7 @@ public static class CompilerModule
             .AddLazyResolution()
             .AddSingleton<DocumentCompiler>()
             .AddSingleton<DirectoryCompiler>()
+            .AddSingleton<ProjectCompiler>()
             .AddMethodPolicyHandlers()
             .AddSyntaxCompilers();
     }

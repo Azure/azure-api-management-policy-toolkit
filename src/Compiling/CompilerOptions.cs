@@ -9,8 +9,8 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public class CompilerOptions
 {
-    public string SourceFolder { get; }
-    public string OutputFolder { get; }
+    public string SourcePath { get; }
+    public string OutputPath { get; }
     public bool Format { get; }
     public string FileExtension { get; }
 
@@ -21,24 +21,36 @@ public class CompilerOptions
 
     public CompilerOptions(IConfigurationRoot configuration)
     {
-        SourceFolder = configuration["s"] ??
-                       configuration["source"] ??
-                       throw new NullReferenceException("Source folder not provided");
-        SourceFolder = Path.GetFullPath(SourceFolder);
-        OutputFolder = configuration["o"] ??
-                       configuration["out"] ??
-                       throw new NullReferenceException("Output folder not provided");
-        OutputFolder = Path.GetFullPath(OutputFolder);
+        SourcePath = configuration["s"] ??
+                     configuration["source"] ??
+                     throw new NullReferenceException("Source path not provided");
+        SourcePath = Path.GetFullPath(SourcePath);
+        OutputPath = configuration["o"] ??
+                     configuration["out"] ??
+                     throw new NullReferenceException("Output path not provided");
+        OutputPath = Path.GetFullPath(OutputPath);
 
         FileExtension = configuration["ext"] ?? "xml";
         Format = bool.TryParse(configuration["format"] ?? "true", out var fmt) && fmt;
     }
 
+    public bool IsProjectSource =>
+        Path.GetExtension(SourcePath)?.Equals(".csproj", StringComparison.OrdinalIgnoreCase) == true;
+
     public DirectoryCompilerOptions ToDirectoryCompilerOptions() => new()
     {
-        SourceFolder = SourceFolder,
-        OutputFolder = OutputFolder,
-        CodeFormat = Format,
+        SourceFolder = SourcePath,
+        OutputFolder = OutputPath,
+        FormatCode = Format,
+        FileExtension = FileExtension,
+        XmlWriterSettings = XmlWriterSettings,
+    };
+
+    public ProjectCompilerOptions ToProjectCompilerOptions() => new()
+    {
+        ProjectPath = SourcePath,
+        OutputFolder = OutputPath,
+        FormatCode = Format,
         FileExtension = FileExtension,
         XmlWriterSettings = XmlWriterSettings,
     };
