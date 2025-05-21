@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -11,7 +10,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Azure.ApiManagement.PolicyToolkit.Compiling;
 
-public partial class DirectoryCompiler(DocumentCompiler compiler)
+public class DirectoryCompiler(DocumentCompiler compiler)
 {
     private static readonly IEnumerable<MetadataReference> References =
     [
@@ -23,12 +22,12 @@ public partial class DirectoryCompiler(DocumentCompiler compiler)
     public Task<DirectoryCompilerResult> Compile(DirectoryCompilerOptions options)
     {
         var files = Directory.GetFiles(options.SourceFolder, "*.cs", SearchOption.AllDirectories)
-            .Where(p => !InObjectOrBinFolder().IsMatch(p));
+            .Where(p => !FileUtils.InObjOrBinFolder.IsMatch(p));
 
         DirectoryCompilerResult result = new();
         foreach (var file in files)
         {
-            Console.Out.WriteLine($"File '{file}' Processing");
+            Console.Out.WriteLine($"File '{file}' processing");
             var code = File.ReadAllText(file);
             var syntax = CSharpSyntaxTree.ParseText(code, path: file);
             var compilation = CSharpCompilation.Create(
@@ -68,7 +67,4 @@ public partial class DirectoryCompiler(DocumentCompiler compiler)
 
         return Task.FromResult(result);
     }
-
-    [GeneratedRegex(@".*[\\/](obj|bin)[\\/].*")]
-    private static partial Regex InObjectOrBinFolder();
 }

@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -12,6 +13,8 @@ namespace Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public static class FileUtils
 {
+    public static Regex InObjOrBinFolder = new Regex(@".*[\\/](obj|bin)[\\/].*", RegexOptions.Compiled);
+
     public class Data
     {
         public required XElement Element;

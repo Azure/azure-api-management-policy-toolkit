@@ -20,32 +20,36 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
             throw new Exception("Cannot compile project which does not support compilation");
         }
 
+        await Console.Out.WriteLineAsync($"Compiling project '{options.ProjectPath}'");
         var compilation = await project.GetCompilationAsync(cancellationToken);
         if (compilation is null)
         {
             throw new NullReferenceException("Compilation is null");
         }
 
-        result.CompilerDiagnostics =
-        [
-            ..compilation.GetDiagnostics(cancellationToken).Where(d =>
-                !d.IsSuppressed &&
-                d is { Severity: DiagnosticSeverity.Error } or
-                    { Severity: DiagnosticSeverity.Warning, IsWarningAsError: true })
-        ];
-        foreach (var diag in result.CompilerDiagnostics)
+        var emitResult = compilation.Emit(Stream.Null, cancellationToken: cancellationToken);
+        if (!emitResult.Success)
         {
-            await Console.Error.WriteLineAsync(diag.ToString());
-        }
+            result.CompilerDiagnostics =
+            [
+                ..emitResult.Diagnostics.Where(d =>
+                    !d.IsSuppressed &&
+                    d is { Severity: DiagnosticSeverity.Error } or
+                        { Severity: DiagnosticSeverity.Warning, IsWarningAsError: true })
+            ];
+            foreach (var diag in result.CompilerDiagnostics)
+            {
+                await Console.Error.WriteLineAsync(diag.ToString());
+            }
 
-        if (result.CompilerDiagnostics.Any())
-        {
             return result;
         }
 
-        foreach (var syntaxTree in compilation.SyntaxTrees)
+        var onlyUserSyntaxTrees = compilation.SyntaxTrees.Where(t => !FileUtils.InObjOrBinFolder.IsMatch(t.FilePath));
+
+        foreach (var syntaxTree in onlyUserSyntaxTrees)
         {
-            await Console.Out.WriteLineAsync($"File '{syntaxTree.FilePath}' Processing");
+            await Console.Out.WriteLineAsync($"File '{syntaxTree.FilePath}' processing");
             var root = await syntaxTree.GetRootAsync(cancellationToken);
             var documents = root.GetDocumentAttributedClasses();
             foreach (var document in documents)
@@ -71,6 +75,8 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
                 });
                 await Console.Out.WriteLineAsync($"File '{targetFile}' created");
             }
+
+            await Console.Out.WriteLineAsync($"File '{syntaxTree.FilePath}' processed");
         }
 
         return result;
