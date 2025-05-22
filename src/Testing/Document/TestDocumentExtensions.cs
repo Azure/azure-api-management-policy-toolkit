@@ -31,4 +31,7 @@ public static class TestDocumentExtensions
 
     public static LoggerStore SetupLoggerStore(this TestDocument document) =>
         document.Context.LoggerStore;
+
+    public static DiagnosticStore SetupDiagnosticStore(this TestDocument document) =>
+        document.Context.DiagnosticStore;
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -16,6 +17,17 @@ internal class EmitMetricHandler : PolicyHandler<EmitMetricConfig>
 
     protected override void Handle(GatewayContext context, EmitMetricConfig config)
     {
-        throw new NotImplementedException();
+        if (context.DiagnosticStore.Enabled)
+        {
+            context.DiagnosticStore.Metrics.Add(new Metric(
+                config.Namespace ?? "API Management",
+                config.Name,
+                config.Value ?? 1.0,
+                config.Dimensions
+                    .Where(d => d.Value is not null || !context.DiagnosticStore.SkipDimensionOnEmpty)
+                    .Select(d => new MetricDimension(d.Name, d.Value ?? "N/A"))
+                    .ToArray()
+            ));
+        }
     }
 }
