@@ -14,7 +14,7 @@ public class LogToEventHubCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.LogToEventHub);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<LogToEventHubConfig>(context, "log-to-eventhub",
                 out IReadOnlyDictionary<string, InitializerValue>? values))

@@ -14,7 +14,7 @@ public class ValidateParametersCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.ValidateParameters);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ValidateParametersConfig>(context, "validate-parameters",
                 out var values))
@@ -68,7 +68,7 @@ public class ValidateParametersCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static void AddHeadersElement(ICompilationContext context, InitializerValue headersValue,
+    private static void AddHeadersElement(IDocumentCompilationContext context, InitializerValue headersValue,
         XElement parentElement)
     {
         if (!headersValue.TryGetValues<ValidateHeaderParameters>(out var headerParams))
@@ -116,7 +116,7 @@ public class ValidateParametersCompiler : IMethodPolicyHandler
         parentElement.Add(headersElement);
     }
 
-    private static void AddQueryElement(ICompilationContext context, InitializerValue queryValue,
+    private static void AddQueryElement(IDocumentCompilationContext context, InitializerValue queryValue,
         XElement parentElement)
     {
         if (!queryValue.TryGetValues<ValidateQueryParameters>(out var queryParams))
@@ -164,7 +164,8 @@ public class ValidateParametersCompiler : IMethodPolicyHandler
         parentElement.Add(queryElement);
     }
 
-    private static void AddPathElement(ICompilationContext context, InitializerValue pathValue, XElement parentElement)
+    private static void AddPathElement(IDocumentCompilationContext context, InitializerValue pathValue,
+        XElement parentElement)
     {
         if (!pathValue.TryGetValues<ValidatePathParameters>(out var pathParams))
         {
@@ -199,7 +200,7 @@ public class ValidateParametersCompiler : IMethodPolicyHandler
         parentElement.Add(pathElement);
     }
 
-    private static void AddParameters(ICompilationContext context, InitializerValue parametersValue,
+    private static void AddParameters(IDocumentCompilationContext context, InitializerValue parametersValue,
         XElement parentElement, string policyPath)
     {
         foreach (var paramValue in parametersValue.UnnamedValues ?? [])

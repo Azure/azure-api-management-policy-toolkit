@@ -11,7 +11,7 @@ public class ValidateStatusCodeCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IOutboundContext.ValidateStatusCode);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ValidateStatusCodeConfig>(context, "validate-status-code",
                 out var values))
@@ -43,7 +43,7 @@ public class ValidateStatusCodeCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static void HandleStatusCodes(ICompilationContext context, InitializerValue statusCodesValue,
+    private static void HandleStatusCodes(IDocumentCompilationContext context, InitializerValue statusCodesValue,
         XElement parentElement)
     {
         foreach (var statusCodeValue in statusCodesValue.UnnamedValues ?? [])

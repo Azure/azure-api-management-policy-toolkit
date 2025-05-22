@@ -8,5 +8,5 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 public interface IMethodPolicyHandler
 {
     string MethodName { get; }
-    void Handle(ICompilationContext context, InvocationExpressionSyntax node);
+    void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node);
 }

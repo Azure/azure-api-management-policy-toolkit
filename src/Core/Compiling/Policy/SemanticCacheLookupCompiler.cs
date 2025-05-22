@@ -28,7 +28,7 @@ public abstract class BaseSemanticCacheLookupCompiler : IMethodPolicyHandler
         _policyName = policyName;
     }
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<SemanticCacheLookupConfig>(context, _policyName, out var values))
         {

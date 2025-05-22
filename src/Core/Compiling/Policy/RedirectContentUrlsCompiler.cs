@@ -12,7 +12,7 @@ public class RedirectContentUrlsCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.RedirectContentUrls);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         context.AddPolicy(new XElement("redirect-content-urls"));
     }

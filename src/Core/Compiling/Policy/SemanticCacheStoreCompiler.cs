@@ -28,7 +28,7 @@ public abstract class BaseSemanticCacheStoreCompiler : IMethodPolicyHandler
         _policyName = policyName;
     }
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
         if (arguments.Count != 1)

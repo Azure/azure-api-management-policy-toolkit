@@ -14,7 +14,7 @@ public class CacheLookupCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.CacheLookup);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CacheLookupConfig>(context, "check-header", out var values))
         {

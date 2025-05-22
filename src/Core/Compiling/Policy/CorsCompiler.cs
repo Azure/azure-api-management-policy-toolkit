@@ -14,7 +14,7 @@ public class CorsCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.Cors);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CorsConfig>(context, "cors", out var values))
         {

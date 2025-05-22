@@ -12,7 +12,7 @@ public class AuthenticationManageIdentityReturnValueCompiler : IReturnValueMetho
 {
     public string MethodName => nameof(IInboundContext.AuthenticationManagedIdentity);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node, string variableName)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node, string variableName)
     {
         var policy = new XElement("authentication-managed-identity");
         var resource = node.ArgumentList.Arguments[0].Expression.ProcessParameter(context);

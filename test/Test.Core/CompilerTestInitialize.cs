@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Xml.Linq;
+
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.IoC;
 using Microsoft.CodeAnalysis;
@@ -13,8 +16,15 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Tests.Extensions;
 [TestClass]
 public static class CompilerTestInitialize
 {
-    private static ServiceProvider s_serviceProvider;
-    private static CSharpPolicyCompiler s_compiler;
+    private static readonly IEnumerable<MetadataReference> References =
+    [
+        MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+        MetadataReference.CreateFromFile(typeof(XElement).Assembly.Location),
+        MetadataReference.CreateFromFile(typeof(IDocument).Assembly.Location)
+    ];
+
+    private static ServiceProvider s_serviceProvider = null!;
+    private static DocumentCompiler s_compiler = null!;
 
     [AssemblyInitialize]
     public static void CompilerInitialize(TestContext testContext)
@@ -23,7 +33,7 @@ public static class CompilerTestInitialize
         s_serviceProvider = serviceCollection
             .SetupCompiler()
             .BuildServiceProvider();
-        s_compiler = s_serviceProvider.GetRequiredService<CSharpPolicyCompiler>();
+        s_compiler = s_serviceProvider.GetRequiredService<DocumentCompiler>();
     }
 
     [AssemblyCleanup]
@@ -32,15 +42,19 @@ public static class CompilerTestInitialize
         s_serviceProvider.Dispose();
     }
 
-    public static ICompilationResult CompileDocument(this string document)
+    public static IDocumentCompilationResult CompileDocument(this string document)
     {
-        SyntaxTree code = CSharpSyntaxTree.ParseText(document);
-        ClassDeclarationSyntax policy = code
+        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(document);
+        var compilation = CSharpCompilation.Create(
+            Guid.NewGuid().ToString(),
+            syntaxTrees: [syntaxTree],
+            references: References);
+        ClassDeclarationSyntax policy = syntaxTree
             .GetRoot()
             .DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
             .First(c => c.AttributeLists.ContainsAttributeOfType("Document"));
 
-        return s_compiler.Compile(policy);
+        return s_compiler.Compile(compilation, policy);
     }
 }

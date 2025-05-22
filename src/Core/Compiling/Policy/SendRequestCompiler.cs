@@ -14,7 +14,7 @@ public class SendRequestCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.SendRequest);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<SendRequestConfig>(context, "send-request", out var values))
         {
@@ -71,7 +71,8 @@ public class SendRequestCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private void HandleAuthentication(ICompilationContext context, XElement element, InitializerValue authentication)
+    private void HandleAuthentication(IDocumentCompilationContext context, XElement element,
+        InitializerValue authentication)
     {
         var values = authentication.NamedValues;
         if (values is null)

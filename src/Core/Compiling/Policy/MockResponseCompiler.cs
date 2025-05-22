@@ -14,7 +14,7 @@ public class MockResponseCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.MockResponse);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
         if (arguments.Count > 1)
@@ -35,7 +35,7 @@ public class MockResponseCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private void HandleConfig(ICompilationContext context, XElement element, InitializerValue value)
+    private void HandleConfig(IDocumentCompilationContext context, XElement element, InitializerValue value)
     {
         if (value.Type != nameof(MockResponseConfig))
         {

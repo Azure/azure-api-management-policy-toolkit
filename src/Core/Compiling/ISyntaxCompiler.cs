@@ -10,5 +10,5 @@ public interface ISyntaxCompiler
 {
     SyntaxKind Syntax { get; }
 
-    void Compile(ICompilationContext context, SyntaxNode node);
+    void Compile(IDocumentCompilationContext context, SyntaxNode node);
 }

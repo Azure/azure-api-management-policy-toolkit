@@ -14,7 +14,7 @@ public class CacheStoreCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IOutboundContext.CacheStore);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
         if (arguments.Count is > 2 or < 1)

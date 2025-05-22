@@ -14,7 +14,7 @@ public class QuotaCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.Quota);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<QuotaConfig>(context, "quota", out var values))
         {
@@ -98,7 +98,7 @@ public class QuotaCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private bool Handle(ICompilationContext context, string name, InitializerValue value, out XElement element)
+    private bool Handle(IDocumentCompilationContext context, string name, InitializerValue value, out XElement element)
     {
         element = new XElement(name);
         var values = value.NamedValues!;

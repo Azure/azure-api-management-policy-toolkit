@@ -14,7 +14,7 @@ public class ValidateJwtCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.ValidateJwt);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ValidateJwtConfig>(context, "validate-jwt", out var values))
         {
@@ -70,7 +70,7 @@ public class ValidateJwtCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static object[] HandleOpenIdConfigs(ICompilationContext context, InitializerValue openIdConfigs)
+    private static object[] HandleOpenIdConfigs(IDocumentCompilationContext context, InitializerValue openIdConfigs)
     {
         var openIdElements = new List<object>();
         foreach (var openIdConfig in openIdConfigs.UnnamedValues ?? [])
@@ -105,7 +105,7 @@ public class ValidateJwtCompiler : IMethodPolicyHandler
     }
 
     private static void HandleKeys(
-        ICompilationContext context,
+        IDocumentCompilationContext context,
         XElement element,
         IReadOnlyDictionary<string, InitializerValue> values,
         string key,

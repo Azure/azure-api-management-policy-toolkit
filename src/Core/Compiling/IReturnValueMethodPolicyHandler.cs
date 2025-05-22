@@ -8,5 +8,5 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 public interface IReturnValueMethodPolicyHandler
 {
     string MethodName { get; }
-    void Handle(ICompilationContext context, InvocationExpressionSyntax node, string variableName);
+    void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node, string variableName);
 }

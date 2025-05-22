@@ -14,7 +14,7 @@ public class PublishToDarpCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.PublishToDarp);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<PublishToDarpConfig>(context, "publish-to-darp", out var values))
         {

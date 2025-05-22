@@ -30,7 +30,7 @@ public abstract class BaseSetHeaderCompiler : IMethodPolicyHandler
 
     public string MethodName { get; }
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
         if (_type != "delete" && arguments.Count < 2 ||
@@ -57,7 +57,7 @@ public abstract class BaseSetHeaderCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    public static void HandleHeaders(ICompilationContext context, XElement root, InitializerValue headers)
+    public static void HandleHeaders(IDocumentCompilationContext context, XElement root, InitializerValue headers)
     {
         foreach (var header in headers.UnnamedValues!)
         {

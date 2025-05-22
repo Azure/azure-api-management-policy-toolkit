@@ -15,7 +15,7 @@ public class XslTransformCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.XslTransform);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<XslTransformConfig>(context, "xsl-transform", out var values))
         {
@@ -59,7 +59,7 @@ public class XslTransformCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static void HandleParameters(ICompilationContext context, InitializerValue parametersValue,
+    private static void HandleParameters(IDocumentCompilationContext context, InitializerValue parametersValue,
         XElement element)
     {
         foreach (var paramValue in parametersValue.UnnamedValues ?? [])

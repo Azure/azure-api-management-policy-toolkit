@@ -14,7 +14,7 @@ public class ValidateContentCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.ValidateContent);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ValidateContentConfig>(context, "validate-content", out var values))
         {
@@ -74,7 +74,7 @@ public class ValidateContentCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static void HandleContentTypeMap(ICompilationContext context, InitializerValue contentTypeMapValue,
+    private static void HandleContentTypeMap(IDocumentCompilationContext context, InitializerValue contentTypeMapValue,
         XElement parentElement)
     {
         if (!contentTypeMapValue.TryGetValues<ContentTypeMapConfig>(out var mapConfigValues))
@@ -103,7 +103,8 @@ public class ValidateContentCompiler : IMethodPolicyHandler
         parentElement.Add(mapElement);
     }
 
-    private static void HandleTypeMap(ICompilationContext context, InitializerValue typesValue, XElement mapElement)
+    private static void HandleTypeMap(IDocumentCompilationContext context, InitializerValue typesValue,
+        XElement mapElement)
     {
         foreach (var typeValue in typesValue.UnnamedValues ?? [])
         {
@@ -137,7 +138,7 @@ public class ValidateContentCompiler : IMethodPolicyHandler
         }
     }
 
-    private static void HandleContents(ICompilationContext context, InitializerValue contentTypesValue,
+    private static void HandleContents(IDocumentCompilationContext context, InitializerValue contentTypesValue,
         XElement parentElement)
     {
         foreach (var contentTypeValue in contentTypesValue.UnnamedValues ?? [])

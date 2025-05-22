@@ -14,7 +14,7 @@ public class ValidateHeadersCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IOutboundContext.ValidateHeaders);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ValidateHeadersConfig>(context, "validate-headers", out var values))
         {
@@ -57,7 +57,8 @@ public class ValidateHeadersCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static void HandleHeaders(ICompilationContext context, InitializerValue headerValues, XElement element)
+    private static void HandleHeaders(IDocumentCompilationContext context, InitializerValue headerValues,
+        XElement element)
     {
         foreach (var headerValue in headerValues.UnnamedValues ?? [])
         {

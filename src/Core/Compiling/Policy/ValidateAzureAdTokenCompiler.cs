@@ -14,7 +14,7 @@ public class ValidateAzureAdTokenCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.ValidateAzureAdToken);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ValidateAzureAdTokenConfig>(context, "validate-azure-ad-token",
                 out IReadOnlyDictionary<string, InitializerValue>? values))
@@ -66,7 +66,7 @@ public class ValidateAzureAdTokenCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static XElement HandleDecryptionKeys(ICompilationContext context, InitializerValue decryptionKeys)
+    private static XElement HandleDecryptionKeys(IDocumentCompilationContext context, InitializerValue decryptionKeys)
     {
         XElement listElement = new("decryption-keys");
         foreach (InitializerValue initializer in decryptionKeys.UnnamedValues ?? [])

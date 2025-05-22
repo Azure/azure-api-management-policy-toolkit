@@ -28,7 +28,7 @@ public abstract class BaseTokenLimitCompiler : IMethodPolicyHandler
 
     public string MethodName { get; }
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<TokenLimitConfig>(context, _policyName, out var values))
         {

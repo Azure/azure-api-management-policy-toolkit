@@ -14,7 +14,7 @@ public class CacheLookupValueCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.CacheLookupValue);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CacheLookupValueConfig>(context, "cache-lookup-value", out var values))
         {

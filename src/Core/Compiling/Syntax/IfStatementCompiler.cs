@@ -21,7 +21,7 @@ public class IfStatementCompiler : ISyntaxCompiler
 
     public SyntaxKind Syntax => SyntaxKind.IfStatement;
 
-    public void Compile(ICompilationContext context, SyntaxNode node)
+    public void Compile(IDocumentCompilationContext context, SyntaxNode node)
     {
         var ifStatement = node as IfStatementSyntax ?? throw new NullReferenceException();
 
@@ -58,7 +58,7 @@ public class IfStatementCompiler : ISyntaxCompiler
             }
 
             var section = new XElement("when");
-            var innerContext = new SubCompilationContext(context, section);
+            var innerContext = new SubDocumentCompilationContext(context, section);
             _blockCompiler.Value.Compile(innerContext, block);
             section.Add(new XAttribute("condition", CompilerUtils.FindCode(condition, context)));
             choose.Add(section);
@@ -69,7 +69,7 @@ public class IfStatementCompiler : ISyntaxCompiler
         if (currentIf.Else != null)
         {
             var section = new XElement("otherwise");
-            var innerContext = new SubCompilationContext(context, section);
+            var innerContext = new SubDocumentCompilationContext(context, section);
             if (currentIf.Else.Statement is BlockSyntax block)
             {
                 _blockCompiler.Value.Compile(innerContext, block);

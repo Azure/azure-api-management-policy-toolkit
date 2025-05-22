@@ -22,7 +22,7 @@ public class LimitConcurrencyCompiler : IMethodPolicyHandler
 
     public string MethodName => nameof(IInboundContext.LimitConcurrency);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (node.ArgumentList.Arguments.Count != 2)
         {
@@ -85,7 +85,7 @@ public class LimitConcurrencyCompiler : IMethodPolicyHandler
             return;
         }
 
-        SubCompilationContext subContext = new(context, element);
+        SubDocumentCompilationContext subContext = new(context, element);
         _blockCompiler.Value.Compile(subContext, lambda.Block);
 
         context.AddPolicy(element);

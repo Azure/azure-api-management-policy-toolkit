@@ -11,21 +11,21 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
-public class CSharpPolicyCompiler
+public class DocumentCompiler
 {
     private readonly Lazy<BlockCompiler> _blockCompiler;
 
-    public CSharpPolicyCompiler(Lazy<BlockCompiler> blockCompiler)
+    public DocumentCompiler(Lazy<BlockCompiler> blockCompiler)
     {
         _blockCompiler = blockCompiler;
     }
 
-    public ICompilationResult Compile(ClassDeclarationSyntax document)
+    public IDocumentCompilationResult Compile(Compilation compilation, ClassDeclarationSyntax document)
     {
         var methods = document.DescendantNodes()
             .OfType<MethodDeclarationSyntax>();
         var policyDocument = new XElement("policies");
-        CompilationContext context = new(document, policyDocument);
+        DocumentCompilationContext context = new(compilation, document, policyDocument);
 
         foreach (var method in methods)
         {
@@ -50,7 +50,7 @@ public class CSharpPolicyCompiler
     }
 
 
-    private void CompileSection(ICompilationContext context, string section, MethodDeclarationSyntax method)
+    private void CompileSection(DocumentCompilationContext context, string section, MethodDeclarationSyntax method)
     {
         if (method.Body is null)
         {
@@ -63,7 +63,7 @@ public class CSharpPolicyCompiler
         }
 
         var sectionElement = new XElement(section);
-        var sectionContext = new SubCompilationContext(context, sectionElement);
+        var sectionContext = new DocumentCompilationContext(context, sectionElement);
         _blockCompiler.Value.Compile(sectionContext, method.Body);
         context.AddPolicy(sectionElement);
     }

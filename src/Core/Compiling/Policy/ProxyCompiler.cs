@@ -14,7 +14,7 @@ public class ProxyCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.Proxy);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ProxyConfig>(context, "proxy",
                 out IReadOnlyDictionary<string, InitializerValue>? values))
@@ -29,7 +29,7 @@ public class ProxyCompiler : IMethodPolicyHandler
         }
     }
 
-    public static void HandleProxy(ICompilationContext context, XElement element, InitializerValue value)
+    public static void HandleProxy(IDocumentCompilationContext context, XElement element, InitializerValue value)
     {
         if (!value.TryGetValues<ProxyConfig>(out IReadOnlyDictionary<string, InitializerValue>? values))
         {
@@ -49,7 +49,7 @@ public class ProxyCompiler : IMethodPolicyHandler
         }
     }
 
-    private static XElement? HandleProxy(ICompilationContext context, SyntaxNode node,
+    private static XElement? HandleProxy(IDocumentCompilationContext context, SyntaxNode node,
         IReadOnlyDictionary<string, InitializerValue> values)
     {
         XElement element = new("proxy");

@@ -14,7 +14,7 @@ public class RateLimitCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.RateLimit);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<RateLimitConfig>(context, "rate-limit", out var values))
         {
@@ -79,7 +79,7 @@ public class RateLimitCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private bool Handle(ICompilationContext context, string name, InitializerValue value, out XElement element)
+    private bool Handle(IDocumentCompilationContext context, string name, InitializerValue value, out XElement element)
     {
         element = new XElement(name);
         var values = value.NamedValues!;

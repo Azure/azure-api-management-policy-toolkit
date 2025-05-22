@@ -12,7 +12,7 @@ public class ReturnResponseCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.ReturnResponse);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ReturnResponseConfig>(context, "return-response", out var values))
         {

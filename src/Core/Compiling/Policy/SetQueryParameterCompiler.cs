@@ -34,7 +34,7 @@ public abstract class BaseSetQueryParameterCompiler : IMethodPolicyHandler
 
     public string MethodName { get; }
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
         if (_type != "delete" && arguments.Count < 2 ||

@@ -14,7 +14,7 @@ public class IpFilterCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.IpFilter);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<IpFilterConfig>(context, "ip-filter", out var values))
         {

@@ -14,7 +14,7 @@ public class AuthenticationManagedIdentityCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.AuthenticationManagedIdentity);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<ManagedIdentityAuthenticationConfig>(
                 context,
@@ -46,7 +46,7 @@ public class AuthenticationManagedIdentityCompiler : IMethodPolicyHandler
     }
 
     public static void HandleManagedIdentityAuthentication(
-        ICompilationContext context,
+        IDocumentCompilationContext context,
         XElement element,
         IReadOnlyDictionary<string, InitializerValue> values,
         SyntaxNode node)

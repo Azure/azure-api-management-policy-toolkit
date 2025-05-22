@@ -14,7 +14,7 @@ public class LlmContentSafetyCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.LlmContentSafety);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<LlmContentSafetyConfig>(context, "llm-content-safety", out var values))
         {
@@ -49,7 +49,8 @@ public class LlmContentSafetyCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static void HandleCategories(ICompilationContext context, InitializerValue categoriesValue, XElement parent)
+    private static void HandleCategories(IDocumentCompilationContext context, InitializerValue categoriesValue,
+        XElement parent)
     {
         if (!categoriesValue.TryGetValues<ContentSafetyCategories>(out var categories))
         {
@@ -68,7 +69,7 @@ public class LlmContentSafetyCompiler : IMethodPolicyHandler
         parent.Add(categoriesElement);
     }
 
-    private static void HandleCategory(ICompilationContext context, InitializerValue categoryValues,
+    private static void HandleCategory(IDocumentCompilationContext context, InitializerValue categoryValues,
         XElement categoriesElement)
     {
         foreach (var categoryValue in categoryValues.UnnamedValues ?? [])

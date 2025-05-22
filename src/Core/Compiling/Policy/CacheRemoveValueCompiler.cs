@@ -14,7 +14,7 @@ public class CacheRemoveValueCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.CacheRemoveValue);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<CacheRemoveValueConfig>(context, "cache-remove-value", out var values))
         {

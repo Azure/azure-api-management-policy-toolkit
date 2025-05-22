@@ -18,7 +18,7 @@ public class LocalDeclarationStatementCompiler : ISyntaxCompiler
 
     public SyntaxKind Syntax => SyntaxKind.LocalDeclarationStatement;
 
-    public void Compile(ICompilationContext context, SyntaxNode node)
+    public void Compile(IDocumentCompilationContext context, SyntaxNode node)
     {
         var syntax = node as LocalDeclarationStatementSyntax ?? throw new Exception();
         var variables = syntax.Declaration.Variables;

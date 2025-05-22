@@ -14,7 +14,7 @@ public class QuotaByKeyCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.QuotaByKey);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<QuotaByKeyConfig>(context, "quota-by-key",
                 out IReadOnlyDictionary<string, InitializerValue>? values))

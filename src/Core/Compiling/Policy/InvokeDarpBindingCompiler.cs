@@ -14,7 +14,7 @@ public class InvokeDarpBindingCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.InvokeDarpBinding);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<InvokeDarpBindingConfig>(context, "invoke-darp-binding",
                 out IReadOnlyDictionary<string, InitializerValue>? values))
@@ -56,7 +56,7 @@ public class InvokeDarpBindingCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
-    private static void HandleMataData(ICompilationContext context, InitializerValue mataDataValue,
+    private static void HandleMataData(IDocumentCompilationContext context, InitializerValue mataDataValue,
         XElement parentElement)
     {
         if (mataDataValue.UnnamedValues is null || mataDataValue.UnnamedValues.Count == 0)
@@ -111,7 +111,8 @@ public class InvokeDarpBindingCompiler : IMethodPolicyHandler
         parentElement.Add(element);
     }
 
-    private static void HandleData(ICompilationContext context, InitializerValue dataValue, XElement parentElement)
+    private static void HandleData(IDocumentCompilationContext context, InitializerValue dataValue,
+        XElement parentElement)
     {
         if (dataValue.Value is null)
         {

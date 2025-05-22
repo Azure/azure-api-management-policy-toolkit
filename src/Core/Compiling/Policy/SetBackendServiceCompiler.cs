@@ -14,7 +14,7 @@ public class SetBackendServiceCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.SetBackendService);
 
-    public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
+    public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<SetBackendServiceConfig>(context, "set-backend-service", out var values))
         {
