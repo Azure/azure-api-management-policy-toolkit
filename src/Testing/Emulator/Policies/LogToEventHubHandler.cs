@@ -35,7 +35,7 @@ internal class LogToEventHubHandler : PolicyHandler<LogToEventHubConfig>
             Array.Copy(copyBytes, content, MaxMessageBytes);
         }
 
-        logger.EventsInternal.Add(new EventHubEvent(Encoding.UTF8.GetString(content), config.PartitionId,
-            config.PartitionKey));
+        var hubEvent = new EventHubEvent(Encoding.UTF8.GetString(content), config.PartitionId, config.PartitionKey);
+        logger.EventsInternal.Add(hubEvent);
     }
 }

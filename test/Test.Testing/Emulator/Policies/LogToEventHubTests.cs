@@ -59,15 +59,7 @@ public class LogToEventHubTests
 
         public string GetValue(IExpressionContext context)
         {
-            int targetSize = 204001; // 1 byte larger than 204,000
-            var builder = new StringBuilder(targetSize);
-
-            while (Encoding.UTF8.GetByteCount(builder.ToString()) < targetSize)
-            {
-                builder.Append("a"); // Add characters until the size exceeds 204,000 bytes
-            }
-
-            return builder.ToString();
+            return new string('a', 204001); // 204,000 bytes of UTF-8
         }
     }
 
@@ -149,7 +141,7 @@ public class LogToEventHubTests
     [TestMethod]
     public void LogToEventHub_WithPartition()
     {
-        var test = new SimpleLogToEventHub().AsTestDocument();
+        var test = new WithPartitioningLogToEventHub().AsTestDocument();
         var logger = test.SetupLoggerStore().Add("test-inbound");
 
         test.RunInbound();
