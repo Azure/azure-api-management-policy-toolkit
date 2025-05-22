@@ -3,7 +3,7 @@
 
 using System.Net;
 
-using Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 
 namespace Test.Emulator.Emulator;
 

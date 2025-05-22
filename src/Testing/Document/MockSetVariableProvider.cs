@@ -1,9 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Document;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
 public static class MockSetVariableProvider
 {

@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions.Extensions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions.Extensions;
 
 [TestClass]
 public class JwtParserTests
@@ -45,7 +45,7 @@ public class JwtParserTests
         using RandomNumberGenerator rng = RandomNumberGenerator.Create();
         byte[] key = new byte[32];
         rng.GetBytes(key);
-        
+
         var tokenHandler = new JsonWebTokenHandler();
         var tokenDescriptor = new SecurityTokenDescriptor
         {

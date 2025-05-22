@@ -4,12 +4,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public static class CompilerUtils
 {

@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class MockUser : IUser
 {
@@ -16,7 +16,9 @@ public class MockUser : IUser
 
     public string Id { get; set; } = "joe-doe-contoso-example";
 
-    public List<MockUserIdentity> MockUserIdentities { get; set; } = new List<MockUserIdentity>() { new MockUserIdentity() };
+    public List<MockUserIdentity> MockUserIdentities { get; set; } =
+        new List<MockUserIdentity>() { new MockUserIdentity() };
+
     public IEnumerable<IUserIdentity> Identities => MockUserIdentities;
 
     public string LastName { get; set; } = "Doe";

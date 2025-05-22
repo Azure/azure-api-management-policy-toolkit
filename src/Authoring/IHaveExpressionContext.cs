@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
-namespace Azure.ApiManagement.PolicyToolkit.Authoring;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 public interface IHaveExpressionContext
 {

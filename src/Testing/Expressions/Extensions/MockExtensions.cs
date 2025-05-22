@@ -1,9 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public static class MockExtensions
 {
@@ -24,7 +24,7 @@ public static class MockExtensions
 
     public static void SetDefaultUrlContentEncoder()
         => SetUrlContentEncoder(new UrlContentEncoder());
-    
+
     public static void SetDefaultServices()
     {
         SetDefaultBasicAuthCredentialParser();

@@ -4,12 +4,11 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-using Azure.ApiManagement.PolicyToolkit.Compiling;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Azure.ApiManagement.PolicyToolkit.Serialization;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
 public static class RazorCodeFormatter
 {

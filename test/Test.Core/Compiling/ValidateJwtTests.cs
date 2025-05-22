@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class ValidateJwtTests
@@ -76,7 +76,7 @@ public class ValidateJwtTests
                     HeaderName = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => "Author" + "ization";
         }
         """,
@@ -122,7 +122,7 @@ public class ValidateJwtTests
                     QueryParameterName = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => "au" + "th";
         }
         """,
@@ -146,7 +146,7 @@ public class ValidateJwtTests
                     TokenValue = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => context.Request.Headers["Authorization"];
         }
         """,
@@ -194,7 +194,7 @@ public class ValidateJwtTests
                     FailedValidationHttpCode = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => 400 + 1;
         }
         """,
@@ -242,7 +242,7 @@ public class ValidateJwtTests
                     FailedValidationErrorMessage = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => "Invalid" + " " + "token";
         }
         """,
@@ -290,7 +290,7 @@ public class ValidateJwtTests
                     RequireExpirationTime = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => context.User.Email.EndsWith("@contoso.example");
         }
         """,
@@ -338,7 +338,7 @@ public class ValidateJwtTests
                     RequireScheme = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => "Shared" + "Access" + "Signature";
         }
         """,
@@ -386,7 +386,7 @@ public class ValidateJwtTests
                     RequireSignedTokens = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => !context.User.Email.EndsWith("@contoso.example");
         }
         """,
@@ -434,7 +434,7 @@ public class ValidateJwtTests
                     ClockSkew = Exp(context.ExpressionContext),
                 });
             }
-        
+
             string Exp(IExpressionContext context) => context.User.Email.EndsWith("@contoso.example") ? 10 : 0;
         }
         """,

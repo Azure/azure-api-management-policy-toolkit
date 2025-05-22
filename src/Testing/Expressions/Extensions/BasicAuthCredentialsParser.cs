@@ -4,10 +4,10 @@
 using System.Net.Http.Headers;
 using System.Text;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
-using Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Implementations;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class BasicAuthCredentialsParser : IBasicAuthCredentialsParser
 {
@@ -17,13 +17,13 @@ public class BasicAuthCredentialsParser : IBasicAuthCredentialsParser
 
     public BasicAuthCredentials? Parse(string? value)
     {
-        if(string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(value))
         {
             return null;
         }
 
-        if (!AuthenticationHeaderValue.TryParse(value, out var header) 
-            || !"Basic".Equals(header.Scheme, StringComparison.Ordinal) 
+        if (!AuthenticationHeaderValue.TryParse(value, out var header)
+            || !"Basic".Equals(header.Scheme, StringComparison.Ordinal)
             || string.IsNullOrWhiteSpace(header.Parameter))
         {
             return null;

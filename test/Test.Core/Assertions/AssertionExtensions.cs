@@ -3,9 +3,9 @@
 
 using System.Diagnostics.Contracts;
 
-using Azure.ApiManagement.PolicyToolkit.Compiling;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
-namespace Azure.ApiManagement.PolicyToolkit.Assertions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Assertions;
 
 public static class AssertionExtensions
 {

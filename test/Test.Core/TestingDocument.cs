@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
 using Newtonsoft.Json.Linq;
 
-namespace Azure.ApiManagement.PolicyToolkit.CodeContext;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.CodeContext;
 
 [Document("echo-api.retrieve-resource")]
 public class TestingDocument : IDocument

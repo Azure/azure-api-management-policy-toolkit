@@ -3,7 +3,7 @@
 
 using System.Text;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions.Extensions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions.Extensions;
 
 [TestClass]
 public class BasicAuthCredentialsParserTests
@@ -70,6 +70,4 @@ public class BasicAuthCredentialsParserTests
         result!.Password.Should().Be("password");
         result!.Username.Should().Be("¡usernameÿ");
     }
-    
-    
 }

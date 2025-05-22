@@ -3,17 +3,17 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class RateLimitByKeyCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.RateLimitByKey);
+
     public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
     {
         if (!node.TryExtractingConfigParameter<RateLimitByKeyConfig>(context, "rate-limit-by-key", out var values))
@@ -55,15 +55,17 @@ public class RateLimitByKeyCompiler : IMethodPolicyHandler
             ));
             return;
         }
-        
+
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.IncrementCondition), "increment-condition");
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.IncrementCount), "increment-count");
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.RetryAfterHeaderName), "retry-after-header-name");
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.RetryAfterVariableName), "retry-after-variable-name");
-        element.AddAttribute(values, nameof(RateLimitByKeyConfig.RemainingCallsHeaderName), "remaining-calls-header-name");
-        element.AddAttribute(values, nameof(RateLimitByKeyConfig.RemainingCallsVariableName), "remaining-calls-variable-name");
+        element.AddAttribute(values, nameof(RateLimitByKeyConfig.RemainingCallsHeaderName),
+            "remaining-calls-header-name");
+        element.AddAttribute(values, nameof(RateLimitByKeyConfig.RemainingCallsVariableName),
+            "remaining-calls-variable-name");
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.TotalCallsHeaderName), "total-calls-header-name");
-        
+
         context.AddPolicy(element);
     }
 }

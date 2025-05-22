@@ -3,12 +3,11 @@
 
 using System.Reflection;
 
-using Azure.ApiManagement.PolicyToolkit.Compiling;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Azure.ApiManagement.PolicyToolkit.IoC;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.IoC;
 
 public static class CompilerModule
 {
@@ -31,7 +30,7 @@ public static class CompilerModule
                     IsClass: true,
                     IsAbstract: false,
                     IsPublic: true,
-                    Namespace: "Azure.ApiManagement.PolicyToolkit.Compiling.Policy"
+                    Namespace: "Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy"
                 }
                 && typeof(IMethodPolicyHandler).IsAssignableFrom(type));
 

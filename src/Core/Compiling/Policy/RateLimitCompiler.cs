@@ -3,13 +3,12 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class RateLimitCompiler : IMethodPolicyHandler
 {
@@ -49,24 +48,26 @@ public class RateLimitCompiler : IMethodPolicyHandler
         element.AddAttribute(values, nameof(RateLimitConfig.RetryAfterHeaderName), "retry-after-header-name");
         element.AddAttribute(values, nameof(RateLimitConfig.RetryAfterVariableName), "retry-after-variable-name");
         element.AddAttribute(values, nameof(RateLimitConfig.RemainingCallsHeaderName), "remaining-calls-header-name");
-        element.AddAttribute(values, nameof(RateLimitConfig.RemainingCallsVariableName), "remaining-calls-variable-name");
+        element.AddAttribute(values, nameof(RateLimitConfig.RemainingCallsVariableName),
+            "remaining-calls-variable-name");
         element.AddAttribute(values, nameof(RateLimitConfig.TotalCallsHeaderName), "total-calls-header-name");
 
         if (values.TryGetValue(nameof(RateLimitConfig.Apis), out var apis))
         {
             foreach (var api in apis.UnnamedValues!)
             {
-                if(!Handle(context, "api", api, out var apiElement))
+                if (!Handle(context, "api", api, out var apiElement))
                 {
                     continue;
                 }
+
                 element.Add(apiElement);
 
                 if (api.NamedValues!.TryGetValue(nameof(ApiRateLimit.Operations), out var operations))
                 {
                     foreach (var operation in operations.UnnamedValues!)
                     {
-                        if(Handle(context, "operation", operation, out var operationElement))
+                        if (Handle(context, "operation", operation, out var operationElement))
                         {
                             apiElement.Add(operationElement);
                         }
@@ -82,7 +83,7 @@ public class RateLimitCompiler : IMethodPolicyHandler
     {
         element = new XElement(name);
         var values = value.NamedValues!;
-        
+
         var isNameAdded = element.AddAttribute(values, nameof(EntityLimitConfig.Name), "name");
         var isIdAdded = element.AddAttribute(values, nameof(EntityLimitConfig.Id), "id");
 

@@ -1,15 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Compiling;
-using Azure.ApiManagement.PolicyToolkit.IoC;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.IoC;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Azure.ApiManagement.PolicyToolkit.Tests.Extensions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Tests.Extensions;
 
 [TestClass]
 public static class CompilerTestInitialize

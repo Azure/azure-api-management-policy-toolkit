@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Expressions.Extensions;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions.Extensions;
 
 [TestClass]
 public class UrlContentEncoderTests
@@ -84,9 +84,10 @@ public class UrlContentEncoderTests
         var result = new UrlContentEncoder().Encode(dictionary);
 
         // Assert
-        result.Should().NotBeNullOrWhiteSpace().And.BeEquivalentTo("!@%23$%25%5E%26*()-%3D%2B,.%3A;%3C%3E%3F%2F%22%5C%7C%5B%5D%7B%7D%60~=value");
+        result.Should().NotBeNullOrWhiteSpace().And
+            .BeEquivalentTo("!@%23$%25%5E%26*()-%3D%2B,.%3A;%3C%3E%3F%2F%22%5C%7C%5B%5D%7B%7D%60~=value");
     }
-    
+
     [TestMethod]
     public void UrlContentEncoder_ShouldHtmlEncodeValue()
     {
@@ -100,6 +101,7 @@ public class UrlContentEncoderTests
         var result = new UrlContentEncoder().Encode(dictionary);
 
         // Assert
-        result.Should().NotBeNullOrWhiteSpace().And.BeEquivalentTo("key=!@%23$%25%5E%26*()-%3D%2B,.%3A;%3C%3E%3F%2F%22%5C%7C%5B%5D%7B%7D%60~");
+        result.Should().NotBeNullOrWhiteSpace().And
+            .BeEquivalentTo("key=!@%23$%25%5E%26*()-%3D%2B,.%3A;%3C%3E%3F%2F%22%5C%7C%5B%5D%7B%7D%60~");
     }
 }

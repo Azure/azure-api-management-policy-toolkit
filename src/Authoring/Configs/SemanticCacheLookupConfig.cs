@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Authoring;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 /// <summary>
 /// Configuration for semantic cache lookup policies (azure-openai-semantic-cache-lookup and llm-semantic-cache-lookup).<br/>

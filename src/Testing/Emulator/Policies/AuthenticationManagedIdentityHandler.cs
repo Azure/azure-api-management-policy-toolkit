@@ -3,19 +3,18 @@
 
 using System.IdentityModel.Tokens.Jwt;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 [Section(nameof(IInboundContext))]
 internal class AuthenticationManagedIdentityHandler : PolicyHandler<ManagedIdentityAuthenticationConfig>
 {
     public List<Tuple<
-            Func<GatewayContext, ManagedIdentityAuthenticationConfig, bool>,
-            Func<string, string?, string>
+        Func<GatewayContext, ManagedIdentityAuthenticationConfig, bool>,
+        Func<string, string?, string>
     >> ProvideTokenHooks { get; } = new();
 
     public override string PolicyName => nameof(IInboundContext.AuthenticationManagedIdentity);

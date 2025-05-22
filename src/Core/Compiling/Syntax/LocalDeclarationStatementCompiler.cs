@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 
 public class LocalDeclarationStatementCompiler : ISyntaxCompiler
 {

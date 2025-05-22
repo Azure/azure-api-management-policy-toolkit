@@ -3,9 +3,9 @@
 
 using System.Security.Cryptography.X509Certificates;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 [Section(nameof(IInboundContext))]
 internal class AuthenticationCertificateHandler : PolicyHandler<CertificateAuthenticationConfig>

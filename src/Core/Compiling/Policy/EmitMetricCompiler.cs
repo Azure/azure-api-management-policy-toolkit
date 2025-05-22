@@ -3,13 +3,12 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class EmitMetricCompiler : IMethodPolicyHandler
 {
@@ -88,7 +87,7 @@ public class EmitMetricCompiler : IMethodPolicyHandler
             dimensionElement.AddAttribute(result, nameof(MetricDimensionConfig.Value), "value");
             element.Add(dimensionElement);
         }
-        
+
         context.AddPolicy(element);
     }
 }

@@ -6,10 +6,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Compiling;
-using Azure.ApiManagement.PolicyToolkit.IoC;
-using Azure.ApiManagement.PolicyToolkit.Serialization;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.IoC;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

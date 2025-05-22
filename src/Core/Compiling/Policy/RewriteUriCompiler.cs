@@ -3,17 +3,17 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class RewriteUriCompiler : IMethodPolicyHandler
 {
     public string MethodName => nameof(IInboundContext.RewriteUri);
+
     public void Handle(ICompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
@@ -30,7 +30,7 @@ public class RewriteUriCompiler : IMethodPolicyHandler
         var template = node.ArgumentList.Arguments[0].Expression.ProcessParameter(context);
         element.Add(new XAttribute("template", template));
 
-        if(node.ArgumentList.Arguments.Count == 2)
+        if (node.ArgumentList.Arguments.Count == 2)
         {
             var copyUnmatchedParams = node.ArgumentList.Arguments[1].Expression.ProcessParameter(context);
             element.Add(new XAttribute("copy-unmatched-params", copyUnmatchedParams));

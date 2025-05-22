@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class LlmTokenLimitTests
@@ -72,7 +72,7 @@ public class LlmTokenLimitTests
                     TokensPerMinute = 5000,
                 });
             }
-        
+
             string GetCounterKey(IExpressionContext context) => context.User.Id + "-token-counter";
         }
         """,
@@ -99,7 +99,7 @@ public class LlmTokenLimitTests
                     TokensPerMinute = 5000,
                 });
             }
-        
+
             bool ShouldEstimateToken(IExpressionContext context) => context.Request.Headers.ContainsKey("X-Estimate-Tokens");
         }
         """,
@@ -126,7 +126,7 @@ public class LlmTokenLimitTests
                     TokensPerMinute = GetTokenRate(context.ExpressionContext),
                 });
             }
-        
+
             int GetTokenRate(IExpressionContext context) => context.User.Groups.Contains("premium") ? 10000 : 5000;
         }
         """,
@@ -154,7 +154,7 @@ public class LlmTokenLimitTests
                     TokenQuotaPeriod = "Daily"
                 });
             }
-        
+
             int GetQuota(IExpressionContext context) => context.User.Groups.Contains("premium") ? 50000 : 20000;
         }
         """,

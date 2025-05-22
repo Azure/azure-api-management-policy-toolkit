@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Azure.ApiManagement.PolicyToolkit.IoC;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.IoC;
 
 public static class LazilyResolutionModule
 {

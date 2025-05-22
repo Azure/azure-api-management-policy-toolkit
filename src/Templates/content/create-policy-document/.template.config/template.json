@@ -9,8 +9,8 @@
   "name": "Policy Toolkit Policy Class",
   "generatorVersions": "[1.0.0.0-*)",
   "description": "Creates a new Policy Toolkit policy class",
-  "groupIdentity": "Azure.ApiManagement.PolicyToolkit.Templates.Policy",
-  "identity": "Azure.ApiManagement.PolicyToolkit.Templates.Policy.1.0",
+  "groupIdentity": "Microsoft.Azure.ApiManagement.PolicyToolkit.Templates.Policy",
+  "identity": "Microsoft.Azure.ApiManagement.PolicyToolkit.Templates.Policy.1.0",
   "shortName": "policytoolkitclass",
   "tags": {
     "language": "C#",

@@ -1,6 +1,6 @@
-﻿using Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+﻿using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 
 internal abstract class PolicyHandler<TConfig> : IPolicyHandler
 {

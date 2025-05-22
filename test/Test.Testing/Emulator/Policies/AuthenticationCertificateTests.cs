@@ -4,10 +4,10 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
-using Azure.ApiManagement.PolicyToolkit.Testing;
-using Azure.ApiManagement.PolicyToolkit.Testing.Document;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
 namespace Test.Emulator.Emulator.Policies;
 

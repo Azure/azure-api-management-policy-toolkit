@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class RetryTests
@@ -25,7 +25,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             public void Backend(IBackendContext context)
             {
                 context.Retry(new RetryConfig()
@@ -55,7 +55,7 @@ public class RetryTests
                         });
                     });
             }
-        
+
             public void OnError(IOnErrorContext context)
             {
                 context.Retry(new RetryConfig()
@@ -71,7 +71,7 @@ public class RetryTests
                         });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
         }
         """,
@@ -119,7 +119,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
             int GetRetryCount(IExpressionContext context) => (int)context.Variables["retry-count"];
         }
@@ -153,7 +153,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
             int GetInterval(IExpressionContext context) => (int)context.Variables["retry-interval"];
         }
@@ -188,7 +188,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
         }
         """,
@@ -222,7 +222,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
             int GetMaxInterval(IExpressionContext context) => (int)context.Variables["retry-max-interval"];
         }
@@ -257,7 +257,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
         }
         """,
@@ -291,7 +291,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
             int GetDelta(IExpressionContext context) => (int)context.Variables["retry-delta"];
         }
@@ -326,7 +326,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
         }
         """,
@@ -360,7 +360,7 @@ public class RetryTests
                         context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
                     });
             }
-        
+
             bool Condition(IExpressionContext context) => context.Variables.ContainsKey("retry");
             bool GetFirstFastRetry(IExpressionContext context) => (bool)context.Variables["retry-first-fast-retry"];
         }

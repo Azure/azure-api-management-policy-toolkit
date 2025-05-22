@@ -3,13 +3,12 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
 public class CorsCompiler : IMethodPolicyHandler
 {
@@ -51,6 +50,7 @@ public class CorsCompiler : IMethodPolicyHandler
             ));
             return;
         }
+
         element.Add(new XElement("allowed-origins", origins));
 
         if (!values.TryGetValue(nameof(CorsConfig.AllowedHeaders), out var allowedHeaders))
@@ -77,6 +77,7 @@ public class CorsCompiler : IMethodPolicyHandler
             ));
             return;
         }
+
         element.Add(new XElement("allowed-headers", headers));
 
         if (values.TryGetValue(nameof(CorsConfig.AllowedMethods), out var allowedMethods))
@@ -96,6 +97,7 @@ public class CorsCompiler : IMethodPolicyHandler
                     nameof(CorsConfig.AllowedMethods)
                 ));
             }
+
             allowedMethodsElement.Add(methods);
             element.Add(allowedMethodsElement);
         }
@@ -114,6 +116,7 @@ public class CorsCompiler : IMethodPolicyHandler
                     nameof(CorsConfig.ExposeHeaders)
                 ));
             }
+
             element.Add(new XElement("expose-headers", exposeHeadersElements));
         }
 

@@ -3,10 +3,10 @@
 
 using System.Security.Cryptography.X509Certificates;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Document;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
 public static class MockAuthenticationCertificateProvider
 {

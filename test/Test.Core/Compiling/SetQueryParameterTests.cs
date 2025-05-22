@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class SetQueryParameterCompilationTests
@@ -114,7 +114,7 @@ public class SetQueryParameterCompilationTests
                 {
                     context.SetQueryParameter(NameFromExpression(context.ExpressionContext), "1");
                 }
-            
+
                 public string NameFromExpression(IExpressionContext context) => "name" + context.RequestId;
             }
             """;
@@ -146,7 +146,7 @@ public class SetQueryParameterCompilationTests
                 {
                     context.SetQueryParameter("param1", "1", ValueFromExpression(context.ExpressionContext), "2");
                 }
-            
+
                 public string ValueFromExpression(IExpressionContext context) => "value" + context.RequestId;
             }
             """;

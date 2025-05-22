@@ -5,8 +5,8 @@
     "Solution",
     "Policy Toolkit"
   ],
-  "groupIdentity": "Azure.ApiManagement.PolicyToolkit.Templates.Solution",
-  "identity": "Azure.ApiManagement.PolicyToolkit.Templates.Solution.1.0",
+  "groupIdentity": "Microsoft.Azure.ApiManagement.PolicyToolkit.Templates.Solution",
+  "identity": "Microsoft.Azure.ApiManagement.PolicyToolkit.Templates.Solution.1.0",
   "name": "Azure API Management Policy Toolkit solution template",
   "shortName": "policytoolkitsolution",
   "tags": {

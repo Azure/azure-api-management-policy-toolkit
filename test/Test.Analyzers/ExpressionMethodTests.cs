@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Analyzers;
-using Azure.ApiManagement.PolicyToolkit.Analyzers.Test;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers.Test;
 
-namespace Azure.ApiManagement.PolicyToolkit.Test.Analyzers;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Test.Analyzers;
 
 [TestClass]
 public class ExpressionDefinitionTests

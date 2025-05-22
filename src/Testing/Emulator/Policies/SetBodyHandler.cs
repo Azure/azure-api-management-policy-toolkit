@@ -1,10 +1,10 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
-namespace Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 [Section(nameof(IInboundContext))]
 internal class SetBodyRequestHandler : SetBodyHandler
@@ -54,7 +54,7 @@ internal abstract class SetBodyHandler : IPolicyHandler
         var callbackHook = CallbackHooks.Find(hook => hook.Item1(context, body, config));
 
         if (callbackHook is not null)
-        {        
+        {
             callbackHook.Item2(context, body, config);
             return null;
         }

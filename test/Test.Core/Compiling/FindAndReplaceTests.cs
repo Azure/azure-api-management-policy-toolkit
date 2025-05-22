@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class FindAndReplaceTests
@@ -16,17 +16,17 @@ public class FindAndReplaceTests
             {
                 context.FindAndReplace("cat", "dog");
             }
-        
+
             public void Backend(IBackendContext context)
             {
                 context.FindAndReplace("cat", "dog");
             }
-        
+
             public void Outbound(IOutboundContext context)
             {
                 context.FindAndReplace("cat", "dog");
             }
-        
+
             public void OnError(IOnErrorContext context)
             {
                 context.FindAndReplace("cat", "dog");
@@ -60,7 +60,7 @@ public class FindAndReplaceTests
             {
                 context.FindAndReplace(FromEmail(context.ExpressionContext), "issues@contoso.com");
             }
-        
+
             private string FromEmail(IExpressionContext context) => context.User.Email;
         }
         """,
@@ -82,7 +82,7 @@ public class FindAndReplaceTests
             {
                 context.FindAndReplace("admin@contoso.com", ToEmail(context.ExpressionContext));
             }
-        
+
             private string ToEmail(IExpressionContext context) => context.User.Email;
         }
         """,
@@ -104,7 +104,7 @@ public class FindAndReplaceTests
             {
                 context.FindAndReplace(FromId(context.ExpressionContext), ToName(context.ExpressionContext));
             }
-        
+
             private string FromId(IExpressionContext context) => context.User.Id;
             private string ToName(IExpressionContext context) => context.User.Name;
         }
