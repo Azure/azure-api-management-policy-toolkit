@@ -53,18 +53,19 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
         {
             await Console.Out.WriteLineAsync($"File '{syntaxTree.FilePath}' processing");
             var root = await syntaxTree.GetRootAsync(cancellationToken);
-            var documents = root.GetDocumentAttributedClasses();
+            var semantics = compilation.GetSemanticModel(syntaxTree);
+            var documents = root.GetDocumentAttributedClasses(semantics);
             foreach (var document in documents)
             {
                 var documentResult = documentCompiler.Compile(compilation, document);
                 result.DocumentResults.Add(documentResult);
 
-                foreach (var error in documentResult.Diagnostics)
+                foreach (var error in documentResult.Errors)
                 {
                     await Console.Error.WriteLineAsync(error.ToString());
                 }
 
-                var policyFileName = document.ExtractDocumentFileName();
+                var policyFileName = document.ExtractDocumentFileName(semantics);
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
                     Element = documentResult.Document,

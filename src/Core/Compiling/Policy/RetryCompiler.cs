@@ -99,7 +99,7 @@ public class RetryCompiler : IMethodPolicyHandler
         element.AddAttribute(config, nameof(RetryConfig.Delta), "delta");
         element.AddAttribute(config, nameof(RetryConfig.FirstFastRetry), "first-fast-retry");
 
-        SubDocumentCompilationContext subContext = new(context, element);
+        var subContext = new DocumentCompilationContext(context, element);
         _blockCompiler.Value.Compile(subContext, lambda.Block);
 
         context.AddPolicy(element);
