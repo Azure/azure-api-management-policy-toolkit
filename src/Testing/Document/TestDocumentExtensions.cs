@@ -25,4 +25,7 @@ public static class TestDocumentExtensions
 
     public static CacheStore SetupCacheStore(this TestDocument document) =>
         document.Context.CacheStore;
+
+    public static DiagnosticStore SetupDiagnosticStore(this TestDocument document) =>
+        document.Context.DiagnosticStore;
 }
