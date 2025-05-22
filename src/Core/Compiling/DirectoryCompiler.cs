@@ -3,12 +3,11 @@
 
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public class DirectoryCompiler(DocumentCompiler compiler)
 {

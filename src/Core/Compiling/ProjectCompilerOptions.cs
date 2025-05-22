@@ -3,7 +3,7 @@
 
 using System.Xml;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public class ProjectCompilerOptions
 {

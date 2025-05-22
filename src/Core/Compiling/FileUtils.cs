@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
-using Azure.ApiManagement.PolicyToolkit.Serialization;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
-namespace Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public static class FileUtils
 {
