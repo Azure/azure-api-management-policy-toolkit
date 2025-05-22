@@ -241,6 +241,18 @@ public interface IOnErrorContext : IHaveExpressionContext
     void SetVariable(string name, [ExpressionAllowed] object value);
 
     /// <summary>
+    /// Sets or replaces the request or response body with the specified value.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-body-policy">set-body</a> policy.
+    /// </summary>
+    /// <param name="body">
+    /// The value to set as the body. Policy expressions are allowed.
+    /// </param>
+    /// <param name="config">
+    /// Optional configuration specifying template, xsi:nil, and parse date settings.
+    /// </param>
+    void SetBody([ExpressionAllowed] string body, SetBodyConfig? config = null);
+
+    /// <summary>
     /// Validates the client certificate presented in the request.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-client-certificate-policy">validate-client-certificate</a> policy.
     /// </summary>

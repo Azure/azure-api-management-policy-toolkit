@@ -149,6 +149,25 @@ public class SetBodyTests
         """,
         DisplayName = "Should compile set body policy with ParseDate in config"
     )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void OnError(IOnErrorContext context) {
+                context.SetBody("error-body");
+            }
+        }
+        """,
+        """
+        <policies>
+            <on-error>
+                <set-body>error-body</set-body>
+            </on-error>
+        </policies>
+        """,
+        DisplayName = "Should compile set body policy in on-error section"
+    )]
     public void ShouldCompileForwardRequestPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
