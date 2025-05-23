@@ -7,7 +7,6 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 [
     Section(nameof(IInboundContext)),
-    Section(nameof(IBackendContext)),
     Section(nameof(IOutboundContext)),
     Section(nameof(IOnErrorContext))
 ]

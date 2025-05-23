@@ -20,6 +20,14 @@ public class XmlToJsonTests
                     Apply = "always",
                 });
             }
+            public void Backend(IBackendContext context)
+            {
+                context.XmlToJson(new XmlToJsonConfig
+                {
+                    Kind = "direct",
+                    Apply = "always",
+                });
+            }
             public void Outbound(IOutboundContext context)
             {
                 context.XmlToJson(new XmlToJsonConfig
@@ -43,6 +51,9 @@ public class XmlToJsonTests
             <inbound>
                 <xml-to-json kind="javascript-friendly" apply="always" />
             </inbound>
+            <backend>
+                <xml-to-json kind="direct" apply="always" />
+            </backend>
             <outbound>
                 <xml-to-json kind="direct" apply="always" />
             </outbound>

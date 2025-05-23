@@ -15,7 +15,13 @@ public class SetBackendServiceTests
             public void Inbound(IInboundContext context) {
                 context.SetBackendService(new SetBackendServiceConfig { BackendId = "id" });
             }
-            public void Backend(IOutboundContext context) {
+            public void Backend(IBackendContext context) {
+                context.SetBackendService(new SetBackendServiceConfig { BackendId = "id" });
+            }
+            public void Outbound(IOutboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig { BackendId = "id" });
+            }
+            public void OnError(IOnErrorContext context) {
                 context.SetBackendService(new SetBackendServiceConfig { BackendId = "id" });
             }
         }
@@ -28,6 +34,12 @@ public class SetBackendServiceTests
             <backend>
                 <set-backend-service backend-id="id" />
             </backend>
+            <outbound>
+                <set-backend-service backend-id="id" />
+            </outbound>
+            <on-error>
+                <set-backend-service backend-id="id" />
+            </on-error>
         </policies>
         """,
         DisplayName = "Should compile set backend service policy in sections"

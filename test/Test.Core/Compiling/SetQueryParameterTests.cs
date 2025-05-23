@@ -21,6 +21,18 @@ public class SetQueryParameterCompilationTests
                   { 
                       context.{{method}}("param1", "1");
                   }
+                  public void Backend(IBackendContext context) 
+                  { 
+                      context.{{method}}("param1", "1");
+                  }
+                  public void Outbound(IOutboundContext context) 
+                  { 
+                      context.{{method}}("param1", "1");
+                  }
+                  public void OnError(IOnErrorContext context) 
+                  { 
+                      context.{{method}}("param1", "1");
+                  }
               }
               """;
 
@@ -34,6 +46,21 @@ public class SetQueryParameterCompilationTests
                           <value>1</value>
                       </set-query-parameter>
                   </inbound>
+                  <backend>
+                      <set-query-parameter name="param1" exists-action="{{type}}">
+                          <value>1</value>
+                      </set-query-parameter>
+                  </backend>
+                  <outbound>
+                      <set-query-parameter name="param1" exists-action="{{type}}">
+                          <value>1</value>
+                      </set-query-parameter>
+                  </outbound>
+                  <on-error>
+                      <set-query-parameter name="param1" exists-action="{{type}}">
+                          <value>1</value>
+                      </set-query-parameter>
+                  </on-error>
               </policies>
               """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
@@ -43,27 +70,48 @@ public class SetQueryParameterCompilationTests
     public void ShouldCompileRemoveQueryParameterPolicyInSections()
     {
         var code =
-            """
-            [Document]
-            public class PolicyDocument : IDocument
-            {
-                public void Inbound(IInboundContext context) 
-                {
-                    context.RemoveQueryParameter("param1");
-                }
-            }
-            """;
+            $$"""
+              [Document]
+              public class PolicyDocument : IDocument
+              {
+                  public void Inbound(IInboundContext context) 
+                  {
+                      context.RemoveQueryParameter("param1");
+                  }
+                  public void Backend(IBackendContext context) 
+                  { 
+                      context.RemoveQueryParameter("param1");
+                  }
+                  public void Outbound(IOutboundContext context) 
+                  { 
+                      context.RemoveQueryParameter("param1");
+                  }
+                  public void OnError(IOnErrorContext context) 
+                  { 
+                      context.RemoveQueryParameter("param1");
+                  }
+              }
+              """;
 
         var result = code.CompileDocument();
 
         var expectedXml =
-            """
-            <policies>
-                <inbound>
-                    <set-query-parameter name="param1" exists-action="delete" />
-                </inbound>
-            </policies>
-            """;
+            $"""
+             <policies>
+                 <inbound>
+                     <set-query-parameter name="param1" exists-action="delete" />
+                 </inbound>
+                 <backend>
+                     <set-query-parameter name="param1" exists-action="delete" />
+                 </backend>
+                 <outbound>
+                     <set-query-parameter name="param1" exists-action="delete" />
+                 </outbound>
+                 <on-error>
+                     <set-query-parameter name="param1" exists-action="delete" />
+                 </on-error>
+             </policies>
+             """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
 

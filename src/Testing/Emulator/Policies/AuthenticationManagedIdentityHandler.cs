@@ -9,7 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
-[Section(nameof(IInboundContext))]
+[Section(nameof(IInboundContext)), Section(nameof(IOutboundContext))]
 internal class AuthenticationManagedIdentityHandler : PolicyHandler<ManagedIdentityAuthenticationConfig>
 {
     public List<Tuple<

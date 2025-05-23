@@ -21,6 +21,24 @@ public class GetAuthorizationContextTests
                     ContextVariableName = "context-variable-name"
                 });
             }
+            public void Backend(IBackendContext context)
+            {
+                context.GetAuthorizationContext(new GetAuthorizationContextConfig
+                {
+                    ProviderId = "provider-id",
+                    AuthorizationId = "authorization-id",
+                    ContextVariableName = "context-variable-name"
+                });
+            }
+            public void Outbound(IOutboundContext context)
+            {
+                context.GetAuthorizationContext(new GetAuthorizationContextConfig
+                {
+                    ProviderId = "provider-id",
+                    AuthorizationId = "authorization-id",
+                    ContextVariableName = "context-variable-name"
+                });
+            }
         }
         """,
         """
@@ -28,9 +46,15 @@ public class GetAuthorizationContextTests
             <inbound>
                 <get-authorization-context provider-id="provider-id" authorization-id="authorization-id" context-variable-name="context-variable-name" />
             </inbound>
+            <backend>
+                <get-authorization-context provider-id="provider-id" authorization-id="authorization-id" context-variable-name="context-variable-name" />
+            </backend>
+            <outbound>
+                <get-authorization-context provider-id="provider-id" authorization-id="authorization-id" context-variable-name="context-variable-name" />
+            </outbound>
         </policies>
         """,
-        DisplayName = "Should compile get-authorization-context policy with required properties"
+        DisplayName = "Should compile get-authorization-context policy with required properties in sections"
     )]
     [DataRow(
         """
