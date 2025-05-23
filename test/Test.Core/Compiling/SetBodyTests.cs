@@ -18,6 +18,9 @@ public class SetBodyTests
             public void Outbound(IOutboundContext context) {
                 context.SetBody("outbound");
             }
+            public void OnError(IOnErrorContext context) {
+                context.SetBody("on-error");
+            }
         }
         """,
         """
@@ -28,6 +31,9 @@ public class SetBodyTests
             <outbound>
                 <set-body>outbound</set-body>
             </outbound>
+            <on-error>
+                <set-body>on-error</set-body>
+            </on-error>
         </policies>
         """,
         DisplayName = "Should compile set body policy in sections"
@@ -148,25 +154,6 @@ public class SetBodyTests
         </policies>
         """,
         DisplayName = "Should compile set body policy with ParseDate in config"
-    )]
-    [DataRow(
-        """
-        [Document]
-        public class PolicyDocument : IDocument
-        {
-            public void OnError(IOnErrorContext context) {
-                context.SetBody("error-body");
-            }
-        }
-        """,
-        """
-        <policies>
-            <on-error>
-                <set-body>error-body</set-body>
-            </on-error>
-        </policies>
-        """,
-        DisplayName = "Should compile set body policy in on-error section"
     )]
     public void ShouldCompileForwardRequestPolicy(string code, string expectedXml)
     {
