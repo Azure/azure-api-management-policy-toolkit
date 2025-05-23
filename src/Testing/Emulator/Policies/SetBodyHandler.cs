@@ -6,7 +6,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
-[Section(nameof(IInboundContext))]
+[Section(nameof(IInboundContext)), Section(nameof(IBackendContext))]
 internal class SetBodyRequestHandler : SetBodyHandler
 {
     protected override MockBody GetBody(GatewayContext context) => context.Request.Body;

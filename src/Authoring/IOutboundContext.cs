@@ -17,6 +17,26 @@ public interface IOutboundContext : IHaveExpressionContext
     void AppendHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
+    /// Adds specified query parameter with values or appends values if parameter already exists.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy with exist-action="append".
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the query parameter to be added. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be appended. Policy expressions are allowed.
+    /// </param>
+    void AppendQueryParameter([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
+    /// Authenticates with a backend service using a managed identity to obtain an access token from Azure Active Directory.<br />
+    /// The policy can use either a system-assigned or user-assigned managed identity.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/authentication-managed-identity-policy">authentication-managed-identity</a> policy.
+    /// </summary>
+    /// <param name="config">Configuration specifying the resource for which to request a token, optional client ID for user-assigned identity, and other settings.</param>
+    void AuthenticationManagedIdentity(ManagedIdentityAuthenticationConfig config);
+
+    /// <summary>
     /// Stores the current Azure OpenAI request and response in the semantic cache for future lookup.<br/>
     /// This policy must be placed in the outbound section to capture both the request and response.<br/>
     /// When stored, the entries can later be found by the azure-openai-semantic-cache-lookup policy.<br/>
@@ -91,6 +111,15 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <param name="from">The string value to find. Policy expressions are allowed.</param>
     /// <param name="to">The replacement string value. Policy expressions are allowed.</param>
     void FindAndReplace([ExpressionAllowed] string from, [ExpressionAllowed] string to);
+
+    /// <summary>
+    /// Retrieves an authorization context from a specified provider.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/get-authorization-context-policy">get-authorization-context</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the credential provider, connection resource identifier, context variable name, identity type, identity token, and error handling behavior.
+    /// </param>
+    void GetAuthorizationContext(GetAuthorizationContextConfig config);
 
     /// <summary>
     /// The policy inserts the policy fragment as-is at the location you select in the policy definition.<br />
@@ -181,6 +210,15 @@ public interface IOutboundContext : IHaveExpressionContext
     void MockResponse(MockResponseConfig? config = null);
 
     /// <summary>
+    /// Publishes a message to a Dapr topic.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/publish-to-dapr-policy">publish-to-dapr</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the topic, content, and other optional settings for the publish-to-dapr policy.
+    /// </param>
+    void PublishToDarp(PublishToDarpConfig config);
+
+    /// <summary>
     /// Redirects URLs in the response content to a specified hostname and scheme.<br/>
     /// This policy rewrites URLs in the response body to point to the gateway URL instead of the backend service URL.<br/>
     /// Useful when backend services return absolute URLs that need to be redirected through the API Management gateway.<br/>
@@ -195,6 +233,15 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Specifies name of the header to be deleted. Policy expressions are allowed.
     /// </param>
     void RemoveHeader([ExpressionAllowed] string name);
+
+    /// <summary>
+    /// Deletes query parameter of specified name.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy with exist-action="delete".
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the query parameter to be deleted. Policy expressions are allowed.
+    /// </param>
+    void RemoveQueryParameter([ExpressionAllowed] string name);
 
     /// <summary>
     /// Aborts pipeline execution and returns the specified response directly to the caller.<br/>
@@ -236,6 +283,15 @@ public interface IOutboundContext : IHaveExpressionContext
     void SendRequest(SendRequestConfig config);
 
     /// <summary>
+    /// Sets the backend service for the request.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-backend-service-policy">set-backend-service</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the backend service details, including base URL, backend ID, Service Fabric settings, and Dapr settings.
+    /// </param>
+    void SetBackendService(SetBackendServiceConfig config);
+
+    /// <summary>
     /// Sets or replaces the request or response body with the specified value.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-body-policy">set-body</a> policy.
     /// </summary>
@@ -272,6 +328,39 @@ public interface IOutboundContext : IHaveExpressionContext
     void SetHeaderIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
+    /// Sets the HTTP method for the request.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-method-policy">set-method</a> policy.
+    /// </summary>
+    /// <param name="method">
+    /// Specifies the HTTP method to set for the request.
+    /// </param>
+    void SetMethod(string method);
+
+    /// <summary>
+    /// Sets or replaces the value of a query parameter in the request URL.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies the name of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    void SetQueryParameter([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
+    /// Sets the value of a query parameter in the request URL if it does not already exist.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies the name of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    void SetQueryParameterIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
     /// Sets the HTTP status code and reason phrase for the response.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-status-policy">set-status</a> policy.
     /// </summary>
@@ -300,15 +389,6 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Configuration specifying the trace source, message, severity, and optional metadata.
     /// </param>
     void Trace(TraceConfig config);
-
-    /// <summary>
-    /// Validates the client certificate presented in the request.<br />
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-client-certificate-policy">validate-client-certificate</a> policy.
-    /// </summary>
-    /// <param name="config">
-    /// Configuration specifying the validation parameters, including revocation, trust, validity period, and identities.
-    /// </param>
-    void ValidateClientCertificate(ValidateClientCertificateConfig config);
 
     /// <summary>
     /// Validates the content of the request or response against specified rules.<br/>
@@ -352,8 +432,22 @@ public interface IOutboundContext : IHaveExpressionContext
     void Wait(Action section, [ExpressionAllowed] string? waitFor = null);
 
     /// <summary>
-    /// TODO
+    /// Converts XML content to JSON format.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xml-to-json-policy">xml-to-json</a> policy.
     /// </summary>
-    /// <param name="config"></param>
+    /// <param name="config">
+    /// Configuration specifying how to convert XML to JSON, including options for applying the policy, considering the Accept header, and more.
+    /// </param>
+    void XmlToJson(XmlToJsonConfig config);
+
+    /// <summary>
+    /// Transforms XML in request or response body using XSL transform (XSLT).<br/>
+    /// Can transform XML in the request body, response body, or a context variable.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xsl-transform-policy">xsl-transform</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the transformation parameters, including where to apply the transformation (request, response, or variable),
+    /// the XSL stylesheet to use, content type, and error handling options.
+    /// </param>
     void XslTransform(XslTransformConfig config);
 }

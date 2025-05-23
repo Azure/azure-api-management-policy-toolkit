@@ -6,6 +6,30 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 public interface IBackendContext : IHaveExpressionContext
 {
     /// <summary>
+    /// Adds header of specified name with values or appends values if header already exists.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the header to be added. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the header to be set or appended. Policy expressions are allowed.
+    /// </param>
+    void AppendHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
+    /// Adds specified query parameter with values or appends values if parameter already exists.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy with exist-action="append".
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the query parameter to be added. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be appended. Policy expressions are allowed.
+    /// </param>
+    void AppendQueryParameter([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
     /// The base policy used to specify when parent scope policy should be executed
     /// </summary>
     void Base();
@@ -40,17 +64,6 @@ public interface IBackendContext : IHaveExpressionContext
     void CacheStoreValue(CacheStoreValueConfig config);
 
     /// <summary>
-    /// Emits custom metrics to Azure Monitor for tracking API usage patterns and performance.<br/>
-    /// The metrics are accessible through Azure Monitor metrics explorer with the configured dimensions and namespace.<br/>
-    /// This policy is useful for custom monitoring and can be used for visualization, alerting, and analysis.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/emit-metric-policy">emit-metric</a> policy.
-    /// </summary>
-    /// <param name="config">
-    /// Configuration specifying the metric name, dimensions, optional namespace, and optional value.
-    /// </param>
-    void EmitMetric(EmitMetricConfig config);
-
-    /// <summary>
     /// Replaces occurrences of a specified string with another string in the request or response body.<br/>
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/find-and-replace-policy">find-and-replace</a> policy.
     /// </summary>
@@ -68,6 +81,15 @@ public interface IBackendContext : IHaveExpressionContext
     void ForwardRequest(ForwardRequestConfig? config = null);
 
     /// <summary>
+    /// Retrieves an authorization context from a specified provider.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/get-authorization-context-policy">get-authorization-context</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the credential provider, connection resource identifier, context variable name, identity type, identity token, and error handling behavior.
+    /// </param>
+    void GetAuthorizationContext(GetAuthorizationContextConfig config);
+
+    /// <summary>
     /// The policy inserts the policy fragment as-is at the location you select in the policy definition.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/include-fragment-policy">include-fragment</a> policy.
     /// </summary>
@@ -81,6 +103,15 @@ public interface IBackendContext : IHaveExpressionContext
     /// Policy in xml format.
     /// </param>
     void InlinePolicy(string policy);
+
+    /// <summary>
+    /// Converts JSON content to XML format.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/json-to-xml-policy">json-to-xml</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying how to convert JSON to XML, including options for applying the policy, considering the Accept header, parsing dates, and more.
+    /// </param>
+    void JsonToXml(JsonToXmlConfig config);
 
     /// <summary>
     /// Limits the number of concurrent calls to a backend service.<br />
@@ -106,13 +137,22 @@ public interface IBackendContext : IHaveExpressionContext
     void LogToEventHub(LogToEventHubConfig config);
 
     /// <summary>
-    /// Configures a proxy server for forwarding requests.<br />
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/proxy-policy">proxy</a> policy.
+    /// Deletes header of specified name.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
     /// </summary>
-    /// <param name="config">
-    /// Configuration specifying the proxy server URL, and optionally the username and password for authentication.
+    /// <param name="name">
+    /// Specifies name of the header to be deleted. Policy expressions are allowed.
     /// </param>
-    void Proxy(ProxyConfig config);
+    void RemoveHeader([ExpressionAllowed] string name);
+
+    /// <summary>
+    /// Deletes query parameter of specified name.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy with exist-action="delete".
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the query parameter to be deleted. Policy expressions are allowed.
+    /// </param>
+    void RemoveQueryParameter([ExpressionAllowed] string name);
 
     /// <summary>
     /// Aborts pipeline execution and returns the specified response directly to the caller.<br/>
@@ -163,6 +203,75 @@ public interface IBackendContext : IHaveExpressionContext
     void SetBackendService(SetBackendServiceConfig config);
 
     /// <summary>
+    /// Sets or replaces the request or response body with the specified value.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-body-policy">set-body</a> policy.
+    /// </summary>
+    /// <param name="body">
+    /// The value to set as the body. Policy expressions are allowed.
+    /// </param>
+    /// <param name="config">
+    /// Optional configuration specifying template, xsi:nil, and parse date settings.
+    /// </param>
+    void SetBody([ExpressionAllowed] string body, SetBodyConfig? config = null);
+
+    /// <summary>
+    /// Adds header of specified name with values or overrides values if header already exists.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the header to be added. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the header to be set. Policy expressions are allowed.
+    /// </param>
+    void SetHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
+    /// Sets header of specified name and values if header not already exist.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the header to be added. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the header to be set. Policy expressions are allowed.
+    /// </param>
+    void SetHeaderIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
+    /// Sets the HTTP method for the request.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-method-policy">set-method</a> policy.
+    /// </summary>
+    /// <param name="method">
+    /// Specifies the HTTP method to set for the request.
+    /// </param>
+    void SetMethod(string method);
+
+    /// <summary>
+    /// Sets or replaces the value of a query parameter in the request URL.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies the name of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    void SetQueryParameter([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
+    /// Sets the value of a query parameter in the request URL if it does not already exist.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies the name of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    void SetQueryParameterIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
     /// Sets the HTTP status code and reason phrase for the response.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-status-policy">set-status</a> policy.
     /// </summary>
@@ -205,4 +314,13 @@ public interface IBackendContext : IHaveExpressionContext
     /// Policy expressions are allowed.
     /// </param>
     void Wait(Action section, [ExpressionAllowed] string? waitFor = null);
+
+    /// <summary>
+    /// Converts XML content to JSON format.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xml-to-json-policy">xml-to-json</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying how to convert XML to JSON, including options for applying the policy, considering the Accept header, and more.
+    /// </param>
+    void XmlToJson(XmlToJsonConfig config);
 }
