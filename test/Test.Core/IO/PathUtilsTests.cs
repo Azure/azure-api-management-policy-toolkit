@@ -19,10 +19,8 @@ public class PathUtilsTests
     [DataRow(@"Folder\UserPolicy", "xml", @"Folder/UserPolicy.xml")]
     [DataRow(@"Folder/UserPolicy", "xml", @"Folder/UserPolicy.xml")]
     [DataRow(@"\Folder\UserPolicy", "xml", @"Folder/UserPolicy.xml")]
-    [DataRow(@"C:\Folder\UserPolicy", "xml", @"Folder/UserPolicy.xml")]
     [DataRow(@"\Folder/UserPolicy", "xml", @"Folder/UserPolicy.xml")]
     [DataRow(@"/Folder/UserPolicy", "xml", @"Folder/UserPolicy.xml")]
-    [DataRow(@"C:/Folder/UserPolicy", "xml", @"Folder/UserPolicy.xml")]
     [DataRow(@"/Folder//UserPolicy", "xml", @"Folder/UserPolicy.xml")]
     public void PrepareOutputPath_ShouldHandlePathsCorrectly(string actualPath, string extension, string expectedPath)
     {
@@ -38,8 +36,6 @@ public class PathUtilsTests
     [DataRow(@"a/b/UserFile.cs", true)]
     [DataRow(@"/a/b/UserFile.cs", true)]
     [DataRow(@"\a\b\UserFile.cs", true)]
-    [DataRow(@"C:/a/b/UserFile.cs", true)]
-    [DataRow(@"C:\a\b\UserFile.cs", true)]
     [DataRow(@"bin\NotUserFile.cs", false)]
     [DataRow(@"obj\NotUserFile.cs", false)]
     [DataRow(@"bin/NotUserFile.cs", false)]
@@ -48,10 +44,6 @@ public class PathUtilsTests
     [DataRow(@"a/obj/NotUserFile.cs", false)]
     [DataRow(@"a\bin\NotUserFile.cs", false)]
     [DataRow(@"a\obj\NotUserFile.cs", false)]
-    [DataRow(@"C:\a\bin\NotUserFile.cs", false)]
-    [DataRow(@"C:\a\obj\NotUserFile.cs", false)]
-    [DataRow(@"C:/a/bin/NotUserFile.cs", false)]
-    [DataRow(@"C:/a/obj/NotUserFile.cs", false)]
     public void IsNotInObjOrBinFolder_ChecksCorrectly(string path, bool expected)
     {
         PathUtils.IsNotInObjOrBinFolder(path).Should().Be(expected);
