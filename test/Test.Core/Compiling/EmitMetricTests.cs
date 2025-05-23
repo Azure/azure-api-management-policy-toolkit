@@ -32,16 +32,6 @@ public class EmitMetricTests
                     ]
                 });
             }
-            public void Backend(IBackendContext context)
-            {
-                context.EmitMetric(new EmitMetricConfig
-                {
-                    Name = "backend",
-                    Dimensions = [
-                        new MetricDimensionConfig { Name = "API ID" }
-                    ]
-                });
-            }
             public void OnError(IOnErrorContext context)
             {
                 context.EmitMetric(new EmitMetricConfig
@@ -66,11 +56,6 @@ public class EmitMetricTests
                     <dimension name="API ID" />
                 </emit-metric>
             </outbound>
-            <backend>
-                <emit-metric name="backend">
-                    <dimension name="API ID" />
-                </emit-metric>
-            </backend>
             <on-error>
                 <emit-metric name="on-error">
                     <dimension name="API ID" />

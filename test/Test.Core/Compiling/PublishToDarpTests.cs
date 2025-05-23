@@ -20,6 +20,22 @@ public class PublishToDarpTests
                     Content = "my-content"
                 });
             }
+            public void Outbound(IOutboundContext context) 
+            {
+                context.PublishToDarp(new PublishToDarpConfig
+                {
+                    Topic = "my-topic",
+                    Content = "my-content"
+                });
+            }
+            public void OnError(IOnErrorContext context) 
+            {
+                context.PublishToDarp(new PublishToDarpConfig
+                {
+                    Topic = "my-topic",
+                    Content = "my-content"
+                });
+            }
         }
         """,
         """
@@ -27,9 +43,15 @@ public class PublishToDarpTests
             <inbound>
                 <publish-to-darp topic="my-topic">my-content</publish-to-darp>
             </inbound>
+            <outbound>
+                <publish-to-darp topic="my-topic">my-content</publish-to-darp>
+            </outbound>
+            <on-error>
+                <publish-to-darp topic="my-topic">my-content</publish-to-darp>
+            </on-error>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with required properties"
+        DisplayName = "Should compile publish-to-darp policy with required properties in sections"
     )]
     [DataRow(
         """

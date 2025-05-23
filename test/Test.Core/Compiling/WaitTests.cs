@@ -18,7 +18,6 @@ public class WaitTests
                         });
                     });
             }
-
             public void Backend(IBackendContext context)
             {
                 context.Wait(() =>
@@ -28,8 +27,16 @@ public class WaitTests
                         });
                     });
             }
-
             public void Outbound(IOutboundContext context)
+            {
+                context.Wait(() =>
+                    {
+                        context.SendRequest(new SendRequestConfig {
+                            ResponseVariableName = "variable"
+                        });
+                    });
+            }
+            public void OnError(OnErrorContext context)
             {
                 context.Wait(() =>
                     {
@@ -57,6 +64,11 @@ public class WaitTests
                     <send-request response-variable-name="variable" />
                 </wait>
             </outbound>
+            <on-error>
+                <wait>
+                    <send-request response-variable-name="variable" />
+                </wait>
+            </on-error>
         </policies>
         """,
         DisplayName = "Should compile wait policy in sections"

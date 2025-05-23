@@ -15,6 +15,9 @@ public class JsonToXmlTests
             public void Inbound(IInboundContext context) {
                 context.JsonToXml(new JsonToXmlConfig { Apply = "always" });
             }
+            public void Backend(IBackendContext context) {
+                context.JsonToXml(new JsonToXmlConfig { Apply = "always" });
+            }
             public void Outbound(IOutboundContext context) {
                 context.JsonToXml(new JsonToXmlConfig { Apply = "always" });
             }
@@ -28,6 +31,9 @@ public class JsonToXmlTests
             <inbound>
                 <json-to-xml apply="always" />
             </inbound>
+            <backend>
+                <json-to-xml apply="always" />
+            </backend>
             <outbound>
                 <json-to-xml apply="always" />
             </outbound>
