@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

@@ -85,7 +85,7 @@ public class LimitConcurrencyCompiler : IMethodPolicyHandler
             return;
         }
 
-        SubDocumentCompilationContext subContext = new(context, element);
+        var subContext = new DocumentCompilationContext(context, element);
         _blockCompiler.Value.Compile(subContext, lambda.Block);
 
         context.AddPolicy(element);

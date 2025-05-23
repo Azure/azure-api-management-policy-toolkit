@@ -20,7 +20,7 @@ if (options.IsProjectSource)
     await Console.Out.WriteLineAsync("Project mode");
     var compiler = serviceProvider.GetRequiredService<ProjectCompiler>();
     var result = await compiler.Compile(options.ToProjectCompilerOptions());
-    return result.DocumentResults.Sum(r => r.Diagnostics.Count);
+    return result.DocumentResults.Sum(r => r.Errors.Length);
 }
 else
 {
@@ -28,5 +28,5 @@ else
         "Directory mode is deprecated. Please use project mode by pointing source parameter to .csproj file or to folder with one .csproj file.");
     var compiler = serviceProvider.GetRequiredService<DirectoryCompiler>();
     var result = await compiler.Compile(options.ToDirectoryCompilerOptions());
-    return result.DocumentResults.Sum(r => r.Diagnostics.Count);
+    return result.DocumentResults.Sum(r => r.Errors.Length);
 }

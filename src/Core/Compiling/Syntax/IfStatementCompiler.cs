@@ -58,7 +58,7 @@ public class IfStatementCompiler : ISyntaxCompiler
             }
 
             var section = new XElement("when");
-            var innerContext = new SubDocumentCompilationContext(context, section);
+            var innerContext = new DocumentCompilationContext(context, section);
             _blockCompiler.Value.Compile(innerContext, block);
             section.Add(new XAttribute("condition", CompilerUtils.FindCode(condition, context)));
             choose.Add(section);
@@ -69,7 +69,7 @@ public class IfStatementCompiler : ISyntaxCompiler
         if (currentIf.Else != null)
         {
             var section = new XElement("otherwise");
-            var innerContext = new SubDocumentCompilationContext(context, section);
+            var innerContext = new DocumentCompilationContext(context, section);
             if (currentIf.Else.Statement is BlockSyntax block)
             {
                 _blockCompiler.Value.Compile(innerContext, block);

@@ -9,31 +9,29 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public static class SyntaxExtensions
 {
-    public static bool ContainsAttributeOfType(this SyntaxList<AttributeListSyntax> syntax, string type)
+    public static bool ContainsAttributeOfType<T>(this SyntaxList<AttributeListSyntax> syntax, SemanticModel model)
+        where T : Attribute
     {
-        return syntax.GetFirstAttributeOfType(type) != null;
+        return syntax.GetFirstAttributeOfType<T>(model) != null;
     }
 
-    public static AttributeSyntax? GetFirstAttributeOfType(this SyntaxList<AttributeListSyntax> syntax, string type)
+    public static AttributeSyntax? GetFirstAttributeOfType<T>(this SyntaxList<AttributeListSyntax> syntax,
+        SemanticModel model) where T : Attribute
     {
+        var attributeSymbol = model.Compilation.GetTypeByMetadataName(typeof(T).FullName!);
         return syntax
             .SelectMany(a => a.Attributes)
-            .FirstOrDefault(attribute => string.Equals(attribute.Name.ToString(), type, StringComparison.Ordinal));
+            .FirstOrDefault(attribute =>
+                SymbolEqualityComparer.Default.Equals(model.GetTypeInfo(attribute).Type, attributeSymbol));
     }
 
-    public static string ExtractDocumentFileName(this ClassDeclarationSyntax document)
+    public static string ExtractDocumentFileName(this ClassDeclarationSyntax document, SemanticModel model)
     {
-        var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType("Document");
+        var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType<DocumentAttribute>(model);
         var attributeArgumentExpression =
             attributeSyntax?.ArgumentList?.Arguments.FirstOrDefault()?.Expression as LiteralExpressionSyntax;
         return attributeArgumentExpression?.Token.ValueText ?? document.Identifier.ValueText;
     }
-
-    public static IEnumerable<ClassDeclarationSyntax> GetDocumentAttributedClasses(this SyntaxNode syntax) =>
-        syntax
-            .DescendantNodes()
-            .OfType<ClassDeclarationSyntax>()
-            .Where(c => c.AttributeLists.ContainsAttributeOfType("Document"));
 
     public static IEnumerable<ClassDeclarationSyntax> GetDocumentAttributedClasses(this SyntaxNode syntax,
         SemanticModel semanticModel)
