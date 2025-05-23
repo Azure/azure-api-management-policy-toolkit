@@ -3,18 +3,15 @@
 
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
-namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.IO;
 
 public static class FileUtils
 {
-    public static Regex InObjOrBinFolder = new Regex(@".*[\\/](obj|bin)[\\/].*", RegexOptions.Compiled);
-
     public class Data
     {
         public required XElement Element;

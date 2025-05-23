@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.IO;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 
@@ -45,7 +46,7 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
             return result;
         }
 
-        var onlyUserSyntaxTrees = compilation.SyntaxTrees.Where(t => !FileUtils.InObjOrBinFolder.IsMatch(t.FilePath));
+        var onlyUserSyntaxTrees = compilation.SyntaxTrees.Where(t => PathUtils.IsNotInObjOrBinFolder(t.FilePath));
 
         foreach (var syntaxTree in onlyUserSyntaxTrees)
         {
@@ -54,7 +55,6 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
             var documents = root.GetDocumentAttributedClasses();
             foreach (var document in documents)
             {
-                var policyFileName = document.ExtractDocumentFileName(options.FileExtension);
                 var documentResult = documentCompiler.Compile(compilation, document);
                 result.DocumentResults.Add(documentResult);
 
@@ -63,13 +63,14 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
                     await Console.Error.WriteLineAsync(error.ToString());
                 }
 
+                var policyFileName = document.ExtractDocumentFileName();
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
                     Element = documentResult.Document,
                     SourceFolder = Path.GetDirectoryName(options.ProjectPath)!,
                     SourceFilePath = syntaxTree.FilePath,
                     OutputFolder = options.OutputFolder,
-                    OutputFilePath = policyFileName,
+                    OutputFilePath = PathUtils.PrepareOutputPath(policyFileName, options.FileExtension),
                     FormatCode = options.FormatCode,
                     XmlWriterSettings = options.XmlWriterSettings,
                 });

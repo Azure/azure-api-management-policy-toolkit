@@ -4,6 +4,7 @@
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.IO;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -21,7 +22,7 @@ public class DirectoryCompiler(DocumentCompiler compiler)
     public Task<DirectoryCompilerResult> Compile(DirectoryCompilerOptions options)
     {
         var files = Directory.GetFiles(options.SourceFolder, "*.cs", SearchOption.AllDirectories)
-            .Where(p => !FileUtils.InObjOrBinFolder.IsMatch(p));
+            .Where(PathUtils.IsNotInObjOrBinFolder);
 
         DirectoryCompilerResult result = new();
         foreach (var file in files)
@@ -39,7 +40,6 @@ public class DirectoryCompiler(DocumentCompiler compiler)
 
             foreach (var document in documents)
             {
-                var policyFileName = document.ExtractDocumentFileName(options.FileExtension);
                 IDocumentCompilationResult documentResult = compiler.Compile(compilation, document);
                 result.DocumentResults.Add(documentResult);
 
@@ -48,13 +48,14 @@ public class DirectoryCompiler(DocumentCompiler compiler)
                     Console.Error.WriteLine(error.ToString());
                 }
 
+                var policyFileName = document.ExtractDocumentFileName();
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
                     Element = documentResult.Document,
                     SourceFolder = options.SourceFolder,
                     SourceFilePath = file,
                     OutputFolder = options.OutputFolder,
-                    OutputFilePath = policyFileName,
+                    OutputFilePath = PathUtils.PrepareOutputPath(policyFileName, options.FileExtension),
                     FormatCode = options.FormatCode,
                     XmlWriterSettings = options.XmlWriterSettings,
                 });
