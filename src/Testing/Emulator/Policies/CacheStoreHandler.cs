@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -12,6 +13,11 @@ internal class CacheStoreHandler : IPolicyHandler
         Func<GatewayContext, uint, bool, bool>,
         Action<GatewayContext, uint, bool>
     >> CallbackHooks { get; } = new();
+
+    public List<Tuple<
+        Func<GatewayContext, uint, bool, bool>,
+        Func<GatewayContext, uint, bool, string>
+    >> CacheKeyProvider { get; } = new();
 
     public string PolicyName => nameof(IOutboundContext.CacheStore);
 
@@ -32,9 +38,42 @@ internal class CacheStoreHandler : IPolicyHandler
         return null;
     }
 
-    protected void Handle(GatewayContext context, uint duration, bool cacheResponse)
+    private void Handle(GatewayContext context, uint duration, bool cacheResponse)
     {
-        throw new NotImplementedException();
+        if (!context.CacheInfo.CacheSetup)
+        {
+            return;
+        }
+
+        if (!context.Request.Method.Equals("GET", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return;
+        }
+
+        var store = context.CacheStore.GetCache(context.CacheInfo.CachingType);
+        if (store is null)
+        {
+            return;
+        }
+
+        if (!cacheResponse || context.Response.StatusCode != 200)
+        {
+            return;
+        }
+
+        if (context.Response.Headers.ContainsKey("Authorization") && !context.CacheInfo.AllowPrivateResponseCaching)
+        {
+            return;
+        }
+
+        var cacheValue = context.Response.Clone();
+
+        var key = CacheKeyProvider.Find(hook => hook.Item1(context, duration, cacheResponse))
+                      ?.Item2(context, duration, cacheResponse)
+                  ?? CacheInfo.CacheKey(context);
+
+
+        store[key] = new CacheValue(cacheValue) { Duration = duration };
     }
 
     private static (uint, bool) ExtractParameters(object?[]? args)
@@ -49,12 +88,12 @@ internal class CacheStoreHandler : IPolicyHandler
             throw new ArgumentException($"Expected {typeof(uint).Name} as first argument", nameof(args));
         }
 
-        if (args.Length != 2)
+        if (args.Length != 2 || args[1] is null)
         {
-            return (duration, true);
+            return (duration, false);
         }
 
-        if (args[0] is not bool cacheValue)
+        if (args[1] is not bool cacheValue)
         {
             throw new ArgumentException($"Expected {typeof(bool).Name} as second argument", nameof(args));
         }

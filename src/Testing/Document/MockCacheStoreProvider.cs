@@ -35,5 +35,10 @@ public static class MockCacheStoreProvider
 
         public void WithCallback(Action<GatewayContext, uint, bool> callback) =>
             _handler.CallbackHooks.Add((_predicate, callback).ToTuple());
+
+        public void WithCacheKey(Func<GatewayContext, uint, bool, string> callback) =>
+            _handler.CacheKeyProvider.Add((_predicate, callback).ToTuple());
+
+        public void WithCacheKey(string key) => this.WithCacheKey((_, _, _) => key);
     }
 }
