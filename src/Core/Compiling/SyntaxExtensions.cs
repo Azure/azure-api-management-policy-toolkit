@@ -21,6 +21,14 @@ public static class SyntaxExtensions
             .FirstOrDefault(attribute => string.Equals(attribute.Name.ToString(), type, StringComparison.Ordinal));
     }
 
+    public static string ExtractDocumentFileName(this ClassDeclarationSyntax document)
+    {
+        var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType("Document");
+        var attributeArgumentExpression =
+            attributeSyntax?.ArgumentList?.Arguments.FirstOrDefault()?.Expression as LiteralExpressionSyntax;
+        return attributeArgumentExpression?.Token.ValueText ?? document.Identifier.ValueText;
+    }
+
     public static IEnumerable<ClassDeclarationSyntax> GetDocumentAttributedClasses(this SyntaxNode syntax) =>
         syntax
             .DescendantNodes()
