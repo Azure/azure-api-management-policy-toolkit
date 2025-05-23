@@ -14,7 +14,8 @@ public static class PathUtils
 
     public static string PrepareOutputPath(string path, string extension)
     {
-        var unrootedPath = UnrootPath(path);
+        var normalizedPath = path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+        var unrootedPath = UnrootPath(normalizedPath);
         return Path.HasExtension(path) ? path : Path.ChangeExtension(unrootedPath, extension);
     }
 

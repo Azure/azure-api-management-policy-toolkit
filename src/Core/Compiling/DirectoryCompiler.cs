@@ -22,7 +22,7 @@ public class DirectoryCompiler(DocumentCompiler compiler)
     public Task<DirectoryCompilerResult> Compile(DirectoryCompilerOptions options)
     {
         var files = Directory.GetFiles(options.SourceFolder, "*.cs", SearchOption.AllDirectories)
-            .Where(PathUtils.IsNotInObjOrBinFolder);
+            .Where(p => PathUtils.IsNotInObjOrBinFolder(Path.GetFullPath(p)));
 
         DirectoryCompilerResult result = new();
         foreach (var file in files)
