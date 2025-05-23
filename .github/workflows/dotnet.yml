@@ -6,34 +6,74 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-and-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build with dotnet
-      run: dotnet build --no-restore
-    - name: Test with dotnet
-      run: dotnet test --no-build --logger trx --results-directory "TestResults"
-    - name: Upload dotnet test results
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: dotnet-test-results
-        path: TestResults
-    - name: Check format
-      if: ${{ always() }}
-      run: dotnet format style --verify-no-changes --report "FormatReport"
-    - name: Upload dotnet test results
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: dotnet-format-report
-        path: FormatReport
-      
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build with dotnet
+        run: dotnet build --no-restore
+      - name: Test with dotnet
+        run: dotnet test --no-build --logger trx --results-directory "TestResults"
+      - name: Upload dotnet test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-test-results-${{ matrix.os }}
+          path: TestResults
+      - name: Check format
+        if: ${{ always() }}
+        run: dotnet format style --verify-no-changes --report "FormatReport"
+      - name: Upload format report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-format-report-${{ matrix.os }}
+          path: FormatReport
+
+  example-project:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0.x
+      - name: Create new packages
+        run: dotnet pack
+      - name: Restore dependencies
+        working-directory: ./example
+        run: dotnet restore
+      - name: Restore tool
+        working-directory: ./example
+        run: dotnet tool restore
+      - name: Build with dotnet
+        working-directory: ./example
+        run: dotnet build --no-restore
+      - name: Test with dotnet
+        working-directory: ./example
+        run: dotnet test --no-build --logger trx --results-directory "TestResults"
+      - name: Upload dotnet test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-test-results-example-${{ matrix.os }}
+          path: ./example/TestResults
+      - name: Compile policies
+        working-directory: ./example
+        run: dotnet azure-apim-policy-compiler --s ./source/ --o ./target/ --format true
