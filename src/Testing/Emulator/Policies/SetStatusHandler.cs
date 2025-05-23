@@ -11,8 +11,13 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
     Section(nameof(IOutboundContext)),
     Section(nameof(IOnErrorContext))
 ]
-internal class RemoveQueryParameterHandler : PolicyHandler<string>
+internal class SetStatusHandler : PolicyHandler<StatusConfig>
 {
-    public override string PolicyName => nameof(IInboundContext.RemoveQueryParameter);
-    protected override void Handle(GatewayContext context, string name) => context.Request.Url.Query.Remove(name);
+    public override string PolicyName => nameof(IInboundContext.SetStatus);
+
+    protected override void Handle(GatewayContext context, StatusConfig config)
+    {
+        context.Response.StatusCode = config.Code;
+        context.Response.StatusReason = config.Reason;
+    }
 }

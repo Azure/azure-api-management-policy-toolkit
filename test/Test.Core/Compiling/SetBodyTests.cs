@@ -15,8 +15,14 @@ public class SetBodyTests
             public void Inbound(IInboundContext context) {
                 context.SetBody("inbound");
             }
+            public void Backend(IBackendContext context) {
+                context.SetBody("backend");
+            }
             public void Outbound(IOutboundContext context) {
                 context.SetBody("outbound");
+            }
+            public void OnError(IOnErrorContext context) {
+                context.SetBody("on-error");
             }
         }
         """,
@@ -25,9 +31,15 @@ public class SetBodyTests
             <inbound>
                 <set-body>inbound</set-body>
             </inbound>
+            <backend>
+                <set-body>backend</set-body>
+            </backend>
             <outbound>
                 <set-body>outbound</set-body>
             </outbound>
+            <on-error>
+                <set-body>on-error</set-body>
+            </on-error>
         </policies>
         """,
         DisplayName = "Should compile set body policy in sections"

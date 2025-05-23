@@ -18,6 +18,19 @@ public interface IOnErrorContext : IHaveExpressionContext
     void AppendHeader([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
 
     /// <summary>
+    /// Adds specified query parameter with values or appends values if parameter already exists.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy with exist-action="append".
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the query parameter to be added. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be appended. Policy expressions are allowed.
+    /// Specifies the values of the query parameter to be appended. Policy expressions are allowed.
+    /// </param>
+    void AppendQueryParameter([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
     /// The base policy used to specify when parent scope policy should be executed
     /// </summary>
     void Base();
@@ -139,6 +152,15 @@ public interface IOnErrorContext : IHaveExpressionContext
     void MockResponse(MockResponseConfig? config = null);
 
     /// <summary>
+    /// Publishes a message to a Dapr topic.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/publish-to-dapr-policy">publish-to-dapr</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the topic, content, and other optional settings for the publish-to-dapr policy.
+    /// </param>
+    void PublishToDarp(PublishToDarpConfig config);
+
+    /// <summary>
     /// Deletes header of specified name.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
     /// </summary>
@@ -146,6 +168,15 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// Specifies name of the header to be deleted. Policy expressions are allowed.
     /// </param>
     void RemoveHeader([ExpressionAllowed] string name);
+
+    /// <summary>
+    /// Deletes query parameter of specified name.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy with exist-action="delete".
+    /// </summary>
+    /// <param name="name">
+    /// Specifies name of the query parameter to be deleted. Policy expressions are allowed.
+    /// </param>
+    void RemoveQueryParameter([ExpressionAllowed] string name);
 
     /// <summary>
     /// Aborts pipeline execution and returns the specified response directly to the caller.<br/>
@@ -187,6 +218,27 @@ public interface IOnErrorContext : IHaveExpressionContext
     void SendRequest(SendRequestConfig config);
 
     /// <summary>
+    /// Sets the backend service for the request.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-backend-service-policy">set-backend-service</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the backend service details, including base URL, backend ID, Service Fabric settings, and Dapr settings.
+    /// </param>
+    void SetBackendService(SetBackendServiceConfig config);
+
+    /// <summary>
+    /// Sets or replaces the request or response body with the specified value.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-body-policy">set-body</a> policy.
+    /// </summary>
+    /// <param name="body">
+    /// The value to set as the body. Policy expressions are allowed.
+    /// </param>
+    /// <param name="config">
+    /// Optional configuration specifying template, xsi:nil, and parse date settings.
+    /// </param>
+    void SetBody([ExpressionAllowed] string body, SetBodyConfig? config = null);
+
+    /// <summary>
     /// Adds header of specified name with values or overrides values if header already exists.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
     /// </summary>
@@ -220,6 +272,30 @@ public interface IOnErrorContext : IHaveExpressionContext
     void SetMethod(string method);
 
     /// <summary>
+    /// Sets or replaces the value of a query parameter in the request URL.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies the name of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    void SetQueryParameter([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
+    /// Sets the value of a query parameter in the request URL if it does not already exist.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-query-parameter-policy">set-query-parameter</a> policy.
+    /// </summary>
+    /// <param name="name">
+    /// Specifies the name of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    /// <param name="values">
+    /// Specifies the values of the query parameter to be set. Policy expressions are allowed.
+    /// </param>
+    void SetQueryParameterIfNotExist([ExpressionAllowed] string name, [ExpressionAllowed] params string[] values);
+
+    /// <summary>
     /// Sets the HTTP status code and reason phrase for the response.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-status-policy">set-status</a> policy.
     /// </summary>
@@ -241,13 +317,13 @@ public interface IOnErrorContext : IHaveExpressionContext
     void SetVariable(string name, [ExpressionAllowed] object value);
 
     /// <summary>
-    /// Validates the client certificate presented in the request.<br />
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-client-certificate-policy">validate-client-certificate</a> policy.
+    /// Adds a trace message to the trace log.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/trace-policy">trace</a> policy.
     /// </summary>
     /// <param name="config">
-    /// Configuration specifying the validation parameters, including revocation, trust, validity period, and identities.
+    /// Configuration specifying the trace source, message, severity, and optional metadata.
     /// </param>
-    void ValidateClientCertificate(ValidateClientCertificateConfig config);
+    void Trace(TraceConfig config);
 
     /// <summary>
     /// Validates the content of the request or response against specified rules.<br/>
@@ -275,4 +351,38 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// Configuration specifying the validation rules for status codes, including actions for specified and unspecified status codes.
     /// </param>
     void ValidateStatusCode(ValidateStatusCodeConfig config);
+
+    /// <summary>
+    /// Executes its immediate child policies in parallel, and waits for either all or one of its immediate
+    /// child policies to complete before it completes.<br/>
+    /// The wait policy can have as its immediate child policies one or more of the following: send-request,
+    /// cache-lookup-value, and choose policies.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/wait-policy">wait</a> policy.
+    /// </summary>
+    /// <param name="section">Child policies which should be awaited.</param>
+    /// <param name="waitFor">
+    /// Determines whether the wait policy waits for all immediate child policies to be completed or just one.<br/>
+    /// Policy expressions are allowed.
+    /// </param>
+    void Wait(Action section, [ExpressionAllowed] string? waitFor = null);
+
+    /// <summary>
+    /// Converts XML content to JSON format.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xml-to-json-policy">xml-to-json</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying how to convert XML to JSON, including options for applying the policy, considering the Accept header, and more.
+    /// </param>
+    void XmlToJson(XmlToJsonConfig config);
+
+    /// <summary>
+    /// Transforms XML in request or response body using XSL transform (XSLT).<br/>
+    /// Can transform XML in the request body, response body, or a context variable.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xsl-transform-policy">xsl-transform</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the transformation parameters, including where to apply the transformation (request, response, or variable),
+    /// the XSL stylesheet to use, content type, and error handling options.
+    /// </param>
+    void XslTransform(XslTransformConfig config);
 }

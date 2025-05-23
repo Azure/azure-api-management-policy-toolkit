@@ -25,7 +25,7 @@ if (options.IsProjectSource)
 else
 {
     await Console.Error.WriteLineAsync(
-        "Directory mode is deprecated. Please use project mode by pointing source parameter to .csproj file");
+        "Directory mode is deprecated. Please use project mode by pointing source parameter to .csproj file or to folder with one .csproj file.");
     var compiler = serviceProvider.GetRequiredService<DirectoryCompiler>();
     var result = await compiler.Compile(options.ToDirectoryCompilerOptions());
     return result.DocumentResults.Sum(r => r.Diagnostics.Count);

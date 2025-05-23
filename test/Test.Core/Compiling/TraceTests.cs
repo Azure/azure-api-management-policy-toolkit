@@ -33,6 +33,13 @@ public class TraceTests
                     Message = "outbound-message"
                 });
             }
+            public void OnError(IOnErrorContext context) {
+                context.Trace(new TraceConfig 
+                {
+                    Source = "on-error-source",
+                    Message = "on-error-message"
+                });
+            }
         }
         """,
         """
@@ -52,6 +59,11 @@ public class TraceTests
                     <message>outbound-message</message>
                 </trace>
             </outbound>
+            <on-error>
+                <trace source="on-error-source">
+                    <message>on-error-message</message>
+                </trace>
+            </on-error>
         </policies>
         """,
         DisplayName = "Should compile trace policy in sections"

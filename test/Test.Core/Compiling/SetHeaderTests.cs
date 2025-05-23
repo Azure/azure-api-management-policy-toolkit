@@ -21,8 +21,16 @@ public class SetHeaderCompilationTests
                   { 
                       context.{{method}}("X-Header", "1");
                   }
+                  public void Backend(IBackendContext context) 
+                  { 
+                      context.{{method}}("X-Header", "1");
+                  }
                   public void Outbound(IOutboundContext context)
                   {
+                      context.{{method}}("X-Header", "1");
+                  }
+                  public void OnError(IOnErrorContext context) 
+                  { 
                       context.{{method}}("X-Header", "1");
                   }
               }
@@ -38,11 +46,21 @@ public class SetHeaderCompilationTests
                           <value>1</value>
                       </set-header>
                   </inbound>
+                  <backend>
+                      <set-header name="X-Header" exists-action="{{type}}">
+                          <value>1</value>
+                      </set-header>
+                  </backend>
                   <outbound>
                       <set-header name="X-Header" exists-action="{{type}}">
                           <value>1</value>
                       </set-header>
                   </outbound>
+                  <on-error>
+                      <set-header name="X-Header" exists-action="{{type}}">
+                          <value>1</value>
+                      </set-header>
+                  </on-error>
               </policies>
               """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
@@ -52,20 +70,28 @@ public class SetHeaderCompilationTests
     public void ShouldCompileRemoveHeaderPolicyInSections()
     {
         var code =
-            """
-            [Document]
-            public class PolicyDocument : IDocument
-            {
-                public void Inbound(IInboundContext context) 
-                {
-                    context.RemoveHeader("Delete");
-                }
-                public void Outbound(IOutboundContext context)
-                {
-                    context.RemoveHeader("Delete");
-                }
-            }
-            """;
+            $$"""
+              [Document]
+              public class PolicyDocument : IDocument
+              {
+                  public void Inbound(IInboundContext context) 
+                  {
+                      context.RemoveHeader("Delete");
+                  }
+                  public void Backend(IBackendContext context) 
+                  { 
+                      context.RemoveHeader("Delete");
+                  }
+                  public void Outbound(IOutboundContext context)
+                  {
+                      context.RemoveHeader("Delete");
+                  }
+                  public void OnError(IOnErrorContext context) 
+                  { 
+                      context.RemoveHeader("Delete");
+                  }
+              }
+              """;
 
         var result = code.CompileDocument();
 
@@ -75,9 +101,15 @@ public class SetHeaderCompilationTests
                 <inbound>
                     <set-header name="Delete" exists-action="delete" />
                 </inbound>
+                <backend>
+                    <set-header name="Delete" exists-action="delete" />
+                </backend>
                 <outbound>
                     <set-header name="Delete" exists-action="delete" />
                 </outbound>
+                <on-error>
+                    <set-header name="Delete" exists-action="delete" />
+                </on-error>
             </policies>
             """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);

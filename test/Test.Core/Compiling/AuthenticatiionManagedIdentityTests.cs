@@ -16,6 +16,10 @@ public class AuthenticationManagedIdentityTests
             { 
                 context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
             }
+            public void Outbound(IOutboundContext context) 
+            { 
+                context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig { Resource = "resource" });
+            }
         }
         """,
         """
@@ -23,9 +27,12 @@ public class AuthenticationManagedIdentityTests
             <inbound>
                 <authentication-managed-identity resource="resource" />
             </inbound>
+            <outbound>
+                <authentication-managed-identity resource="resource" />
+            </outbound>
         </policies>
         """,
-        DisplayName = "Should compile authentication manage identity policy"
+        DisplayName = "Should compile authentication manage identity policy in sections"
     )]
     public void ShouldCompileAuthenticationManagedIdentityPolicy(string code, string expectedXml)
     {

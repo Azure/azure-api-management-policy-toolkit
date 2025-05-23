@@ -15,6 +15,12 @@ public class SetMethodTests
             public void Inbound(IInboundContext context) {
                 context.SetMethod("GET");
             }
+            public void Backend(IBackendContext context) {
+                context.SetMethod("PUT");
+            }
+            public void Outbound(IOutboundContext context) {
+                context.SetMethod("OPTIONS");
+            }
             public void OnError(IOutboundContext context) {
                 context.SetMethod("POST");
             }
@@ -25,6 +31,12 @@ public class SetMethodTests
             <inbound>
                 <set-method>GET</set-method>
             </inbound>
+            <backend>
+                <set-method>PUT</set-method>
+            </backend>
+            <outbound>
+                <set-method>OPTIONS</set-method>
+            </outbound>
             <on-error>
                 <set-method>POST</set-method>
             </on-error>

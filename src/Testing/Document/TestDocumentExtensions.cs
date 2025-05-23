@@ -28,4 +28,7 @@ public static class TestDocumentExtensions
 
     public static ResponseExampleStore SetupResponseExampleStore(this TestDocument document) =>
         document.Context.ResponseExampleStore;
+
+    public static LoggerStore SetupLoggerStore(this TestDocument document) =>
+        document.Context.LoggerStore;
 }

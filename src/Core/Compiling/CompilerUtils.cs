@@ -230,21 +230,6 @@ public static class CompilerUtils
         return true;
     }
 
-    public static string ExtractDocumentFileName(this ClassDeclarationSyntax document, string extension)
-    {
-        var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType("Document");
-        var attributeArgumentExpression =
-            attributeSyntax?.ArgumentList?.Arguments.FirstOrDefault()?.Expression as LiteralExpressionSyntax;
-        var path = attributeArgumentExpression?.Token.ValueText ?? document.Identifier.ValueText;
-        var currentExtension = Path.GetExtension(path);
-        if (string.IsNullOrWhiteSpace(currentExtension))
-        {
-            path = $"{path}.{extension}";
-        }
-
-        return path;
-    }
-
     public static T Normalize<T>(T node) where T : SyntaxNode
     {
         var unformatted = (T)new TriviaRemoverRewriter().Visit(node);
