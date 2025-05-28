@@ -35,20 +35,20 @@ public class DirectoryCompiler(DocumentCompiler compiler)
                 syntaxTrees: [syntax],
                 references: References);
 
-            var documents = syntax.GetRoot()
-                .GetDocumentAttributedClasses();
+            var semantics = compilation.GetSemanticModel(syntax);
+            var documents = syntax.GetRoot().GetDocumentAttributedClasses(semantics);
 
             foreach (var document in documents)
             {
                 IDocumentCompilationResult documentResult = compiler.Compile(compilation, document);
                 result.DocumentResults.Add(documentResult);
 
-                foreach (var error in documentResult.Diagnostics)
+                foreach (var error in documentResult.Errors)
                 {
                     Console.Error.WriteLine(error.ToString());
                 }
 
-                var policyFileName = document.ExtractDocumentFileName();
+                var policyFileName = document.ExtractDocumentFileName(semantics);
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
                     Element = documentResult.Document,

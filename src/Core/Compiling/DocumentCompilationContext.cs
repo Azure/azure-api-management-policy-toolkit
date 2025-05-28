@@ -1,29 +1,32 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Immutable;
 using System.Xml.Linq;
 
 using Microsoft.CodeAnalysis;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
-public class DocumentCompilationContext(Compilation compilation, SyntaxNode syntaxRoot, XElement rootElement)
+public class DocumentCompilationContext(Compilation compilation, SyntaxNode syntaxRoot, XElement currentElement)
     : IDocumentCompilationContext, IDocumentCompilationResult
 {
-    private readonly IList<Diagnostic> _diagnostics = new List<Diagnostic>();
-
-    public DocumentCompilationContext(DocumentCompilationContext parent, XElement rootElement) : this(
-        parent.Compilation, parent.SyntaxRoot, rootElement)
+    public DocumentCompilationContext(IDocumentCompilationContext parent, XElement currentElement)
+        : this(parent.Compilation, parent.SyntaxRoot, currentElement)
     {
-        _diagnostics = parent._diagnostics;
+        RootElement = parent.RootElement;
+        Diagnostics = parent.Diagnostics;
     }
 
-    public void AddPolicy(XNode element) => rootElement.Add(element);
-    public void Report(Diagnostic diagnostic) => _diagnostics.Add(diagnostic);
+    public void AddPolicy(XNode element) => CurrentElement.Add(element);
+    public void Report(Diagnostic diagnostic) => Diagnostics.Add(diagnostic);
 
     public Compilation Compilation { get; } = compilation;
     public SyntaxNode SyntaxRoot { get; } = syntaxRoot;
+    public XElement RootElement { get; } = currentElement;
+    public XElement CurrentElement { get; } = currentElement;
+    public IList<Diagnostic> Diagnostics { get; } = new List<Diagnostic>();
 
-    public XElement Document => rootElement;
-    public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.AsReadOnly();
+    public XElement Document => CurrentElement;
+    public ImmutableArray<Diagnostic> Errors => [..Diagnostics];
 }

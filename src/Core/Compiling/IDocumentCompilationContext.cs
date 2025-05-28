@@ -14,4 +14,8 @@ public interface IDocumentCompilationContext
 
     Compilation Compilation { get; }
     SyntaxNode SyntaxRoot { get; }
+    IList<Diagnostic> Diagnostics { get; }
+
+    XElement RootElement { get; }
+    XElement CurrentElement { get; }
 }

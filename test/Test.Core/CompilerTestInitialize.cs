@@ -44,16 +44,26 @@ public static class CompilerTestInitialize
 
     public static IDocumentCompilationResult CompileDocument(this string document)
     {
-        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(document);
+        var doc = $"""
+                   using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+                   using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+
+                   namespace Test;
+
+                   {document}
+                   """;
+
+        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(doc);
         var compilation = CSharpCompilation.Create(
             Guid.NewGuid().ToString(),
             syntaxTrees: [syntaxTree],
             references: References);
+        var semantics = compilation.GetSemanticModel(syntaxTree);
         ClassDeclarationSyntax policy = syntaxTree
             .GetRoot()
             .DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
-            .First(c => c.AttributeLists.ContainsAttributeOfType("Document"));
+            .First(c => c.AttributeLists.ContainsAttributeOfType<DocumentAttribute>(semantics));
 
         return s_compiler.Compile(compilation, policy);
     }
