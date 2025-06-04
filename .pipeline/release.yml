@@ -1,0 +1,90 @@
+trigger: none
+pr: none
+
+variables:
+  mainProjectPath: '$(Build.Repository.LocalPath)/*.sln'
+  exampleProjectFolder: '$(Build.Repository.LocalPath)/example/'
+  exampleProjectPath: '$(Build.Repository.LocalPath)/example/*.sln'
+  outputFolder: '$(Build.Repository.LocalPath)/output/'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - checkout: self
+    displayName: 'Checkout Repository'
+
+  - task: UseDotNet@2
+    inputs:
+      packageType: 'sdk'
+      version: '8.x'
+    displayName: 'Setup dotnet'
+
+  - task: NuGetCommand@2
+    inputs:
+      restoreSolution: '$(mainProjectPath)'
+    displayName: 'NuGet Restore Main Solution'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+      projects: '$(mainProjectPath)'
+    displayName: 'Build Main Solution'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: '$(mainProjectPath)'
+    displayName: 'Test Main Solution'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'pack'
+      packagesToPack: '$(mainProjectPath)'
+    displayName: 'Create NuGet Packages from Main Solution'
+
+  - task: NuGetCommand@2
+    inputs:
+      restoreSolution: '$(mainProjectPath)'
+    displayName: 'NuGet Restore Example Solution'
+
+  - script: dotnet tool restore
+    displayName: 'Restore .NET Tools for Example Project'
+    workingDirectory: '$(exampleProjectFolder)'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+      projects: '$(exampleProjectPath)'
+    displayName: 'Build Example Solution'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: '$(exampleProjectPath)'
+    displayName: 'Test Example Solution'
+
+  - task: onebranch.pipeline.signing@1
+    displayName: 'Sign NuGet package'
+    inputs:
+      command: 'sign'
+      signing_environment: 'azure-ado'
+      cp_code: CP-401405
+      signing_profile: 'external_distribution'
+      #      signing_profile: 'CP-401405'
+      files_to_sign: '*.nupkg'
+      search_root: '$(outputFolder)'
+
+  - task: NuGetCommand@2
+    inputs:
+      command: 'verify'
+      packagesToVerify: '*.nupkg'
+    displayName: 'Verify Signed NuGet Packages'
+    workingDirectory: '$(outputFolder)'
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: '$(outputFolder)'
+      artifactName: 'SignedPackages'
+      publishLocation: 'Container'
+    displayName: 'Upload Signed NuGet Packages'
