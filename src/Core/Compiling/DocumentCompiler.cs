@@ -22,7 +22,8 @@ public class DocumentCompiler
 
     public IDocumentCompilationResult Compile(Compilation compilation, ClassDeclarationSyntax document)
     {
-        var documentType = document.ExtractDocumentType();
+        var semanticModel = compilation.GetSemanticModel(document.SyntaxTree);
+        var documentType = document.ExtractDocumentType(semanticModel);
         var methods = document.DescendantNodes().OfType<MethodDeclarationSyntax>();
         var rootElement = new XElement(documentType == DocumentType.Fragment ? "fragment" : "policies");
         var context = new DocumentCompilationContext(compilation, document, rootElement);

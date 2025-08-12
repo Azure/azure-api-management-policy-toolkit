@@ -231,30 +231,6 @@ public static class CompilerUtils
         return true;
     }
 
-    public static string ExtractDocumentFileName(this ClassDeclarationSyntax document)
-    {
-        var attributeSyntax = document.AttributeLists
-            .SelectMany(a => a.Attributes)
-            .FirstOrDefault(a => a.Name.ToString().Contains("Document"));
-            
-        var attributeArgumentExpression =
-            attributeSyntax?.ArgumentList?.Arguments.FirstOrDefault()?.Expression as LiteralExpressionSyntax;
-        return attributeArgumentExpression?.Token.ValueText ?? document.Identifier.ValueText;
-    }
-
-    public static DocumentType ExtractDocumentType(this ClassDeclarationSyntax document)
-    {
-        var attributeSyntax = document.AttributeLists
-            .SelectMany(a => a.Attributes)
-            .FirstOrDefault(a => a.Name.ToString().Contains("Document"));
-            
-        if (attributeSyntax?.ArgumentList?.Arguments == null)
-            return DocumentType.Policy; // Default to Policy
-
-        return attributeSyntax.ArgumentList.Arguments.Any(arg => 
-            arg.ToString().Contains("Fragment")) ? DocumentType.Fragment : DocumentType.Policy;
-    }
-
     public static T Normalize<T>(T node) where T : SyntaxNode
     {
         var unformatted = (T)new TriviaRemoverRewriter().Visit(node);

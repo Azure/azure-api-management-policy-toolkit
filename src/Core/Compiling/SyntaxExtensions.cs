@@ -33,6 +33,27 @@ public static class SyntaxExtensions
         return attributeArgumentExpression?.Token.ValueText ?? document.Identifier.ValueText;
     }
 
+    public static DocumentType ExtractDocumentType(this ClassDeclarationSyntax document, SemanticModel model)
+    {
+        var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType<DocumentAttribute>(model);
+        
+        if (attributeSyntax?.ArgumentList?.Arguments == null)
+            return DocumentType.Policy; // Default to Policy
+
+        // Look for the 'type' parameter in the attribute arguments
+        var typeArgument = attributeSyntax.ArgumentList.Arguments
+            .FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.ValueText == "type");
+        
+        if (typeArgument?.Expression is MemberAccessExpressionSyntax memberAccess &&
+            memberAccess.Name.Identifier.ValueText == "Fragment")
+        {
+            return DocumentType.Fragment;
+        }
+        
+        // Default to Policy if no type specified or if explicitly set to Policy
+        return DocumentType.Policy;
+    }
+
     public static IEnumerable<ClassDeclarationSyntax> GetDocumentAttributedClasses(this SyntaxNode syntax,
         SemanticModel semanticModel)
     {
