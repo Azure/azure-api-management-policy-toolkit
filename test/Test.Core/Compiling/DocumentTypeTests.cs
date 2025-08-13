@@ -31,7 +31,7 @@ public class DocumentTypeTests
     )]
     [DataRow(
         """
-        [Document(type: DocumentType.Policy)]
+        [Document( Type = DocumentType.Policy )]
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context)
@@ -53,7 +53,7 @@ public class DocumentTypeTests
     )]
     [DataRow(
         """
-        [Document(type: DocumentType.Fragment)]
+        [Document( Type = DocumentType.Fragment )] 
         public class PolicyFragment : IFragment
         {
             public void Fragment(IFragmentContext context)
@@ -73,7 +73,7 @@ public class DocumentTypeTests
     )]
     [DataRow(
         """
-        [Document("my-fragment", type: DocumentType.Fragment)]
+        [Document("my-fragment", Type = DocumentType.Fragment)]
         public class NamedPolicyFragment : IFragment
         {
             public void Fragment(IFragmentContext context)

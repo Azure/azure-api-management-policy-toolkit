@@ -37,7 +37,7 @@ public static class SyntaxExtensions
     {
         var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType<DocumentAttribute>(model);
         var fragmentArgument = attributeSyntax?.ArgumentList?.Arguments
-            .FirstOrDefault(arg => arg.Expression.ToString().Contains("Fragment"));
+            .FirstOrDefault(arg => arg.Expression.ToString().Contains(nameof(DocumentType.Fragment)));
         return fragmentArgument != null ? DocumentType.Fragment : DocumentType.Policy;
     }
 
