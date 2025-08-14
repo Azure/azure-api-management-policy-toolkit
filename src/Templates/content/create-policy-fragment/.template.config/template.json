@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Microsoft",
+  "classifications": [
+    "Policy Toolkit",
+    "Policy Fragment",
+    "Class"
+  ],
+  "name": "Policy Toolkit Policy Fragment Class",
+  "generatorVersions": "[1.0.0.0-*)",
+  "description": "Creates a new Policy Toolkit policy fragment class",
+  "groupIdentity": "Azure.ApiManagement.PolicyToolkit.Templates.PolicyFragment",
+  "identity": "Azure.ApiManagement.PolicyToolkit.Templates.PolicyFragment.1.0",
+  "shortName": "policytoolkitfragment",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "PolicyFragment1",
+  "preferDefaultName": true,
+  "defaultName": "PolicyFragment1",
+  "primaryOutputs": [
+    {
+      "path": ".cs"
+    }
+  ],
+  "symbols": {
+    "DefaultNamespace": {
+      "type": "bind",
+      "binding": "msbuild:RootNamespace",
+      "replaces": "Company.PolicyProject1"
+    }
+  },
+  "constraints": {
+    "csharp-only": {
+      "type": "project-capability",
+      "args": "CSharp"
+    }
+  }
+}

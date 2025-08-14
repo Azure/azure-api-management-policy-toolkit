@@ -22,11 +22,22 @@ public class DocumentCompiler
 
     public IDocumentCompilationResult Compile(Compilation compilation, ClassDeclarationSyntax document)
     {
-        var methods = document.DescendantNodes()
-            .OfType<MethodDeclarationSyntax>();
-        var policyDocument = new XElement("policies");
-        DocumentCompilationContext context = new(compilation, document, policyDocument);
+        var semanticModel = compilation.GetSemanticModel(document.SyntaxTree);
+        var documentType = document.ExtractDocumentType(semanticModel);
+        var methods = document.DescendantNodes().OfType<MethodDeclarationSyntax>();
+        var rootElement = new XElement(documentType == DocumentType.Fragment ? "fragment" : "policies");
+        var context = new DocumentCompilationContext(compilation, document, rootElement);
 
+        if (documentType == DocumentType.Fragment)
+            CompileFragment(context, methods);
+        else
+            CompilePolicy(context, methods);
+
+        return context;
+    }
+
+    private void CompilePolicy(DocumentCompilationContext context, IEnumerable<MethodDeclarationSyntax> methods)
+    {
         foreach (var method in methods)
         {
             var sectionName = method.Identifier.ValueText switch
@@ -45,12 +56,30 @@ public class DocumentCompiler
 
             CompileSection(context, sectionName, method);
         }
-
-        return context;
     }
 
+    private void CompileFragment(DocumentCompilationContext context, IEnumerable<MethodDeclarationSyntax> methods)
+    {
+        var fragmentMethod = methods.FirstOrDefault(m => m.Identifier.ValueText == "Fragment");
+
+        if (fragmentMethod != null && ValidateMethodBody(fragmentMethod, context))
+        {
+            _blockCompiler.Value.Compile(context, fragmentMethod.Body!);
+        }
+    }
 
     private void CompileSection(DocumentCompilationContext context, string section, MethodDeclarationSyntax method)
+    {
+        if (!ValidateMethodBody(method, context))
+            return;
+
+        var sectionElement = new XElement(section);
+        var sectionContext = new DocumentCompilationContext(context, sectionElement);
+        _blockCompiler.Value.Compile(sectionContext, method.Body!);
+        context.AddPolicy(sectionElement);
+    }
+
+    private bool ValidateMethodBody(MethodDeclarationSyntax method, DocumentCompilationContext context)
     {
         if (method.Body is null)
         {
@@ -59,12 +88,8 @@ public class DocumentCompiler
                 method.GetLocation(),
                 method.Identifier.ValueText
             ));
-            return;
+            return false;
         }
-
-        var sectionElement = new XElement(section);
-        var sectionContext = new DocumentCompilationContext(context, sectionElement);
-        _blockCompiler.Value.Compile(sectionContext, method.Body);
-        context.AddPolicy(sectionElement);
+        return true;
     }
 }

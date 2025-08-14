@@ -33,6 +33,14 @@ public static class SyntaxExtensions
         return attributeArgumentExpression?.Token.ValueText ?? document.Identifier.ValueText;
     }
 
+    public static DocumentType ExtractDocumentType(this ClassDeclarationSyntax document, SemanticModel model)
+    {
+        var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType<DocumentAttribute>(model);
+        var fragmentArgument = attributeSyntax?.ArgumentList?.Arguments
+            .FirstOrDefault(arg => arg.Expression.ToString().Contains(nameof(DocumentType.Fragment)));
+        return fragmentArgument != null ? DocumentType.Fragment : DocumentType.Policy;
+    }
+
     public static IEnumerable<ClassDeclarationSyntax> GetDocumentAttributedClasses(this SyntaxNode syntax,
         SemanticModel semanticModel)
     {
