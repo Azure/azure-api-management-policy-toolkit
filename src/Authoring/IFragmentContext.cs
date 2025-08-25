@@ -148,7 +148,7 @@ public interface IFragmentContext : IHaveExpressionContext
     /// <param name="cacheResponse">
     /// Indicates whether the response should be cached. If set to false, the response will not be cached. Policy expressions are allowed.
     /// </param>
-    void CacheStore([ExpressionAllowed] uint duration, [ExpressionAllowed] bool? cacheResponse);
+    void CacheStore([ExpressionAllowed] int duration, [ExpressionAllowed] bool? cacheResponse);
 
     /// <summary>
     /// Stores a value in the cache using a specified key.<br/>
