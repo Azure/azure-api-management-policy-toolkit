@@ -24,7 +24,7 @@ public record CorsConfig
     /// Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public string? TerminateUnmatchedRequest { get; init; }
+    public bool? TerminateUnmatchedRequest { get; init; }
 
     /// <summary>
     /// List of origins allowed to make cross-origin calls to your API.<br/>
