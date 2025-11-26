@@ -36,17 +36,19 @@ We will cover the following topics:
          <packageSources>
            <!-- local feed for the project -->
            <add key="local" value="./packages" />
+           <!-- fallback to nuget.org -->
+           <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
          </packageSources>
        </configuration>
        ```
-5. Add Azure API Management policy toolkit library by running
+5. Add Azure API Management policy authoring toolkit library by running
     ```shell
     cd ./Contoso.Apis.Policies
     dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
     ```
 
 6. Open the solution in your IDE of choice. We
-  tested [Visual Studio ](https://visualstudio.microsoft.com), [Raider](https://www.jetbrains.com/rider/), [Visual Studio Code](https://code.visualstudio.com/)
+  tested [Visual Studio ](https://visualstudio.microsoft.com), [Rider](https://www.jetbrains.com/rider/), [Visual Studio Code](https://code.visualstudio.com/)
   with [C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit),
   but any IDE with C# support should work.
 
@@ -62,10 +64,10 @@ dotnet new class -n ApiOperationPolicy
 ```
 
 The class in the file should inherit from `IDocument` interface and have `Document` attribute
-from `Azure.ApiManagement.PolicyToolkit.Authoring` namespace.
+from `Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring` namespace.
 
 ```csharp
-using Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 namespace Contoso.Apis.Policies;
 
@@ -121,14 +123,14 @@ cd .. # Go to solution folder if not already there
 dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
 ````
 
-After the installation, the compiler should be available in the project folder.
-Now lets run the compiler to generate policy document. Execute compiler command in the solution folder.
+After the installation, the compiler should be available in the project folder as the `azure-apim-policy-compiler` command.
+Now let's run the compiler to generate policy document. Execute compiler command in the solution folder.
 
 ```shell
 dotnet azure-apim-policy-compiler --s .\Contoso.Apis.Policies --o . --format true
-``` 
+```
 
-The compiler is a dotnet tool named `azure-apim-policy-compiler`. The `--s` parameter is a source folder with policy documents.
+The compiler is a dotnet tool whose command name is `azure-apim-policy-compiler`. The `--s` parameter is a source folder with policy documents.
 The `--o` parameter is an output folder for generated policy documents. The `--format` parameter is a flag which tells
 the compiler to format the generated document.
 
@@ -169,8 +171,8 @@ If a request comes from other IP addresses it should use `Bearer` token received
 For every request we want to add header with the user id.
 
 ```csharp
-using Azure.ApiManagement.PolicyToolkit.Authoring;
-using Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
 namespace Contoso.Apis.Policies;
 
@@ -209,7 +211,7 @@ Let's unpack the code above it:
   expression
 * Every method, other than section method are treated as expressions. They need to accept one parameter of type
   `IExpressionContext`
-  with name `context`. Type is available in `Azure.ApiManagement.PolicyToolkit.Authoring.Expressions` namespace.
+  with name `context`. Type is available in `Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions` namespace.
 * `IExpressionContext` type contains the same properties as `context` object in policy expressions.
 * `AuthenticationBasic` method is mapped to `authentication-basic` policy.
 * `AuthenticationManagedIdentity` method is mapped to `authentication-managed-identity` policy.
@@ -269,7 +271,7 @@ the following commands.
 dotnet new mstest --output Contoso.Apis.Policies.Tests
 dotnet sln add ./Contoso.Apis.Policies.Tests
 cd Contoso.Apis.Policies.Tests
-dotnet add package Azure.ApiManagement.PolicyToolkit.Testing
+dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Testing
 dotnet add reference ..\Contoso.Apis.Policies
 dotnet new class -n ApiOperationPolicyTest
 ```
@@ -279,7 +281,7 @@ Perfect! Now we can write a test for `IsCompanyIP` method in the class.
 ```csharp
 using Contoso.Apis.Policies;
 
-using Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
@@ -307,7 +309,7 @@ Let's unpack the code above:
 
 * Test class is a standard MSTest class with one test method. You can use your favorite testing framework in place of MSTest. Policy framework is not dependent on any testing framework.
 * `MockExpressionContext` is a class which is used to mock request context. It is available in
-  `Azure.ApiManagement.PolicyToolkit.Testing.Expressions` namespace. It implements `IExpressionContext`
+  `Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions` namespace. It implements `IExpressionContext`
   interface and exposes helper properties to set up request context.
 * `context.MockRequest.IpAddress = "10.0.0.12"` is setting a IpAddress for request.
 

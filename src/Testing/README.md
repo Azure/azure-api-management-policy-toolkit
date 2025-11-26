@@ -13,14 +13,15 @@ expression and policy documents wrote in C# for Microsoft Azure Api Management.
 Install the Microsoft Azure Api Management Policy Toolkit test library with [NuGet][nuget]:
 
 ```dotnetcli
-dotnet tool install Azure.ApiManagement.PolicyToolkit.Testing
+# If the package is available on nuget.org
+dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Testing
 ```
 
 ### Write test
 
 ```cs
 using Contoso.Apis.Policies;
-using Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Contoso.Apis.Policies.Tests;
@@ -31,6 +32,7 @@ public class ApiOperationPolicyTest
     [TestMethod]
     public void TestHelloFromExpression()
     {
+        var context = new MockExpressionContext();
         Assert.AreEqual("World", ApiOperationPolicy.HelloFromExpression(context));
     }
 }
