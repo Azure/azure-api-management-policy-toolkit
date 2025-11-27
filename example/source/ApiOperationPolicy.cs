@@ -19,7 +19,7 @@ public class ApiOperationPolicy : IDocument
         {
             context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig()
             {
-                Resource = "https://management.azure.com/",
+                Resource = Constants.AzureManagementUrl,
             });
         }
     }

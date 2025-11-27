@@ -215,4 +215,37 @@ public static class CompilationErrors
         "Description.",
         "TODO",
         ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor CannotFindMethodCode = new(
+        "APIM2009",
+        "Cannot find method code",
+        "Cannot find method code. Method '{0}' is not declared in the projects source code.",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor InvalidConstantReference = new(
+        "APIM2010",
+        "Invalid constant reference for policy parameter",
+        "Argument should be an constant field reference",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor IsNotAConstant = new(
+        "APIM2011",
+        "External value is not a constant",
+        "Field '{0}' should be a const for it to be inlined in the policy document",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
 }

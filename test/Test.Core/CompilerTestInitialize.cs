@@ -42,24 +42,29 @@ public static class CompilerTestInitialize
         s_serviceProvider.Dispose();
     }
 
-    public static IDocumentCompilationResult CompileDocument(this string document)
+    public static IDocumentCompilationResult CompileDocument(this string document) => document.CompileDocument([]);
+
+    public static IDocumentCompilationResult CompileDocument(this string document, params string[] separateDocuments)
     {
-        var doc = $"""
-                   using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
-                   using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+        string[] docs = [document, ..separateDocuments];
+        var syntaxTrees = docs.Select(d =>
+                $"""
+                 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+                 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
-                   namespace Test;
+                 namespace Test;
 
-                   {document}
-                   """;
+                 {d}
+                 """)
+            .Select(d => CSharpSyntaxTree.ParseText(d))
+            .ToArray();
 
-        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(doc);
         var compilation = CSharpCompilation.Create(
             Guid.NewGuid().ToString(),
-            syntaxTrees: [syntaxTree],
+            syntaxTrees: syntaxTrees,
             references: References);
-        var semantics = compilation.GetSemanticModel(syntaxTree);
-        ClassDeclarationSyntax policy = syntaxTree
+        var semantics = compilation.GetSemanticModel(syntaxTrees[0]);
+        ClassDeclarationSyntax policy = syntaxTrees[0]
             .GetRoot()
             .DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
