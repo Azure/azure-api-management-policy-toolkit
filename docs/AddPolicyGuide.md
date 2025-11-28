@@ -16,8 +16,7 @@ When adding a new policy, you will typically need to create or modify the follow
 - **Provide automated tests**: `test/Test.Core/Compiling/YourPolicyTests.cs` (Exampe: `RateLimitTests.cs`)
 - **Document your policy**: `docs/AvailablePolicies.md`
 
-Refer to existing policies for detailed examples. It is recommended to look at `RateLimit` or `Quota` policies.
-They are contain all possible aspects of a policy compilation implementation.
+We recommend using existing policies as detailed examples, such as `RateLimit` or `Quota` policies. These contain all possible aspects of a policy compilation implementation.
 
 ## Steps to add a new policy
 
