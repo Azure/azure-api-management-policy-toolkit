@@ -1,4 +1,4 @@
-# Azure API Management Policy Toolkit Compiling tool
+# Azure API Management Policy Toolkit Compiler
 
 This project builds a dotnet tool which can compile C# policy documents into Azure API Management XML (rawxml / Razor)
 policy documents.
