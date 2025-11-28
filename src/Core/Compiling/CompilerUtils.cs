@@ -98,7 +98,9 @@ public static class CompilerUtils
         Compilation compilation = context.Compilation;
         SemanticModel semanticModel = compilation.GetSemanticModel(syntax.SyntaxTree);
         var symbolInfo = semanticModel.GetSymbolInfo(syntax);
-        if (symbolInfo.Symbol is not IFieldSymbol fieldSymbol)
+        var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.SingleOrDefault(s => s is IFieldSymbol);
+
+        if (symbol is not IFieldSymbol fieldSymbol)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.InvalidConstantReference,
