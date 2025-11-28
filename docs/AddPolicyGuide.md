@@ -2,9 +2,9 @@
 
 This guide outlines the steps to support a new policy, or new capabilities for an existing policy.
 
-Guide covers how to add a new policy that can be used in policy documents with a config.
-All new policies should follow this pattern. If a policy does not fit this pattern,
-please discuss it in an issue before impementing it. 
+All contributions should follow the steps provided in this guide to support a policy (feature) and its configuration.
+
+If you cannot follow the defined process, please open an issue to discuss before implementing it. 
 
 ## TL;DR
 
