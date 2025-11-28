@@ -58,6 +58,9 @@ jobs:
           dotnet-version: 8.0.x
       - name: Create new packages
         run: dotnet pack
+      - name: Rename example project
+        working-directory: ./example
+        run: mv Example.sln.example Example.sln
       - name: Restore dependencies
         working-directory: ./example
         run: dotnet restore
