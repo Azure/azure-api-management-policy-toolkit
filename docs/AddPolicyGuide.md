@@ -1,4 +1,4 @@
-# Guide to adding new policy
+# Contributing a new policy (feature)
 
 This guide outlines the steps to support a new policy, or new capabilities for an existing policy.
 
