@@ -13,7 +13,6 @@ expression and policy documents wrote in C# for Microsoft Azure Api Management.
 Install the Microsoft Azure Api Management Policy Toolkit test library with [NuGet][nuget]:
 
 ```dotnetcli
-# If the package is available on nuget.org
 dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Testing
 ```
 

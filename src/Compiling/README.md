@@ -10,9 +10,6 @@ Install the Microsoft Azure Api Management Policy Toolkit compiler CLI tool with
 dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
 ```
 
-If the package is not available on the public NuGet feed for your environment, you can install it from the repository
-`output/` folder after running `dotnet pack` at the repository root.
-
 ### Inspect generated policy
 
 ```cshtml
