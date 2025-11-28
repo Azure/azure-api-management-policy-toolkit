@@ -11,11 +11,11 @@ please discuss it in an issue before impementing it.
 
 When adding a new policy, you will typically need to create or modify the following files:
 
-- Config: `src/Authoring/Configs/YourPolicyConfig.cs` (Exampe: `RateLimitConfig.cs`)
-- Section or framgent interface: `src/Authoring/IInboundContext.cs` (or other context)
-- Compiler: `src/Core/Compiling/Policy/YourPolicyCompiler.cs` (Exampe: `RateLimitCompiler.cs`)
-- Tests: `test/Test.Core/Compiling/YourPolicyTests.cs` (Exampe: `RateLimitTests.cs`)
-- Documentation: `docs/AvailablePolicies.md`
+- **Introduce the configuration**: `src/Authoring/Configs/YourPolicyConfig.cs` (Exampe: `RateLimitConfig.cs`)
+- **Enable using in respective section or fragment**: `src/Authoring/IInboundContext.cs` (or other context)
+- **Support compilation**: `src/Core/Compiling/Policy/YourPolicyCompiler.cs` (Exampe: `RateLimitCompiler.cs`)
+- **Provide automated tests**: `test/Test.Core/Compiling/YourPolicyTests.cs` (Exampe: `RateLimitTests.cs`)
+- **Document your policy**: `docs/AvailablePolicies.md`
 
 Refer to existing policies for detailed examples. It is recommended to look at `RateLimit` or `Quota` policies.
 They are contain all possible aspects of a policy compilation implementation.
