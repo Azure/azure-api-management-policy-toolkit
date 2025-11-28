@@ -31,7 +31,7 @@ This will greatly increase alignment of your PR with the project goals and reduc
 For more information on how to set up the development environment,
 see [Development environment setup](docs/DevEnvironmentSetup.md).
 
-### Implementaition guides
+### Implementation guides
 
  - [Add new policy guide](docs/AddPolicyGuide.md)
 
