@@ -7,7 +7,7 @@ inbound/outbound/backend/on-error/fragment contexts) and reflects which policies
 If a policy you need is missing you can either:
 
 - Use `InlinePolicy(...)` to insert raw XML into the compiled document, or
-- Open an issue / contribute a patch (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
+- Open an issue / contribute the feature (learn more in [our contribution guide](../CONTRIBUTING.md)).
 
 Notes:
 
