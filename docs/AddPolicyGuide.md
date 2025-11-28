@@ -1,7 +1,6 @@
 # Guide to adding new policy
 
-This guide outlines the steps to add a new policy to the system, following the established pattern used for existing
-policies.
+This guide outlines the steps to support a new policy, or new capabilities for an existing policy.
 
 Guide covers how to add a new policy that can be used in policy documents with a config.
 All new policies should follow this pattern. If a policy does not fit this pattern,
