@@ -7,7 +7,7 @@ Guide covers how to add a new policy that can be used in policy documents with a
 All new policies should follow this pattern. If a policy does not fit this pattern,
 please discuss it in an issue before impementing it. 
 
-## TL;DR;
+## TL;DR
 
 When adding a new policy, you will typically need to create or modify the following files:
 
