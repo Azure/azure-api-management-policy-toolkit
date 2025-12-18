@@ -61,9 +61,10 @@ jobs:
       - name: Rename example project
         working-directory: ./example
         run: mv Example.sln.example Example.sln
-      - name: Rename example.source project
+      - name: Rename source.example project
         working-directory: ./example/source
         run: mv Source.Example.csproj.example Source.Example.csproj
+      - name: Rename test.example project
         working-directory: ./example/test
         run: mv Test.Example.csproj.example Test.Example.csproj
       - name: Restore dependencies
