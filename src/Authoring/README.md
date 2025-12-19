@@ -20,7 +20,8 @@ dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
 ### Write your first policy
 
 ```csharp
-using Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
 namespace Contoso.Apis.Policies;
 

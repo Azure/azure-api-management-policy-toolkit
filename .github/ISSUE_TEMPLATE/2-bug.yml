@@ -42,6 +42,7 @@ body:
         - Authoring library
         - Compiler
         - Emulator library
+        - Documentation
     validations:
       required: true
   - type: input
