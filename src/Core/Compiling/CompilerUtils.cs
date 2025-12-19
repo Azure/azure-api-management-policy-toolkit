@@ -4,9 +4,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
 
-using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
@@ -20,6 +20,8 @@ public static class CompilerUtils
             case LiteralExpressionSyntax syntax:
                 return syntax.Token.ValueText;
             case InvocationExpressionSyntax syntax:
+                return FindCode(syntax, context);
+            case MemberAccessExpressionSyntax syntax:
                 return FindCode(syntax, context);
             // case InterpolatedStringExpressionSyntax syntax:
             //     var interpolationParts = syntax.Contents.Select(c => c switch
@@ -46,7 +48,12 @@ public static class CompilerUtils
 
     public static string FindCode(this InvocationExpressionSyntax syntax, IDocumentCompilationContext context)
     {
-        if (syntax.Expression is not IdentifierNameSyntax identifierSyntax)
+        Compilation compilation = context.Compilation;
+        SemanticModel semanticModel = compilation.GetSemanticModel(syntax.SyntaxTree);
+        var symbolInfo = semanticModel.GetSymbolInfo(syntax.Expression);
+        var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.SingleOrDefault(s => s is IMethodSymbol);
+
+        if (symbol is not IMethodSymbol methodSymbol)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.InvalidExpression,
@@ -55,10 +62,20 @@ public static class CompilerUtils
             return "";
         }
 
-        var methodIdentifier = identifierSyntax.Identifier.ValueText;
-        var expressionMethod = context.SyntaxRoot.DescendantNodes()
+        var expressionMethod = methodSymbol.DeclaringSyntaxReferences
+            .Select(r => r.GetSyntax())
             .OfType<MethodDeclarationSyntax>()
-            .First(m => m.Identifier.ValueText == methodIdentifier);
+            .FirstOrDefault();
+
+        if (expressionMethod is null)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.CannotFindMethodCode,
+                syntax.GetLocation(),
+                methodSymbol.Name
+            ));
+            return "";
+        }
 
         expressionMethod = Normalize(expressionMethod);
 
@@ -74,6 +91,45 @@ public static class CompilerUtils
         {
             throw new InvalidOperationException("Invalid expression");
         }
+    }
+
+    public static string FindCode(this MemberAccessExpressionSyntax syntax, IDocumentCompilationContext context)
+    {
+        Compilation compilation = context.Compilation;
+        SemanticModel semanticModel = compilation.GetSemanticModel(syntax.SyntaxTree);
+        var symbolInfo = semanticModel.GetSymbolInfo(syntax);
+        var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.SingleOrDefault(s => s is IFieldSymbol);
+
+        if (symbol is not IFieldSymbol fieldSymbol)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.InvalidConstantReference,
+                syntax.GetLocation()
+            ));
+            return "";
+        }
+
+        if (!fieldSymbol.IsConst)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.InvalidExpression,
+                syntax.GetLocation()
+            ));
+            return "";
+        }
+
+        var value = fieldSymbol.ConstantValue?.ToString();
+        if (value is null)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.IsNotAConstant,
+                syntax.GetLocation(),
+                fieldSymbol.Name
+            ));
+            value = "";
+        }
+
+        return value;
     }
 
     public static InitializerValue Process(
