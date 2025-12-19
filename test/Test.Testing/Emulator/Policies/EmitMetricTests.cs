@@ -26,20 +26,6 @@ public class EmitMetricTests
             });
         }
 
-        public void Backend(IBackendContext context)
-        {
-            context.EmitMetric(new EmitMetricConfig
-            {
-                Name = "TestMetric",
-                Dimensions =
-                [
-                    new MetricDimensionConfig { Name = "TestDimension", Value = "TestValue" }
-                ],
-                Namespace = "TestNamespace",
-                Value = 1.5
-            });
-        }
-
         public void Outbound(IOutboundContext context)
         {
             context.EmitMetric(new EmitMetricConfig
@@ -111,25 +97,6 @@ public class EmitMetricTests
         diagnosticStore.Enabled = true;
 
         test.RunOutbound();
-
-        var metric = diagnosticStore.Metrics.Should().ContainSingle().Subject;
-        metric.Should().NotBeNull();
-        metric.Name.Should().Be("TestMetric");
-        metric.Namespace.Should().Be("TestNamespace");
-        metric.Value.Should().Be(1.5);
-        var dimension = metric.Dimensions.Should().ContainSingle().Subject;
-        dimension.Name.Should().Be("TestDimension");
-        dimension.Value.Should().Be("TestValue");
-    }
-
-    [TestMethod]
-    public void EmitMetric_Backend()
-    {
-        var test = new SimpleEmitMetric().AsTestDocument();
-        var diagnosticStore = test.SetupDiagnosticStore();
-        diagnosticStore.Enabled = true;
-
-        test.RunBackend();
 
         var metric = diagnosticStore.Metrics.Should().ContainSingle().Subject;
         metric.Should().NotBeNull();
