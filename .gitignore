@@ -464,3 +464,10 @@ $RECYCLE.BIN/
 !starter.rsp
 
 .mono/
+
+###
+### example project
+###
+/example/Example.sln
+/example/source/Source.Example.csproj
+/example/test/Test.Example.csproj
