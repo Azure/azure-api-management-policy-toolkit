@@ -218,8 +218,8 @@ public static class CompilationErrors
 
     public readonly static DiagnosticDescriptor CannotFindMethodCode = new(
         "APIM2009",
-        "Cannot find method code",
-        "Cannot find method code. Method '{0}' is not declared in the projects source code.",
+        "Cannot find method implementation",
+        "Cannot find method implementation. Method '{0}' is not declared in the projects source code.",
         "PolicyDocumentCompilation",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
