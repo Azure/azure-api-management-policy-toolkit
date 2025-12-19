@@ -28,13 +28,13 @@ public class CacheStore
         return this;
     }
 
-    public CacheStore WithExternalCacheValue(string key, object value, uint duration = 10)
+    public CacheStore WithExternalCacheValue(string key, object value, int duration = 10)
     {
         _externalCache.Add(key, new CacheValue(value, duration));
         return this;
     }
 
-    public CacheStore WithInternalCacheValue(string key, object value, uint duration = 10)
+    public CacheStore WithInternalCacheValue(string key, object value, int duration = 10)
     {
         _internalCache.Add(key, new CacheValue(value, duration));
         return this;

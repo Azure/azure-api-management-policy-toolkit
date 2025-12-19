@@ -29,7 +29,7 @@ public record CacheStoreValueConfig
     /// Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public required uint Duration { get; init; }
+    public required int Duration { get; init; }
 
     /// <summary>
     /// Optional. One of the following values: prefer-external, external, internal.<br/>
