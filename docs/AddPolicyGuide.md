@@ -10,15 +10,17 @@ If you cannot follow the defined process, please open an issue to discuss before
 
 When adding a new policy, you will typically need to create or modify the following files:
 
-- **Introduce the configuration**: `src/Authoring/Configs/YourPolicyConfig.cs` (Exampe: `RateLimitConfig.cs`)
-- **Enable using in respective section or fragment**: `src/Authoring/IInboundContext.cs` (or other context)
-- **Support compilation**: `src/Core/Compiling/Policy/YourPolicyCompiler.cs` (Exampe: `RateLimitCompiler.cs`)
-- **Provide automated tests**: `test/Test.Core/Compiling/YourPolicyTests.cs` (Exampe: `RateLimitTests.cs`)
-- **Document your policy**: `docs/AvailablePolicies.md`
+- **[Introduce the configuration](#introduce-the-configuration)**: `src/Authoring/Configs/YourPolicyConfig.cs` (Exampe: `RateLimitConfig.cs`)
+- **[Enable using in respective section or fragment](#enable-using-in-respective-section-or-fragment)**: `src/Authoring/IInboundContext.cs` (or other context)
+- **[Support compilation](#support-compilation)**: `src/Core/Compiling/Policy/YourPolicyCompiler.cs` (Exampe: `RateLimitCompiler.cs`)
+- **[Provide automated tests](#provide-automated-tests)**: `test/Test.Core/Compiling/YourPolicyTests.cs` (Exampe: `RateLimitTests.cs`)
+- **[Document your policy](#document-your-policy)**: `docs/AvailablePolicies.md`
 
 We recommend using existing policies as detailed examples, such as `RateLimit` or `Quota` policies. These contain all possible aspects of a policy compilation implementation.
 
 ## Steps to add a new policy
+
+### Introduce the configuration
 
 - Create `src/Authoring/Configs/YourPolicyConfig.cs` as a public record.
   - Required parameters as `required` `init` properties
@@ -48,6 +50,8 @@ We recommend using existing policies as detailed examples, such as `RateLimit` o
   }
 ```
 
+### Enable using in respective section or fragment
+
 - Add a method signature to section context interfaces in which policy is avaliable (e.g. `src/Authoring/IInboundContext.cs`).
   Add method to policy fragment context interface to make policy avaliable in policy fragment. 
   Make sure to add XML documentation.
@@ -61,6 +65,8 @@ We recommend using existing policies as detailed examples, such as `RateLimit` o
     /// </summary>
     void YourPolicy(YourPolicyConfig config);
 ```
+
+### Support compilation
 
 - Create compiler class `src/Core/Compiling/Policy/YourPolicyCompiler.cs` implementing `IMethodPolicyHandler`.
   This class will be responsible for translating the C# method call into the corresponding XML policy element.
@@ -107,6 +113,8 @@ public class YourPolicyCompiler : IMethodPolicyHandler
 }
 ```
 
+### Provide automated tests
+
 - Add tests to `test/Test.Core/Compiling/YourPolicyTests.cs`. 
   - Use a `[DataRow]` for each test case, following the pattern of existing tests.
   - Check that compiler 
@@ -146,5 +154,7 @@ public class YourPolicyTests : PolicyCompilerTestBase
     }
 }
 ```
+
+### Document your policy
 
 - Update `docs/AvailablePolicies.md` to include your new policy in the list of implemented policies.
