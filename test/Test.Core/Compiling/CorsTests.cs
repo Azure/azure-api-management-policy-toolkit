@@ -236,6 +236,68 @@ public class CorsTests
         """,
         DisplayName = "Should compile cors policy with expose headers"
     )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.Cors(new CorsConfig()
+                    {
+                        AllowedOrigins = ["contoso.com"],
+                        AllowedHeaders = ["accept"],
+                        TerminateUnmatchedRequest = true,
+                    });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <cors terminate-unmatched-request="true">
+                    <allowed-origins>
+                        <origin>contoso.com</origin>
+                    </allowed-origins>
+                    <allowed-headers>
+                        <header>accept</header>
+                    </allowed-headers>
+                </cors>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile cors policy with terminate unmatched request explicitly enabled"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.Cors(new CorsConfig()
+                    {
+                        AllowedOrigins = ["contoso.com"],
+                        AllowedHeaders = ["accept"],
+                        TerminateUnmatchedRequest = false,
+                    });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <cors terminate-unmatched-request="false">
+                    <allowed-origins>
+                        <origin>contoso.com</origin>
+                    </allowed-origins>
+                    <allowed-headers>
+                        <header>accept</header>
+                    </allowed-headers>
+                </cors>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile cors policy with terminate unmatched request disabled"
+    )]
     public void ShouldCompileCorsPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
