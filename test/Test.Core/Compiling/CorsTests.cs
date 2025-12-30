@@ -14,10 +14,10 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowedOrigins = ["contoso.com"],
-                        AllowedHeaders = ["accept"],
-                    });
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                });
             }
         }
         """,
@@ -44,10 +44,10 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowedOrigins = ["contoso.com", "fabrikam.com"],
-                        AllowedHeaders = ["accept"],
-                    });
+                {
+                    AllowedOrigins = ["contoso.com", "fabrikam.com"],
+                    AllowedHeaders = ["accept"],
+                });
             }
         }
         """,
@@ -68,6 +68,37 @@ public class CorsTests
         """,
         DisplayName = "Should compile cors policy with multiple origins"
     )]
+        [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.Cors(new CorsConfig()
+                {
+                    AllowedOrigins = [GetCorsOrigin(context.ExpressionContext)],
+                    AllowedHeaders = ["accept"],
+                });
+            }
+            string GetCorsOrigin(IExpressionContext context) => (string)context.Variables["CorsOrigin"];
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <cors>
+                    <allowed-origins>
+                        <origin>@((string)context.Variables["CorsOrigin"])</origin>
+                    </allowed-origins>
+                    <allowed-headers>
+                        <header>accept</header>
+                    </allowed-headers>
+                </cors>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should allow origin from an expression"
+    )]
     [DataRow(
         """
         [Document]
@@ -75,10 +106,10 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowedOrigins = ["contoso.com"],
-                        AllowedHeaders = ["accept", "content-type"],
-                    });
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept", "content-type"],
+                });
             }
         }
         """,
@@ -106,11 +137,11 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowCredentials = true,
-                        AllowedOrigins = ["contoso.com"],
-                        AllowedHeaders = ["accept"],
-                    });
+                {
+                    AllowCredentials = true,
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                });
             }
         }
         """,
@@ -137,11 +168,11 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowedOrigins = ["contoso.com"],
-                        AllowedHeaders = ["accept"],
-                        AllowedMethods = ["PUT", "DELETE"],
-                    });
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                    AllowedMethods = ["PUT", "DELETE"],
+                });
             }
         }
         """,
@@ -172,12 +203,12 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowedOrigins = ["contoso.com"],
-                        AllowedHeaders = ["accept"],
-                        AllowedMethods = ["PUT", "DELETE"],
-                        PreflightResultMaxAge = 100,
-                    });
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                    AllowedMethods = ["PUT", "DELETE"],
+                    PreflightResultMaxAge = 100,
+                });
             }
         }
         """,
@@ -201,6 +232,44 @@ public class CorsTests
         """,
         DisplayName = "Should compile cors policy with allow methods and preflight result max age"
     )]
+        [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.Cors(new CorsConfig()
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                    AllowedMethods = ["PUT", "DELETE"],
+                    PreflightResultMaxAge = 100,
+                    PreflightResultMaxAge = GetPreflightResultMaxAge(context.ExpressionContext),
+                });
+            }
+            int GetPreflightResultMaxAge(IExpressionContext context) => (int)context.Variables["PreflightResultMaxAge"];
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <cors>
+                    <allowed-origins>
+                        <origin>contoso.com</origin>
+                    </allowed-origins>
+                    <allowed-headers>
+                        <header>accept</header>
+                    </allowed-headers>
+                    <allowed-methods preflight-result-max-age="@((int)context.Variables["PreflightResultMaxAge"])">
+                        <method>PUT</method>
+                        <method>DELETE</method>
+                    </allowed-methods>
+                </cors>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile cors policy with allow methods and preflight result max age from expression"
+    )]
     [DataRow(
         """
         [Document]
@@ -208,11 +277,11 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowedOrigins = ["contoso.com"],
-                        AllowedHeaders = ["accept"],
-                        ExposeHeaders = ["accept", "content-type"],
-                    });
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                    ExposeHeaders = ["accept", "content-type"],
+                });
             }
         }
         """,
@@ -243,11 +312,11 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowedOrigins = ["contoso.com"],
-                        AllowedHeaders = ["accept"],
-                        TerminateUnmatchedRequest = true,
-                    });
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                    TerminateUnmatchedRequest = true,
+                });
             }
         }
         """,
@@ -274,11 +343,11 @@ public class CorsTests
         {
             public void Inbound(IInboundContext context) {
                 context.Cors(new CorsConfig()
-                    {
-                        AllowedOrigins = ["contoso.com"],
-                        AllowedHeaders = ["accept"],
-                        TerminateUnmatchedRequest = false,
-                    });
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                    TerminateUnmatchedRequest = false,
+                });
             }
         }
         """,
@@ -297,6 +366,38 @@ public class CorsTests
         </policies>
         """,
         DisplayName = "Should compile cors policy with terminate unmatched request disabled"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.Cors(new CorsConfig()
+                {
+                    AllowedOrigins = ["contoso.com"],
+                    AllowedHeaders = ["accept"],
+                    TerminateUnmatchedRequest = GetTerminateUnmatchedRequest(context.ExpressionContext),
+                });
+            }
+           bool GetTerminateUnmatchedRequest(IExpressionContext context) => (bool)context.Variables["TerminateUnmatchedRequest"];
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <cors terminate-unmatched-request="@((bool)context.Variables["TerminateUnmatchedRequest"])">
+                    <allowed-origins>
+                        <origin>contoso.com</origin>
+                    </allowed-origins>
+                    <allowed-headers>
+                        <header>accept</header>
+                    </allowed-headers>
+                </cors>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile cors policy with terminate unmatched request from expression"
     )]
     public void ShouldCompileCorsPolicy(string code, string expectedXml)
     {
