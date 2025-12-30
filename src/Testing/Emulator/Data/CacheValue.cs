@@ -3,4 +3,4 @@
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
-public record CacheValue(object Value, uint Duration = 0);
+public record CacheValue(object Value, int Duration = 0);

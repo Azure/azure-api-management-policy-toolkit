@@ -8,6 +8,8 @@ The policy toolkit changes that. It allows you to write policy documents in C# l
 
 ## Documentation
 
+:exclamation: Packages are only avaliable for download from github release. We are working to bring them to public nuget.
+
 #### Azure API Management policy toolkit documentation for users.
 * [Quick start](docs/QuickStart.md)
 * [Available policies](docs/AvailablePolicies.md)

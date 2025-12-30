@@ -1,25 +1,13 @@
-# Microsoft Azure ApiManagement Policy Toolkit policy compiler tool
+# Azure API Management Policy Toolkit Compiler
 
-Microsoft Azure API Management is a hybrid, multicloud management platform for APIs across all environments. As a
-platform-as-a-service, API Management supports the complete API lifecycle.
+This project builds a dotnet tool which can compile C# policy documents into Azure API Management XML (rawxml / Razor)
+policy documents.
 
-This library contains .net tool which transforms policies wrote in C# to format accepted by Microsoft Azure Api
-Management.
-
-## Getting started
-
-### Install compiler CLI tool
-
+## Install
 Install the Microsoft Azure Api Management Policy Toolkit compiler CLI tool with [NuGet][nuget]:
 
-```dotnetcli
+```shell
 dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
-```
-
-### Compile the policy
-
-```bash
-dotnet azure-apim-policy-compiler --s .\PATH\TO\SOURCE\FOLDER --o .\PATH\TO\OUTPUT\FOLDER
 ```
 
 ### Inspect generated policy
