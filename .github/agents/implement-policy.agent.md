@@ -123,7 +123,8 @@ Produce the phase-gate status update before proceeding.
 
 Write tests **before** any production code exists. **Consult the `policy-testing` skill** for:
 - Exact test structure and assertion patterns
-- Required coverage checklist (required-only, optional fields, expressions, sections, error cases)
+- Required coverage checklist (required-only, optional fields, expressions, sections)
+- **Error cases**: DO NOT implement for now. See the policy-testing skill for deferred error case guidance.
 - Expression method naming conventions
 
 ### Expected Outcome

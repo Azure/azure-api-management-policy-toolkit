@@ -184,9 +184,12 @@ Repeat for each additional section (backend, on-error, etc.).
 
 When interactions between optional fields matter, add a combined test.
 
-### 7. Error Cases (Optional but Recommended)
+### 7. Error Cases (Skipped for Now)
 
-For each required field, optionally add one test demonstrating omission:
+Error case testing patterns are not yet fully defined. For now:
+
+- **Do NOT implement error test cases** during Phase 4.
+- If you add error cases, mark them with `[Ignore]` attribute and document why they are skipped:
 
 ```csharp
 [DataRow(
@@ -206,11 +209,14 @@ For each required field, optionally add one test demonstrating omission:
     null, // No valid XML expected; compilation produces diagnostic errors
     DisplayName = "Should report error when required 'Calls' field is missing"
 )]
+[Ignore("Error case testing patterns not yet defined. Awaiting framework guidance.")]
 ```
 
-When `expectedXml` is `null`, the test expects compilation to fail with diagnostic errors. The compiler's validation logic (in Phase 6) will report the missing required field.
+When error case patterns are formalized, these tests will be re-enabled and assertion logic will be added to validate diagnostic errors.
 
-**Error case naming**: Use `DisplayName` values like "Should report error when {field} is missing" or "Should report error when {value} exceeds maximum."
+**Future reference (when enabled):**
+- When `expectedXml` is `null`, the test expects compilation to fail with diagnostic errors.
+- Use `DisplayName` values like "Should report error when {field} is missing" or "Should report error when {value} exceeds maximum."
 
 ## Test Infrastructure
 
