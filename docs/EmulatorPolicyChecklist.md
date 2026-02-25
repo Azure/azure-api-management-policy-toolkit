@@ -68,7 +68,7 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 
 | Status | Policy | Handler File | Branch |
 |--------|--------|-------------|--------|
-| ⬜ | InlinePolicy | InlinePolicyHandler.cs | `emulator/tests-inline-policy` |
+| ✅ | InlinePolicy | InlinePolicyHandler.cs | `emulator/tests-inline-policy` |
 | ⬜ | RemoveHeader | RemoveHeaderHandler.cs | `emulator/tests-remove-header` |
 | ⬜ | RemoveQueryParameter | RemoveQueryParameterHandler.cs | `emulator/tests-remove-query-parameter` |
 | ⬜ | ReturnResponse | ReturnResponseHandler.cs | `emulator/tests-return-response` |
