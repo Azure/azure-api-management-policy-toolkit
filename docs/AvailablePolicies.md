@@ -66,6 +66,7 @@ Notes:
 - rewrite-uri
 - send-one-way-request
 - send-request
+- send-service-bus-message
 - set-backend-service
 - set-body
 - set-header

@@ -504,6 +504,15 @@ public interface IFragmentContext : IHaveExpressionContext
     void SendRequest(SendRequestConfig config);
 
     /// <summary>
+    /// Sends a message to an Azure Service Bus queue or topic.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/send-service-bus-message-policy">send-service-bus-message</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the queue or topic name, namespace, client identity, message properties, and payload.
+    /// </param>
+    void SendServiceBusMessage(SendServiceBusMessageConfig config);
+
+    /// <summary>
     /// Sets the backend service for the request.<br/>
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-backend-service-policy">set-backend-service</a> policy.
     /// </summary>
