@@ -18,6 +18,7 @@ public class GatewayContext : MockExpressionContext
     internal readonly CacheStore CacheStore = new();
     internal readonly ResponseExampleStore ResponseExampleStore = new();
     internal readonly LoggerStore LoggerStore = new();
+    internal readonly ForwardRequestStore ForwardRequestStore = new();
 
     public GatewayContext()
     {
