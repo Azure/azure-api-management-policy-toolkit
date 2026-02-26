@@ -61,7 +61,7 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 | ⬜ | RateLimitByKey | RateLimitByKeyHandler.cs | No-op + callbacks | `emulator/rate-limit-by-key` |
 | ⬜ | RewriteUri | RewriteUriHandler.cs | Context mutation | `emulator/rewrite-uri` |
 | ⬜ | SendRequest | SendRequestHandler.cs | External service mock | `emulator/send-request` |
-| ⬜ | SetBackendService | SetBackendServiceHandler.cs | Context mutation | `emulator/set-backend-service` |
+| ✅ | SetBackendService | SetBackendServiceHandler.cs | Context mutation | `emulator/set-backend-service` |
 | ⬜ | ValidateJwt | ValidateJwtHandler.cs | Validation + short-circuit | `emulator/validate-jwt` |
 
 ## Existing Handlers Missing Tests Only
