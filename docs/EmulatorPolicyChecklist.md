@@ -72,7 +72,7 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 | ⬜ | RemoveHeader | RemoveHeaderHandler.cs | `emulator/tests-remove-header` |
 | ✅ | RemoveQueryParameter | RemoveQueryParameterHandler.cs | `emulator/tests-remove-query-parameter` |
 | ⬜ | ReturnResponse | ReturnResponseHandler.cs | `emulator/tests-return-response` |
-| ⬜ | SetBody | SetBodyHandler.cs | `emulator/tests-set-body` |
+| ✅ | SetBody | SetBodyHandler.cs | `emulator/tests-set-body` |
 | ⬜ | SetHeaderIfNotExist | SetHeaderIfNotExistHandler.cs | `emulator/tests-set-header-if-not-exist` |
 | ⬜ | SetMethod | SetMethodHandler.cs | `emulator/tests-set-method` |
 | ⬜ | SetQueryParameter | SetQueryParameterHandler.cs | `emulator/tests-set-query-parameter` |
