@@ -49,7 +49,7 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 | ⬜ | CacheLookup | CacheLookupHandler.cs | Store interaction | `emulator/cache-lookup` |
 | ⬜ | CacheStore | CacheStoreHandler.cs | Store interaction | `emulator/cache-store` |
 | ⬜ | Cors | CorsHandler.cs | Context mutation | `emulator/cors` |
-| ⬜ | EmitMetric | EmitMetricHandler.cs | No-op + callbacks | `emulator/emit-metric` |
+| ✅ | EmitMetric | EmitMetricHandler.cs | No-op + callbacks | `emulator/emit-metric` |
 | ⬜ | ForwardRequest | ForwardRequestHandler.cs | External service mock | `emulator/forward-request` |
 | ⬜ | JsonP | JsonPHandler.cs | Context mutation | `emulator/jsonp` |
 | ⬜ | JsonToXml | JsonToXmlHandle.cs | No-op + callbacks | `emulator/json-to-xml` |
