@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -18,6 +18,7 @@ public class GatewayContext : MockExpressionContext
     internal readonly CacheStore CacheStore = new();
     internal readonly ResponseExampleStore ResponseExampleStore = new();
     internal readonly LoggerStore LoggerStore = new();
+    internal readonly BackendStore BackendStore = new();
     internal readonly RateLimitStore RateLimitStore = new();
 
     public GatewayContext()

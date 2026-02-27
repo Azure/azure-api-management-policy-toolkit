@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -31,6 +31,9 @@ public static class TestDocumentExtensions
 
     public static LoggerStore SetupLoggerStore(this TestDocument document) =>
         document.Context.LoggerStore;
+
+    public static BackendStore SetupBackendStore(this TestDocument document) =>
+        document.Context.BackendStore;
 
     public static RateLimitStore SetupRateLimitStore(this TestDocument document) =>
         document.Context.RateLimitStore;
