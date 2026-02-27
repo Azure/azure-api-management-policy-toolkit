@@ -197,4 +197,4 @@ void {MethodName}({PolicyName}Config config);
 
 ### `IFragmentContext` Duplication
 
-`IFragmentContext` currently duplicates method signatures from the section-specific interfaces (see the `//TODO` comment at the top of the file). When adding a policy to fragment context, copy the exact same method signature. Do not attempt to refactor this pattern.
+`IFragmentContext` currently duplicates method signatures from the section-specific interfaces (see the `//TODO` comment at the top of the file). **Every time you add a policy method to any section interface, you must also add the same signature to `IFragmentContext.cs`.** Copy the exact same method signature verbatim. Do not attempt to refactor this pattern.

@@ -57,7 +57,24 @@ Produce the phase-gate status update (see end of document) before proceeding.
 
 ---
 
-## Phase 2 — Codebase Discovery
+## Phase 2 — Branch Creation
+
+Create a Git branch for this policy before any code changes.
+
+### Steps
+
+1. Ensure working tree is clean: `git status`
+2. Create and checkout branch: `git checkout -b policy/{policy-name}`
+
+### Phase 2 Exit Criteria
+
+- On the correct branch `policy/{policy-name}`.
+
+Produce the phase-gate status update before proceeding.
+
+---
+
+## Phase 3 — Codebase Discovery
 
 Study the existing codebase to learn established patterns before creating a plan. Use the `policy-codebase-reference` skill for the inventory of files, infrastructure, and reference policy selection.
 
@@ -74,7 +91,7 @@ Study the existing codebase to learn established patterns before creating a plan
 
 Pick one structurally similar existing policy as the primary reference. Consult the `policy-codebase-reference` skill for the selection guide. Document which reference you chose and why.
 
-### Phase 2 Exit Criteria
+### Phase 3 Exit Criteria
 
 - Reference pattern identified and documented.
 - Reusable infrastructure listed.
@@ -85,7 +102,7 @@ Produce the phase-gate status update before proceeding.
 
 ---
 
-## Phase 3 — Planning
+## Phase 4 — Planning
 
 Produce a numbered implementation plan and present it to the user for explicit confirmation.
 
@@ -110,7 +127,7 @@ Produce a numbered implementation plan and present it to the user for explicit c
 
 Wait for explicit user confirmation (e.g., "looks good", "proceed", "approved") before writing any code.
 
-### Phase 3 Exit Criteria
+### Phase 4 Exit Criteria
 
 - User explicitly confirms the plan.
 - File-level scope and all test cases are fully specified.
@@ -119,7 +136,7 @@ Produce the phase-gate status update before proceeding.
 
 ---
 
-## Phase 4 — Test Implementation (Red Phase)
+## Phase 5 — Test Implementation (Red Phase)
 
 Write tests **before** any production code exists. **Consult the `policy-testing` skill** for:
 - Exact test structure and assertion patterns
@@ -133,7 +150,7 @@ Tests reference types and methods that **do not exist yet**. The project will **
 
 Run `dotnet build` and capture the expected compilation errors as the red baseline.
 
-### Phase 4 Exit Criteria
+### Phase 5 Exit Criteria
 
 - All planned test cases are written.
 - Compilation fails with expected "type not found" / "method not found" errors only.
@@ -143,31 +160,35 @@ Produce the phase-gate status update before proceeding. Include the compilation 
 
 ---
 
-## Phase 5 — Authoring Implementation
+## Phase 6 — Authoring Implementation
 
 Create the authoring config record(s) and add context interface methods. Use the `policy-authoring` skill for exact conventions, attribute usage, and code templates.
+
+### `IFragmentContext` Reminder
+
+If the policy is being added to any section interface, also add the same method signature to `IFragmentContext.cs`. This interface duplicates signatures from all section interfaces (see the `//TODO` comment at the top of the file). Copy the exact method signature verbatim.
 
 ### Compile Check
 
 Run `dotnet build` after this phase. Expected: the solution should compile successfully now. Tests will compile but **fail at runtime** because the compiler class does not exist yet — the `CompileDocument()` call will not find a handler for the new method and will produce diagnostic errors in the test output (not compilation errors).
 
-### Phase 5 Exit Criteria
+### Phase 6 Exit Criteria
 
 - Config record(s) created with full XML documentation.
-- Method(s) added to all applicable context interfaces.
+- Method(s) added to all applicable context interfaces **and** `IFragmentContext`.
 - `dotnet build` succeeds (full solution compiles).
 
 Produce the phase-gate status update before proceeding.
 
 ---
 
-## Phase 6 — Compilation Implementation
+## Phase 7 — Compilation Implementation
 
 Implement the compiler that converts the authoring model to XML. Use the `policy-compilation` skill for the exact compiler pattern, utility methods, and diagnostics.
 
 ### **CRITICAL CONSTRAINT: Do NOT modify any test files during this phase.**
 
-Tests from Phase 4 are the acceptance criteria. If a test fails, fix the compiler — **never the test**.
+Tests from Phase 5 are the acceptance criteria. If a test fails, fix the compiler — **never the test**.
 
 ### Documentation Update
 
@@ -176,10 +197,10 @@ Add the policy name (in XML element form, kebab-case) to `docs/AvailablePolicies
 ### Validation
 
 1. Run `dotnet build` — must compile successfully.
-2. Run `dotnet test --filter "FullyQualifiedName~{PolicyName}Tests"` — all tests from Phase 4 must pass.
+2. Run `dotnet test --filter "FullyQualifiedName~{PolicyName}Tests"` — all tests from Phase 5 must pass.
 3. Run `dotnet test --project test/Test.Core` — ensure no regressions in existing tests.
 
-### Phase 6 Exit Criteria
+### Phase 7 Exit Criteria
 
 - Compiler class created and auto-registered (by namespace convention).
 - `docs/AvailablePolicies.md` updated.
@@ -190,6 +211,33 @@ Produce the phase-gate status update before proceeding.
 
 ---
 
+## Phase 8 — Commit
+
+### Steps
+
+1. Run full test suite: `dotnet test --project test/Test.Core`
+2. Stage changes: `git add -A`
+3. Commit with descriptive message:
+   ```
+   Add authoring config and compiler for {PolicyName}
+
+   - Add {PolicyName}Config with {description of config shape}
+   - Add {PolicyName}Compiler for {xml-element-name}
+   - Add {PolicyName}Tests with {N} test cases
+   - Sections: {list of sections}
+
+   Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+   ```
+4. Report completion to user.
+
+### Phase 8 Exit Criteria
+
+- All tests pass.
+- Changes committed on `policy/{policy-name}` branch.
+- Ready for PR or emulator handler implementation.
+
+---
+
 ## Phase-to-Skill Mapping Reference
 
 Use this table to quickly identify which skill to consult for each phase:
@@ -197,11 +245,13 @@ Use this table to quickly identify which skill to consult for each phase:
 | Phase | Primary Skill(s) | When to Use |
 |---|---|---|
 | 1 — Information Gathering | None (user-driven) | Coordinate with user; no skill needed |
-| 2 — Codebase Discovery | `policy-codebase-reference` | Finding existing policies, infrastructure, naming conventions, reference policy selection |
-| 3 — Planning | None (agent-driven) | Produce implementation plan; present to user |
-| 4 — Test Implementation | `policy-testing` | Writing test structure, assertions, coverage checklist |
-| 5 — Authoring Implementation | `policy-authoring` | Config record conventions, context interface methods, attributes |
-| 6 — Compilation Implementation | `policy-compilation` | Compiler class pattern, utility methods, property-to-attribute mapping, diagnostics |
+| 2 — Branch Creation | None | Git operations only |
+| 3 — Codebase Discovery | `policy-codebase-reference` | Finding existing policies, infrastructure, naming conventions, reference policy selection |
+| 4 — Planning | None (agent-driven) | Produce implementation plan; present to user |
+| 5 — Test Implementation | `policy-testing` | Writing test structure, assertions, coverage checklist |
+| 6 — Authoring Implementation | `policy-authoring` | Config record conventions, context interface methods, attributes |
+| 7 — Compilation Implementation | `policy-compilation` | Compiler class pattern, utility methods, property-to-attribute mapping, diagnostics |
+| 8 — Commit | None | Git operations, finalize |
 
 All skills also address XML namespace handling and codebase conventions.
 
@@ -241,6 +291,19 @@ Produce this at the end of **every** phase:
 ---
 
 ## Edge Cases & Special Topics
+
+### Modifying an Existing Policy
+
+When adding a new property to an existing policy (not creating a new one from scratch):
+1. The new property **must be optional** (nullable type, no `required` keyword) for backward compatibility.
+2. Add the property to the existing config record in `src/Authoring/Configs/{PolicyName}Config.cs`.
+3. Handle the new attribute/element in the existing compiler class — add it as an optional attribute (no error reporting if absent).
+4. Add new `[DataRow]` test cases to the existing test class — do not modify existing test cases.
+5. If the property supports expressions, add `[ExpressionAllowed]` and an expression test case.
+
+### `IFragmentContext` Checklist
+
+When adding a policy method to **any** section interface, you **must also** add the same method signature to `src/Authoring/IFragmentContext.cs`. This interface duplicates signatures from all section interfaces (see the `//TODO` comment at the top of the file). Forgetting this step will cause incomplete PRs.
 
 ### Workflow Control
 - If the user asks to skip a phase, refuse. Explain that the phased workflow is mandatory and continue with the next required phase.

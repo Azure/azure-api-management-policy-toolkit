@@ -86,6 +86,8 @@ internal class {PolicyName}Handler : PolicyHandler<string, string[]>
 
 Use for wrapper policies (Retry, Wait), no-config policies, or handlers with non-standard signatures.
 
+**Important:** When implementing `IPolicyHandler` directly (instead of inheriting from `PolicyHandler<T>`), callback discovery via `SectionContextProxy` still works — the proxy finds handlers by namespace + `[Section]` attribute. However, you must manually define and check a `CallbackHooks` property (the base classes provide `CallbackSetup` automatically, but direct implementations do not). The test mock setup (`SetupInbound().{PolicyName}().WithCallback(...)`) populates this list via reflection on the handler instance, so the property name **must** be `CallbackHooks` for direct implementations.
+
 ```csharp
 [Section(nameof(IInboundContext))]
 internal class {PolicyName}Handler : IPolicyHandler
@@ -115,7 +117,9 @@ internal class {PolicyName}Handler : IPolicyHandler
 
 ### Reference Handler Selection Guide
 
-When implementing a new handler, choose the closest structural match as your reference:
+When implementing a new handler, choose the closest structural match as your reference. See the `policy-codebase-reference` skill for the full selection guide with reference handler → test mappings.
+
+Quick reference:
 
 | Policy Structure | Reference Handler |
 |---|---|
@@ -124,9 +128,6 @@ When implementing a new handler, choose the closest structural match as your ref
 | Config with callback hooks only (no-op) | `RateLimitHandler` |
 | Optional config | `MockResponseHandler` |
 | Validation + short-circuit | `CheckHeaderHandler` |
-| Authentication + token | `AuthenticationManagedIdentityHandler` |
-| Cache interaction | `CacheLookupValueHandler` |
-| Logging/store interaction | `LogToEventHubHandler` |
 | No-config (no-arg method) | `BaseHandler` |
 | Custom flow control / wrapper | `ReturnResponseHandler` |
 
