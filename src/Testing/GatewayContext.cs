@@ -19,6 +19,7 @@ public class GatewayContext : MockExpressionContext
     internal readonly ResponseExampleStore ResponseExampleStore = new();
     internal readonly LoggerStore LoggerStore = new();
     internal readonly MetricStore MetricStore = new();
+    internal readonly RateLimitStore RateLimitStore = new();
 
     public GatewayContext()
     {
