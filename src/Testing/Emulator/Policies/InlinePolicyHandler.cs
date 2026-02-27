@@ -17,6 +17,5 @@ internal class InlinePolicyHandler : PolicyHandler<string>
 
     protected override void Handle(GatewayContext context, string config)
     {
-        throw new NotImplementedException();
     }
 }
