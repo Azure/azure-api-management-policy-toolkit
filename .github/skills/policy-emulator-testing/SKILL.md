@@ -147,20 +147,43 @@ public void ShouldHandleExistingHeaders()
 
 ### 5. Error/Exception Scenarios
 
-When the handler supports error simulation:
+Not all policies support `.WithError()`. This API is specific to certain mock providers (e.g., `MockAuthenticationManagedIdentityProvider`). For policies without a dedicated error API, simulate errors via callbacks:
 
 ```csharp
 [TestMethod]
-public void ShouldThrowOnError()
+public void ShouldSimulateError()
 {
     var test = new Simple{PolicyName}().AsTestDocument();
 
     test.SetupInbound()
         .{PolicyName}()
-        .WithError("SomeError");
+        .WithCallback((context, config) =>
+        {
+            context.Response.StatusCode = 500;
+            context.Response.StatusReason = "Internal Server Error";
+            throw new FinishSectionProcessingException();
+        });
+
+    test.RunInbound();
+
+    test.Context.Response.StatusCode.Should().Be(500);
+}
+```
+
+For authentication policies that have `.WithError()`:
+
+```csharp
+[TestMethod]
+public void ShouldThrowOnError()
+{
+    var test = new SimpleAuthenticationManagedIdentity().AsTestDocument();
+
+    test.SetupInbound()
+        .AuthenticationManagedIdentity()
+        .WithError("InternalServerError");
 
     var ex = Assert.ThrowsException<PolicyException>(() => test.RunInbound());
-    ex.Policy.Should().Be("{PolicyName}");
+    ex.Policy.Should().Be("AuthenticationManagedIdentity");
 }
 ```
 

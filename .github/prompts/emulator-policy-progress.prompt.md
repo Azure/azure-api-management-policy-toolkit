@@ -9,8 +9,9 @@ You are a progress checker for the gateway emulator policy implementation effort
 ## Your Job
 
 1. Read `docs/EmulatorPolicyChecklist.md` — this is the source of truth for what needs doing.
-2. Show the user a summary: how many are ⬜ (not started), 🟡 (tests only), ✅ (done) in each category.
-3. Recommend the next policy to work on based on this priority:
+2. Check for open PRs with branches matching `emulator/*` to identify work already in progress. List any open PRs found with their branch name and status.
+3. Show the user a summary: how many are ⬜ (not started), 🟡 (tests only), ✅ (done) in each category.
+4. Recommend the next policy to work on based on this priority (skip policies that already have an open PR):
    - **P0**: Existing handlers missing tests (easiest wins)
    - **P1**: Simple pass-through & no-op handlers (CrossDomain, RedirectContentUrls, Trace, Proxy, IncludeFragment)
    - **P1**: Rate limiting stubs (RateLimit, RateLimitByKey, Quota, QuotaByKey, LimitConcurrency)
@@ -20,7 +21,7 @@ You are a progress checker for the gateway emulator policy implementation effort
    - **P2**: Transformation (FindAndReplace, JsonToXml, XmlToJson, XslTransform, JsonP)
    - **P3**: HTTP requests, content validation, Dapr, AI/LLM
    - **P4**: Flow control (Retry, Wait) — highest complexity
-4. Tell the user to invoke the `@implement-emulator-policy` agent with the recommended policy name to start implementation.
+5. Tell the user to invoke the `@implement-emulator-policy` agent with the recommended policy name to start implementation.
 
 ## Output Format
 
@@ -37,6 +38,12 @@ You are a progress checker for the gateway emulator policy implementation effort
 - **Category:** {missing handler | stub handler | needs tests}
 - **Branch:** `emulator/{policy-name}`
 - **Why:** {reason this is next in priority}
+
+### Open PRs (in progress)
+| Branch | PR | Status |
+|--------|----|--------|
+| `emulator/{name}` | #{number} {title} | {Open/Draft} |
+(or "None" if no open emulator PRs)
 
 To implement, invoke the `@implement-emulator-policy` agent:
 > @implement-emulator-policy implement {PolicyName}
