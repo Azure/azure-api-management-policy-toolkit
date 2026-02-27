@@ -75,6 +75,6 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 | ✅ | SetBody | SetBodyHandler.cs | `emulator/tests-set-body` |
 | ⬜ | SetHeaderIfNotExist | SetHeaderIfNotExistHandler.cs | `emulator/tests-set-header-if-not-exist` |
 | ✅ | SetMethod | SetMethodHandler.cs | `emulator/tests-set-method` |
-| ⬜ | SetQueryParameter | SetQueryParameterHandler.cs | `emulator/tests-set-query-parameter` |
+| ✅ | SetQueryParameter | SetQueryParameterHandler.cs | `emulator/tests-set-query-parameter` |
 | ⬜ | SetQueryParameterIfNotExist | SetQueryParameterIfNotExistHandler.cs | `emulator/tests-set-query-parameter-if-not-exist` |
 | ✅ | SetVariable | SetVariableHandler.cs | `emulator/tests-set-variable` |
