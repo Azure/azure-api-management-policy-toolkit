@@ -1,6 +1,6 @@
 ---
 mode: agent
-description: "Check what gateway emulator policies still need implementation or tests, and show the next recommended work item."
+description: "Agent-mode prompt to check emulator policy progress and recommend the next work item."
 tools: ['changes', 'editFiles', 'extensions', 'fetch', 'findTestFiles', 'githubRepo', 'problems', 'runCommands', 'search', 'terminalLastCommand', 'testFailures', 'usages', 'vscodeAPI']
 ---
 
