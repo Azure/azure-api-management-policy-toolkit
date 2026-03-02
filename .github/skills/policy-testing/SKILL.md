@@ -188,7 +188,7 @@ When interactions between optional fields matter, add a combined test.
 
 Error case testing patterns are not yet fully defined. For now:
 
-- **Do NOT implement error test cases** during Phase 4.
+- **Do NOT implement error test cases** during Phase 5.
 - If you add error cases, mark them with `[Ignore]` attribute and document why they are skipped:
 
 ```csharp

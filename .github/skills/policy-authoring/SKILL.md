@@ -36,11 +36,17 @@ public record {PolicyName}Config
 }
 ```
 
+### Related Attributes
+
+- **`[Document]`** (`src/Authoring/Attributes/DocumentAttribute.cs`) — Marks a class as a policy document. Optional `name` parameter; `Scope` and `Type` properties control document scope and type.
+- **`[Expression]`** (`src/Authoring/Attributes/ExpressionAttribute.cs`) — Marks a method as a policy expression (captures source file path via `[CallerFilePath]`). Used by the compiler to identify expression helper methods.
+- **`[ExpressionAllowed]`** (`src/Authoring/Attributes/ExpressionAllowedAttribute.cs`) — Marks config properties or parameters that accept policy expressions.
+
 ### Property Rules
 
 - **Required properties**: use the `required` keyword + `init` setter.
 - **Optional properties**: use a nullable type (`?`) + `init` setter. Do **not** use `required`.
-- **Expression-enabled properties**: decorate with `[ExpressionAllowed]` attribute (from `src/Authoring/Attributes/ExpressionAllowedAttribute.cs`). Add "Policy expressions are allowed." to the XML doc.
+- **Expression-enabled properties**: decorate with `[ExpressionAllowed]` attribute. Add "Policy expressions are allowed." to the XML doc.
 - **Constrained properties** (enums, allowed values): use either:
   - A C# `enum` type (preferred for fixed, type-safe values)
   - A `string` property with XML doc listing allowed values (for values documented outside code)
@@ -197,4 +203,4 @@ void {MethodName}({PolicyName}Config config);
 
 ### `IFragmentContext` Duplication
 
-`IFragmentContext` currently duplicates method signatures from the section-specific interfaces (see the `//TODO` comment at the top of the file). When adding a policy to fragment context, copy the exact same method signature. Do not attempt to refactor this pattern.
+`IFragmentContext` currently duplicates method signatures from the section-specific interfaces (see the `//TODO` comment at the top of the file). **Every time you add a policy method to any section interface, you must also add the same signature to `IFragmentContext.cs`.** Copy the exact same method signature verbatim. Do not attempt to refactor this pattern.
