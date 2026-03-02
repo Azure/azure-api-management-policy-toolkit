@@ -34,4 +34,7 @@ public static class TestDocumentExtensions
 
     public static ForwardRequestStore SetupForwardRequest(this TestDocument document) =>
         document.Context.ForwardRequestStore;
+
+    public static RateLimitStore SetupRateLimitStore(this TestDocument document) =>
+        document.Context.RateLimitStore;
 }

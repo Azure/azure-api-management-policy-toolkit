@@ -29,6 +29,12 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
         ArgumentNullException.ThrowIfNull(targetMethod);
         ArgumentNullException.ThrowIfNull(targetMethod.DeclaringType);
 
+        // Handle WithId() by returning the proxy itself (id is ignored at runtime, it's compile-time only)
+        if (targetMethod.Name == "WithId")
+        {
+            return Object;
+        }
+
         if (!_handlers.TryGetValue(targetMethod.Name, out var handler))
         {
             throw new NotImplementedException(targetMethod.Name);

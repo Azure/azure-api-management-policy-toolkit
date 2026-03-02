@@ -18,4 +18,10 @@ public interface IDocumentCompilationContext
 
     XElement RootElement { get; }
     XElement CurrentElement { get; }
+
+    /// <summary>
+    /// Gets or sets the pending policy ID to be added to the next policy element.
+    /// This is set by WithId() calls and cleared after AddPolicy() uses it.
+    /// </summary>
+    string? PendingPolicyId { get; set; }
 }

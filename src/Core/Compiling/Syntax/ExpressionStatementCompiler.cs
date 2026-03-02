@@ -33,6 +33,9 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
             return;
         }
 
+        // Unwrap WithId() chains and extract the policy id (last one wins)
+        invocation = UnwrapWithIdChain(context, invocation);
+
         if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
         {
             context.Report(Diagnostic.Create(
@@ -57,5 +60,75 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
                 name
             ));
         }
+    }
+
+    /// <summary>
+    /// Unwraps chained WithId() calls from an invocation expression.
+    /// For example: context.WithId("a").WithId("b").SetHeader(...) 
+    /// Returns the SetHeader invocation and sets context.PendingPolicyId to "b" (last wins).
+    /// </summary>
+    private static InvocationExpressionSyntax UnwrapWithIdChain(
+        IDocumentCompilationContext context,
+        InvocationExpressionSyntax invocation)
+    {
+        // Check if this is a method call on the result of WithId()
+        // Pattern: something.WithId("id").Method(...)
+        // The invocation.Expression would be: something.WithId("id").Method
+        // We need to check if "something.WithId("id")" is itself an InvocationExpression of WithId
+
+        // Track if we've set the id (first WithId encountered is the outermost/last in chain)
+        var idSet = false;
+
+        while (invocation.Expression is MemberAccessExpressionSyntax memberAccess &&
+               memberAccess.Expression is InvocationExpressionSyntax innerInvocation &&
+               innerInvocation.Expression is MemberAccessExpressionSyntax innerMemberAccess &&
+               innerMemberAccess.Name.ToString() == "WithId")
+        {
+            // Extract the id from WithId("id") call - only take the first (outermost) one
+            if (!idSet && innerInvocation.ArgumentList.Arguments.Count == 1)
+            {
+                var argExpression = innerInvocation.ArgumentList.Arguments[0].Expression;
+                var idValue = ExtractConstantStringValue(context, argExpression);
+                if (idValue is not null)
+                {
+                    context.PendingPolicyId = idValue;
+                    idSet = true;
+                }
+            }
+
+            // Reconstruct the invocation without the WithId in the chain
+            // context.WithId("id").Method(args) -> context.Method(args)
+            var newMemberAccess = SyntaxFactory.MemberAccessExpression(
+                SyntaxKind.SimpleMemberAccessExpression,
+                innerMemberAccess.Expression,
+                memberAccess.Name);
+
+            invocation = invocation.WithExpression(newMemberAccess);
+        }
+
+        return invocation;
+    }
+
+    /// <summary>
+    /// Extracts a constant string value from an expression, handling both string literals and const field references.
+    /// </summary>
+    private static string? ExtractConstantStringValue(IDocumentCompilationContext context, ExpressionSyntax expression)
+    {
+        // Handle direct string literals
+        if (expression is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
+        {
+            return literal.Token.ValueText;
+        }
+
+        // Handle constant references (const fields, etc.) using semantic model
+        var semanticModel = context.Compilation.GetSemanticModel(expression.SyntaxTree);
+        var constantValue = semanticModel.GetConstantValue(expression);
+
+        if (constantValue.HasValue && constantValue.Value is string stringValue)
+        {
+            return stringValue;
+        }
+
+        return null;
     }
 }

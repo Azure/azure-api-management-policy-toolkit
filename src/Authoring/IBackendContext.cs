@@ -6,6 +6,18 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 public interface IBackendContext : IHaveExpressionContext
 {
     /// <summary>
+    /// Sets a policy ID that will be added as the 'id' attribute to the next policy element.<br />
+    /// Multiple chained WithId calls use the last value (last wins).
+    /// </summary>
+    /// <param name="id">The policy ID to add. Must be a constant string value.</param>
+    /// <returns>The same context instance to allow method chaining.</returns>
+    /// <example>
+    /// context.WithId("my-header-policy").SetHeader("X-Custom", "value");
+    /// // Produces: &lt;set-header id="my-header-policy" name="X-Custom" exists-action="override"&gt;...&lt;/set-header&gt;
+    /// </example>
+    IBackendContext WithId(string id);
+
+    /// <summary>
     /// Adds header of specified name with values or appends values if header already exists.<br />
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-header-policy">set-header</a> policy.
     /// </summary>
