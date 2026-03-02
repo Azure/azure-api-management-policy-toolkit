@@ -36,11 +36,17 @@ public record {PolicyName}Config
 }
 ```
 
+### Related Attributes
+
+- **`[Document]`** (`src/Authoring/Attributes/DocumentAttribute.cs`) — Marks a class as a policy document. Optional `name` parameter; `Scope` and `Type` properties control document scope and type.
+- **`[Expression]`** (`src/Authoring/Attributes/ExpressionAttribute.cs`) — Marks a method as a policy expression (captures source file path via `[CallerFilePath]`). Used by the compiler to identify expression helper methods.
+- **`[ExpressionAllowed]`** (`src/Authoring/Attributes/ExpressionAllowedAttribute.cs`) — Marks config properties or parameters that accept policy expressions.
+
 ### Property Rules
 
 - **Required properties**: use the `required` keyword + `init` setter.
 - **Optional properties**: use a nullable type (`?`) + `init` setter. Do **not** use `required`.
-- **Expression-enabled properties**: decorate with `[ExpressionAllowed]` attribute (from `src/Authoring/Attributes/ExpressionAllowedAttribute.cs`). Add "Policy expressions are allowed." to the XML doc.
+- **Expression-enabled properties**: decorate with `[ExpressionAllowed]` attribute. Add "Policy expressions are allowed." to the XML doc.
 - **Constrained properties** (enums, allowed values): use either:
   - A C# `enum` type (preferred for fixed, type-safe values)
   - A `string` property with XML doc listing allowed values (for values documented outside code)

@@ -130,6 +130,17 @@ Quick reference:
 | Validation + short-circuit | `CheckHeaderHandler` |
 | No-config (no-arg method) | `BaseHandler` |
 | Custom flow control / wrapper | `ReturnResponseHandler` |
+| AzureOpenAi variant (inherits Llm) | `AzureOpenAiEmitTokenMetricHandler` |
+
+### Argument Extraction Utilities
+
+Direct `IPolicyHandler` implementations use extension methods from `ArgumentsExtensions` (`src/Testing/Emulator/Policies/ArgumentsExtensions.cs`) to safely extract typed arguments from `object?[]?`:
+
+- **`args.ExtractArgument<T>()`** — Extracts a single required argument of type `T`. Throws if not found.
+- **`args.ExtractOptionalArgument<T>()`** — Returns `T?`, null if the argument is absent.
+- **`args.ExtractArguments<T1, T2>()`** — Extracts two arguments for two-parameter handlers (e.g., `SetHeader`).
+
+The `PolicyHandler<T>` base classes call these internally — you only need them for direct `IPolicyHandler` implementations.
 
 ---
 

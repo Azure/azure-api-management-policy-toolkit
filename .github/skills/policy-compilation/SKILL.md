@@ -101,6 +101,8 @@ Just ensure your compiler class meets all these criteria and it will be auto-reg
 
 ## Key Utility Methods
 
+All utility methods live in `src/Core/Compiling/CompilerUtils.cs` and `src/Core/Compiling/SyntaxExtensions.cs`. You do not need to modify these files — just use their APIs.
+
 ### `TryExtractingConfigParameter<T>`
 
 Extracts the config object from the method invocation. Returns a dictionary of property name → `InitializerValue`. Returns `false` and reports diagnostics if extraction fails.

@@ -14,11 +14,15 @@ This skill provides an inventory of the codebase structure, shared infrastructur
 | Artifact | Location | Example |
 |---|---|---|
 | Config record | `src/Authoring/Configs/{PolicyName}Config.cs` | `RateLimitConfig.cs` |
-| Expression attribute | `src/Authoring/Attributes/ExpressionAllowedAttribute.cs` | — |
+| Document attribute | `src/Authoring/Attributes/DocumentAttribute.cs` | — |
+| Expression attribute | `src/Authoring/Attributes/ExpressionAttribute.cs` | — |
+| Expression-allowed attribute | `src/Authoring/Attributes/ExpressionAllowedAttribute.cs` | — |
 | Section interfaces | `src/Authoring/I{Section}Context.cs` | `IInboundContext.cs` |
 | Compiler class | `src/Core/Compiling/Policy/{PolicyName}Compiler.cs` | `RateLimitCompiler.cs` |
 | Compiler test class | `test/Test.Core/Compiling/{PolicyName}Tests.cs` | `RateLimitTests.cs` |
 | Available policies doc | `docs/AvailablePolicies.md` | — |
+| Compiler utilities | `src/Core/Compiling/CompilerUtils.cs` | — |
+| Syntax extensions | `src/Core/Compiling/SyntaxExtensions.cs` | — |
 | Diagnostics | `src/Core/Compiling/Diagnostics/CompilationErrors.cs` | — |
 | IoC / auto-registration | `src/Core/IoC/CompilerModule.cs` | — |
 | Test initialization | `test/Test.Core/CompilerTestInitialize.cs` | — |
@@ -35,6 +39,7 @@ This skill provides an inventory of the codebase structure, shared infrastructur
 | IPolicyHandler interface | `src/Testing/Emulator/IPolicyHandler.cs` | — |
 | Section attribute | `src/Testing/Emulator/Policies/SectionAttribute.cs` | — |
 | Argument extensions | `src/Testing/Emulator/Policies/ArgumentsExtensions.cs` | — |
+| Policy exception | `src/Testing/Emulator/PolicyExeption.cs` | Note: filename has typo |
 | SectionContextProxy | `src/Testing/Emulator/SectionContextProxy.cs` | — |
 | GatewayContext | `src/Testing/GatewayContext.cs` | — |
 | TestDocument | `src/Testing/TestDocument.cs` | — |
@@ -95,6 +100,8 @@ When implementing a new policy, choose the closest structural match as your refe
 
 ### Expression Support
 
+- **`[Document]`** attribute (`src/Authoring/Attributes/DocumentAttribute.cs`) — Marks a class as a policy document. Optional `name` parameter; `Scope` and `Type` properties control document scope and type.
+- **`[Expression]`** attribute (`src/Authoring/Attributes/ExpressionAttribute.cs`) — Marks a method as a policy expression helper. Captures source file path via `[CallerFilePath]`.
 - **`[ExpressionAllowed]`** attribute (`src/Authoring/Attributes/ExpressionAllowedAttribute.cs`) — Marks properties or parameters that accept policy expressions.
 - **`Expression<T>`** delegate (`src/Authoring/Expression.cs`) — `delegate T Expression<out T>(IExpressionContext context)`.
 - **`IHaveExpressionContext`** interface (`src/Authoring/IHaveExpressionContext.cs`) — Base interface for all section contexts, providing `IExpressionContext ExpressionContext { get; }`.
@@ -104,6 +111,8 @@ When implementing a new policy, choose the closest structural match as your refe
 - **`IMethodPolicyHandler`** interface (`src/Core/Compiling/IMethodPolicyHandler.cs`) — The primary compiler interface. Properties: `string MethodName { get; }`. Method: `void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)`.
 - **`IReturnValueMethodPolicyHandler`** interface (`src/Core/Compiling/IReturnValueMethodPolicyHandler.cs`) — For policies returning a value. Currently disabled (the `LocalDeclarationStatementCompiler` is commented out in `CompilerModule.cs`).
 - **Auto-registration** (`src/Core/IoC/CompilerModule.cs`) — Uses reflection to find and register all public, non-abstract classes in the `Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy` namespace that implement `IMethodPolicyHandler`. No manual DI wiring needed for standard compilers.
+- **`CompilerUtils`** (`src/Core/Compiling/CompilerUtils.cs`) — Static utility class with methods for parameter extraction (`ProcessParameter`, `TryExtractingConfig`), expression processing, and syntax normalization. Also defines `InitializerValue` for property name → value mapping.
+- **`SyntaxExtensions`** (`src/Core/Compiling/SyntaxExtensions.cs`) — Extension methods for Roslyn syntax trees: attribute detection (`ContainsAttributeOfType<T>`), document class discovery (`GetDocumentAttributedClasses`), and document metadata extraction.
 - **`GenericCompiler.HandleList`** (`src/Core/Compiling/Policy/GenericCompiler.cs`) — Utility for compiling string arrays into repeated child XML elements.
 - **`CompilationErrors`** (`src/Core/Compiling/Diagnostics/CompilationErrors.cs`) — Static class with `DiagnosticDescriptor` fields for all compilation error types.
 
@@ -119,6 +128,8 @@ When implementing a new policy, choose the closest structural match as your refe
 - **`PolicyHandler<T>`** base classes (`src/Testing/Emulator/Policies/PolicyHandler.cs`) — Three generic variants: single config, optional config, and two-parameter. All include `CallbackSetup` for test mocking.
 - **`SectionContextProxy<T>`** (`src/Testing/Emulator/SectionContextProxy.cs`) — Uses `System.Reflection.DispatchProxy` to dynamically route method calls to handlers. Discovers handlers via reflection on namespace + `[Section]` attribute.
 - **`[Section]`** attribute (`src/Testing/Emulator/Policies/SectionAttribute.cs`) — Constructor takes `string scope` (use `nameof(IInboundContext)`, etc.). Multiple attributes can be stacked.
+- **`ArgumentsExtensions`** (`src/Testing/Emulator/Policies/ArgumentsExtensions.cs`) — Static utility for safe argument extraction from `object?[]?`: `ExtractArgument<T>()` (required single arg), `ExtractOptionalArgument<T>()` (nullable), and `ExtractArguments<T1, T2>()` (two-param handlers).
+- **`PolicyException`** (`src/Testing/Emulator/PolicyExeption.cs`) — Exception thrown when a handler fails. Carries `Policy`, `Section`, and `PolicyArgs` context. Note: filename has a typo (`Exeption`) — do not rename.
 - **`GatewayContext`** (`src/Testing/GatewayContext.cs`) — Central mock object with section proxies, mock stores (CertificateStore, CacheStore, ResponseExampleStore, LoggerStore), and expression context.
 - **`TestDocument`** (`src/Testing/TestDocument.cs`) — Orchestrates test execution across policy sections. Wraps `IDocument` and calls section methods through proxies.
 - **`FinishSectionProcessingException`** — Thrown by handlers (e.g., MockResponse, ReturnResponse) to terminate section processing early.
@@ -159,6 +170,7 @@ When implementing a new emulator handler, choose the closest structural match:
 | Logging/store interaction | `LogToEventHubHandler` | `LogToEventHubTests` |
 | No-config (no-arg method) | `BaseHandler` | `BaseTests` |
 | Custom flow control / wrapper | `ReturnResponseHandler` | — |
+| AzureOpenAi variant (inherits Llm) | `AzureOpenAiEmitTokenMetricHandler` | — |
 
 ## Build and Test Commands
 
