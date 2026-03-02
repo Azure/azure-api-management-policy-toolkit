@@ -11,7 +11,7 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
     Section(nameof(IOutboundContext)),
     Section(nameof(IOnErrorContext))
 ]
-internal class JsonToXmlHandle : PolicyHandler<JsonToXmlConfig>
+internal class JsonToXmlHandler : PolicyHandler<JsonToXmlConfig>
 {
     public override string PolicyName => nameof(IInboundContext.JsonToXml);
 

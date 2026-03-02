@@ -16,18 +16,18 @@ public static class MockJsonToXmlProvider
         Func<GatewayContext, JsonToXmlConfig, bool> predicate
     ) where T : class
     {
-        var handler = mock.SectionContextProxy.GetHandler<JsonToXmlHandle>();
+        var handler = mock.SectionContextProxy.GetHandler<JsonToXmlHandler>();
         return new Setup(predicate, handler);
     }
 
     public class Setup
     {
         private readonly Func<GatewayContext, JsonToXmlConfig, bool> _predicate;
-        private readonly JsonToXmlHandle _handler;
+        private readonly JsonToXmlHandler _handler;
 
         internal Setup(
             Func<GatewayContext, JsonToXmlConfig, bool> predicate,
-            JsonToXmlHandle handler)
+            JsonToXmlHandler handler)
         {
             _predicate = predicate;
             _handler = handler;
