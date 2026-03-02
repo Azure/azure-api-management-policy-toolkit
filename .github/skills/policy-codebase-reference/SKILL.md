@@ -151,7 +151,7 @@ When implementing a new emulator handler, choose the closest structural match:
 |---|---|---|
 | Single config, simple state change | `SetStatusHandler` | `SetStatusTests` |
 | Two parameters (name + values) | `SetHeaderHandler` | `SetHeaderTests` |
-| Config with callback hooks only (no-op) | `RateLimitHandler` | — |
+| Config with callback hooks only (no-op) | `RateLimitHandler` | `RateLimitTests` |
 | Optional config | `MockResponseHandler` | `MockResponseTests` |
 | Validation + short-circuit | `CheckHeaderHandler` | `CheckHeaderTests` |
 | Authentication + token | `AuthenticationManagedIdentityHandler` | `AuthenticationManagedIdentityHandlerTests` |

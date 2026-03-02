@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Azure API Management policy toolkit: a set of C# libraries that let users author APIM policy documents in C# instead of XML, compile them to XML, and unit-test them with a gateway emulator. .NET 8, C# 13.
+Azure API Management policy toolkit: a set of C# libraries that let users author APIM policy documents in C# instead of XML, compile them to XML, and unit-test them with a gateway emulator. Prefer the newest stable .NET and C# versions possible while preserving repository compatibility.
 
 ## Build, Test, Lint
 
@@ -79,7 +79,7 @@ Use structurally similar existing policies as references:
 
 ### Code Style
 - Copyright header: `// Copyright (c) Microsoft Corporation.` + `// Licensed under the MIT License.`
-- No `var` — use explicit types
+- Prefer `var` for local variables whenever possible; use explicit types only when they improve clarity
 - Private fields: `_camelCase`, private static fields: `s_camelCase`
 - 4-space indentation, CRLF line endings, Allman braces
 - Root namespace: `Microsoft.Azure.ApiManagement.PolicyToolkit`
@@ -89,7 +89,7 @@ Use structurally similar existing policies as references:
 This repo has custom Copilot skills in `.github/skills/` and agents in `.github/agents/` for policy implementation workflows.
 
 **When asked to add a new policy, always use the appropriate agent rather than implementing manually:**
-- **`@implement-policy-compiled`** — use this agent to add a new policy's authoring config, context interface method, compiler, and compiler tests. It follows a mandatory phased workflow (information gathering → codebase discovery → planning → tests → authoring → compilation).
+- **`@implement-policy-compiled`** — use this agent to add a new policy's authoring config, context interface method, compiler, and compiler tests. It follows a mandatory phased workflow (information gathering → branch → codebase discovery → planning → tests → authoring → compilation → commit).
 - **`@implement-emulator-policy`** — use this agent to add or fix a gateway emulator handler and its tests. It follows a mandatory phased workflow (discovery → branch → tests → handler → commit).
 
 Supporting skills (used by the agents, also available directly):
