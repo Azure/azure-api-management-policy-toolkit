@@ -24,7 +24,7 @@ Determine which policy to implement and gather all information from the codebase
 
 ### Steps
 
-1. **Identify the target policy** — from user request. If user says "next" or doesn't specify, check `docs/EmulatorPolicyChecklist.md` for the next ⬜ item.
+1. **Identify the target policy** — from user request. If user says "next" or doesn't specify, check `docs/EmulatorPolicyChecklist.md` for the next ⬜ item. If the checklist file does not exist or is empty, ask the user which policy to implement.
 2. **Read the authoring config** — find and read `src/Authoring/Configs/{PolicyName}Config.cs` to understand the policy's configuration shape, properties, and types.
 3. **Read the section interface methods** — check `IInboundContext.cs`, `IOutboundContext.cs`, `IBackendContext.cs`, `IOnErrorContext.cs` in `src/Authoring/` to confirm which sections the policy is available in and its exact method signature (parameter types, return type).
 4. **Check for existing handler** — look in `src/Testing/Emulator/Policies/` for an existing handler file. It may be a stub that throws `NotImplementedException`.
@@ -213,6 +213,13 @@ Produce this at the end of **every** phase:
 ---
 
 ## Edge Cases
+
+### Modifying an Existing Handler
+
+When fixing or extending an existing handler (not creating a new one):
+1. Write new tests first (Phase 3) that demonstrate the expected behavior.
+2. Fix the handler to pass the new tests without breaking existing tests.
+3. If the handler was a stub (throws `NotImplementedException`), replace the stub with real behavior.
 
 ### Wrapper Policies (Retry, Wait, LimitConcurrency)
 These policies wrap inner policy delegates. They require custom `IPolicyHandler` implementations that execute delegate parameters. Study `ReturnResponseHandler` for the direct-implementation pattern.
