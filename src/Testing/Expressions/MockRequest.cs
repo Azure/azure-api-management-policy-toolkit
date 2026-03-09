@@ -9,6 +9,15 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class MockRequest : MockMessage, IRequest
 {
+    public MockRequest() { }
+
+    public MockRequest(Uri uri)
+    {
+        var mockUrl = new MockUrl(uri);
+        Url = mockUrl;
+        OriginalUrl = new MockUrl(uri);
+    }
+
     IMessageBody IRequest.Body => Body;
 
     public X509Certificate2? Certificate { get; set; } = null;
@@ -30,4 +39,20 @@ public class MockRequest : MockMessage, IRequest
 
     public MockPrivateEndpointConnection? PrivateEndpointConnection { get; set; }
     IPrivateEndpointConnection? IRequest.PrivateEndpointConnection => PrivateEndpointConnection;
+
+    public MockAzureVnetInfo? AzureVnetInfo { get; set; }
+    IAzureVnetInfo? IRequest.AzureVnetInfo => AzureVnetInfo;
+
+    public MockRequest WithMatchedParameters(IDictionary<string, string> parameters)
+    {
+        foreach (var kvp in parameters)
+            MatchedParameters[kvp.Key] = kvp.Value;
+        return this;
+    }
+
+    public MockRequest WithClientCertificate(X509Certificate2 certificate)
+    {
+        Certificate = certificate;
+        return this;
+    }
 }

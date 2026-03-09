@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -22,6 +23,24 @@ internal class CacheLookupValueHandler : PolicyHandler<CacheLookupValueConfig>
 
     protected override void Handle(GatewayContext context, CacheLookupValueConfig config)
     {
+        var cache = context.Services.Resolve<ICache>();
+        if (cache is not null)
+        {
+            var cached = cache.GetAsync(config.Key).GetAwaiter().GetResult();
+            if (cached is not null)
+            {
+                context.Variables[config.VariableName] = cached;
+                return;
+            }
+
+            if (config.DefaultValue is not null)
+            {
+                context.Variables[config.VariableName] = config.DefaultValue;
+            }
+
+            return;
+        }
+
         var fromSetup = ValueSetup.Find(tuple => tuple.Item1(context, config))?.Item2;
         if (fromSetup is not null)
         {

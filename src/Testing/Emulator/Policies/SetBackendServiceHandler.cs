@@ -17,6 +17,9 @@ internal class SetBackendServiceHandler : PolicyHandler<SetBackendServiceConfig>
 
     protected override void Handle(GatewayContext context, SetBackendServiceConfig config)
     {
-        throw new NotImplementedException();
+        if (config.BaseUrl is not null)
+        {
+            context.BackendUrl = config.BaseUrl;
+        }
     }
 }

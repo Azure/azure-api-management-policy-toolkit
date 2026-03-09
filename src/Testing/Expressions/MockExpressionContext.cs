@@ -17,7 +17,7 @@ public class MockExpressionContext : IExpressionContext
     public TimeSpan Elapsed { get; set; } = TimeSpan.Zero;
     public bool Tracing { get; set; } = false;
 
-    public Dictionary<string, object> Variables { get; set; } = new Dictionary<string, object>();
+    public Dictionary<string, object> Variables { get; set; } = new ApimVariablesDictionary();
     IReadOnlyDictionary<string, object> IExpressionContext.Variables => Variables;
 
     public MockContextApi Api { get; set; } = new MockContextApi();
@@ -48,4 +48,18 @@ public class MockExpressionContext : IExpressionContext
     IProduct IExpressionContext.Product => Product;
 
     public Action<string> Trace { get; set; } = (message) => { };
+
+    private Dictionary<string, string> _namedValues = new();
+
+    public void SetNamedValues(IDictionary<string, string> values)
+    {
+        foreach (var kvp in values)
+            _namedValues[kvp.Key] = kvp.Value;
+    }
+
+    public dynamic NamedValue(string name)
+    {
+        var value = _namedValues.TryGetValue(name, out var v) ? v : null;
+        return new ConfigValue(value);
+    }
 }

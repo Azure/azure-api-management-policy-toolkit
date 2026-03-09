@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling</RootNamespace>
+
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>azure-apim-policy-decompiler</ToolCommandName>
+        <PackageOutputPath>..\..\output</PackageOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Core\Core.csproj" />
+    </ItemGroup>
+
+</Project>

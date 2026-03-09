@@ -34,12 +34,13 @@ internal class ReturnResponseHandler : IPolicyHandler
             Handle(context, config);
         }
 
+        context.ResponseTerminated = true;
         throw new FinishSectionProcessingException();
     }
 
     private void Handle(GatewayContext context, ReturnResponseConfig config)
     {
-        MockResponse response = new();
+        var response = context.Response;
         if (!string.IsNullOrWhiteSpace(config.ResponseVariableName))
         {
             //copy variable
@@ -84,9 +85,7 @@ internal class ReturnResponseHandler : IPolicyHandler
 
         if (config.Body is not null)
         {
-            response.Body.Content = config.Body.Content as string ?? throw new NotImplementedException();
+            response.Body.Content = config.Body.Content as string ?? config.Body.Content?.ToString();
         }
-
-        context.Response = response;
     }
 }

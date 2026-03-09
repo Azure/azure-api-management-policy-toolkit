@@ -1,0 +1,25 @@
+<policies>
+	<inbound>
+		<base />
+		<rate-limit-by-key calls="@((int)context.Variables["Rate-Limit-Calls"])" renewal-period="300" counter-key="@(context.Variables.GetValueOrDefault<string>("Rate-Limit-Key", ""))" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<set-variable name="Headers-To-Remove" value="@{
+			var jArray = JArray.FromObject(context.Response.Headers.Keys.Where(h => h.StartsWith("internal-", StringComparison.OrdinalIgnoreCase)));
+			jArray.Add("internal-dummy-header");
+			return jArray;
+		}" />
+		<set-variable name="Headers-To-Remove-Index" value="@(context.Variables.GetValueOrDefault<JArray>("Headers-To-Remove", new JArray()).Count)" />
+		<retry condition="@((int)context.Variables["Headers-To-Remove-Index"] > 0)" count="50" interval="0">
+			<set-variable name="Headers-To-Remove-Index" value="@((int)context.Variables["Headers-To-Remove-Index"] - 1)" />
+			<set-header name="@(context.Variables.GetValueOrDefault<JArray>("Headers-To-Remove", new JArray())[(int)context.Variables["Headers-To-Remove-Index"]].Value<string>())" exists-action="delete" />
+		</retry>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

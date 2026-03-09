@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -44,7 +44,7 @@ public record SemanticCacheLookupConfig
     /// Default is 4 messages.
     /// </summary>
     [ExpressionAllowed]
-    public uint MaxMessageCount { get; init; }
+    public int MaxMessageCount { get; init; }
 
     /// <summary>
     /// Optional. Array of request properties to vary the cache by.<br/>

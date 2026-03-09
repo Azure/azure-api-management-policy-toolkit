@@ -135,7 +135,7 @@ public class RazorCodeFormatterTests
         markerToCode.Should().HaveCount(2);
         markerToCode.Should().ContainValue("@(var a = 1;)");
         markerToCode.Should()
-            .ContainValue("""@{if (context.Request.IpAddress.StartsWith("10.0.0.")){return "a";}else{return "b";}}""");
+            .ContainValue("@{if (context.Request.IpAddress.StartsWith(\"10.0.0.\"))\n{\nreturn \"a\";\n}\nelse\n{\nreturn \"b\";\n}}");
         result.Should().Match("""
                               <element att1="*">
                                   <v>*</v>

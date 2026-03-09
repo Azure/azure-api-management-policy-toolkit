@@ -1,0 +1,23 @@
+<policies>
+	<inbound>
+		<base />
+		<cache-lookup vary-by-developer="false" vary-by-developer-groups="false" must-revalidate="true" downstream-caching-type="public" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<choose>
+			<when condition="@(context.Response.StatusCode == 200)">
+				<cache-store duration="@(1800)" />
+			</when>
+			<when condition="@(context.Response.StatusCode >= 400)">
+				<cache-store duration="@(60)" />
+			</when>
+		</choose>
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -35,21 +35,14 @@ internal class CheckHeaderHandler : PolicyHandler<CheckHeaderConfig>
             return;
         }
 
-        context.Response = new MockResponse()
-        {
-            StatusCode = config.FailCheckHttpCode,
-            // StatusReason = GetStatusReason(config.FailCheckHttpCode), TODO: Create status reason mapper
-            Headers = { { "Content-Type", ["application/json"] } },
-            Body =
-            {
-                Content = $$"""
-                            {
-                              "statusCode": {{config.FailCheckHttpCode}},
-                              "message": "{{config.FailCheckErrorMessage}}"
-                            }
-                            """
-            }
-        };
+        ResponseUtilities.Overwrite(context.Response, config.FailCheckHttpCode);
+        context.Response.Headers["Content-Type"] = ["application/json"];
+        context.Response.Body.Content = $$"""
+                                         {
+                                           "statusCode": {{config.FailCheckHttpCode}},
+                                           "message": "{{config.FailCheckErrorMessage}}"
+                                         }
+                                         """;
 
         OnCheckFailed.Find(tuple => tuple.Item1(context, config))?.Item2(context, config);
         throw new FinishSectionProcessingException();

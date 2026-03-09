@@ -22,7 +22,7 @@ public record CacheStoreValueConfig
     /// Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public required string Value { get; init; }
+    public required object Value { get; init; }
 
     /// <summary>
     /// Required. Specifies the duration in seconds for which the cached value is valid.<br/>

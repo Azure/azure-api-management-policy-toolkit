@@ -20,4 +20,10 @@ public interface IExpressionContext
     IUser User { get; }
     IReadOnlyDictionary<string, object> Variables { get; }
     Action<string> Trace { get; }
+
+    /// <summary>
+    /// Returns a named value that resolves at runtime. Compiles to {{name}} in XML.
+    /// Supports implicit conversion to string, int, bool, etc.
+    /// </summary>
+    dynamic NamedValue(string name);
 }

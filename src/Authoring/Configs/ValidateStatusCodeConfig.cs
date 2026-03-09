@@ -34,7 +34,7 @@ public record ValidateStatusCode
     /// <summary>
     /// The status code to validate.
     /// </summary>
-    public required uint Code { get; init; }
+    public required int Code { get; init; }
 
     /// <summary>
     /// Action to take for this status code. Possible values are "allow" or "deny".

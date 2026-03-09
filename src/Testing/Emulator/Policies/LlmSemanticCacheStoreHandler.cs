@@ -12,6 +12,8 @@ internal class LlmSemanticCacheStoreHandler : PolicyHandler<uint>
 
     protected override void Handle(GatewayContext context, uint duration)
     {
-        throw new NotImplementedException();
+        // No-op by default in emulator.
+        // LLM semantic cache store is not simulated in tests.
+        // Test authors use CallbackSetup to inspect cache store operations.
     }
 }

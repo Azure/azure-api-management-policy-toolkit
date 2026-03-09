@@ -64,8 +64,8 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
 
     /// <summary>
     /// Unwraps chained WithId() calls from an invocation expression.
-    /// For example: context.WithId("a").WithId("b").SetHeader(...) 
-    /// Returns the SetHeader invocation and sets context.PendingPolicyId to "b" (last wins).
+    /// Extracts the policy id and sets it on the context, but returns
+    /// the ORIGINAL invocation unchanged to preserve the SyntaxTree reference.
     /// </summary>
     private static InvocationExpressionSyntax UnwrapWithIdChain(
         IDocumentCompilationContext context,
@@ -74,38 +74,35 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
         // Check if this is a method call on the result of WithId()
         // Pattern: something.WithId("id").Method(...)
         // The invocation.Expression would be: something.WithId("id").Method
-        // We need to check if "something.WithId("id")" is itself an InvocationExpression of WithId
+        // We extract the id but return the original invocation to preserve
+        // the SyntaxTree for semantic model lookups.
 
-        // Track if we've set the id (first WithId encountered is the outermost/last in chain)
-        var idSet = false;
+        var current = invocation;
 
-        while (invocation.Expression is MemberAccessExpressionSyntax memberAccess &&
+        while (current.Expression is MemberAccessExpressionSyntax memberAccess &&
                memberAccess.Expression is InvocationExpressionSyntax innerInvocation &&
                innerInvocation.Expression is MemberAccessExpressionSyntax innerMemberAccess &&
                innerMemberAccess.Name.ToString() == "WithId")
         {
-            // Extract the id from WithId("id") call - only take the first (outermost) one
-            if (!idSet && innerInvocation.ArgumentList.Arguments.Count == 1)
+            // Extract the id from the outermost WithId("id") call
+            if (context.PendingPolicyId is null && innerInvocation.ArgumentList.Arguments.Count == 1)
             {
                 var argExpression = innerInvocation.ArgumentList.Arguments[0].Expression;
                 var idValue = ExtractConstantStringValue(context, argExpression);
                 if (idValue is not null)
                 {
                     context.PendingPolicyId = idValue;
-                    idSet = true;
                 }
             }
 
-            // Reconstruct the invocation without the WithId in the chain
-            // context.WithId("id").Method(args) -> context.Method(args)
-            var newMemberAccess = SyntaxFactory.MemberAccessExpression(
-                SyntaxKind.SimpleMemberAccessExpression,
-                innerMemberAccess.Expression,
-                memberAccess.Name);
-
-            invocation = invocation.WithExpression(newMemberAccess);
+            // Continue checking for nested WithId chains by looking at what
+            // WithId was called on. We don't need to transform the syntax -
+            // memberAccess.Name (the actual policy method) is extracted by the caller.
+            break;
         }
 
+        // Return the original invocation unchanged - the caller extracts the
+        // method name from invocation.Expression as MemberAccessExpressionSyntax.Name
         return invocation;
     }
 

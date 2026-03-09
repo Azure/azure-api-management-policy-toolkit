@@ -45,7 +45,7 @@ public record CorsConfig
     /// Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public uint? PreflightResultMaxAge { get; init; }
+    public int? PreflightResultMaxAge { get; init; }
 
     /// <summary>
     /// Headers that can be included in the cross-origin request.<br/>

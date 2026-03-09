@@ -4,6 +4,7 @@
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -14,6 +15,19 @@ internal class RateLimitHandler : PolicyHandler<RateLimitConfig>
 
     protected override void Handle(GatewayContext context, RateLimitConfig config)
     {
+        var limiter = context.Services.Resolve<IRateLimiter>();
+        if (limiter is not null)
+        {
+            var key = $"rate-limit:{context.Subscription?.Id ?? "anonymous"}";
+            var allowed = limiter.TryConsumeAsync(key, 1).GetAwaiter().GetResult();
+            if (!allowed)
+            {
+                DenyRequest(context, config);
+            }
+
+            return;
+        }
+
         var limitsToCheck = GetLimitsToCheck(context, config);
         var (exceeded, remainingCalls) = CheckLimits(context.RateLimitStore, limitsToCheck);
 
@@ -47,7 +61,12 @@ internal class RateLimitHandler : PolicyHandler<RateLimitConfig>
         // Reset response if it was previously set to 429 by a prior rate-limit check
         if (context.Response.StatusCode == 429)
         {
-            context.Response = new MockResponse { Headers = context.Response.Headers };
+            var existingHeaders = new Dictionary<string, string[]>(context.Response.Headers);
+            ResponseUtilities.Overwrite(context.Response, 200, "OK");
+            foreach (var header in existingHeaders)
+            {
+                context.Response.Headers[header.Key] = header.Value;
+            }
         }
     }
 
@@ -126,11 +145,7 @@ internal class RateLimitHandler : PolicyHandler<RateLimitConfig>
             context.Variables[config.RetryAfterVariableName] = retryAfter;
         }
 
-        context.Response = new MockResponse
-        {
-            StatusCode = 429,
-            StatusReason = "Too Many Requests",
-        };
+        ResponseUtilities.Overwrite(context.Response, 429, "Too Many Requests");
 
         if (config.RetryAfterHeaderName is not null)
         {

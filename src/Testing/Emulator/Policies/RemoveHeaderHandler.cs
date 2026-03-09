@@ -23,7 +23,15 @@ internal abstract class RemoveHeaderHandler : PolicyHandler<string>
 {
     public override string PolicyName => nameof(IInboundContext.RemoveHeader);
 
-    protected override void Handle(GatewayContext context, string name) => GetHeaders(context).Remove(name);
+    protected override void Handle(GatewayContext context, string name)
+    {
+        var headers = GetHeaders(context);
+        var existingKey = headers.Keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
+        if (existingKey is not null)
+        {
+            headers.Remove(existingKey);
+        }
+    }
 
     protected abstract Dictionary<string, string[]> GetHeaders(GatewayContext context);
 }

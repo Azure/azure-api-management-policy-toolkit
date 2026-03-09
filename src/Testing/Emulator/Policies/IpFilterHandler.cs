@@ -67,21 +67,14 @@ internal class IpFilterHandler : PolicyHandler<IpFilterConfig>
 
     void DenyAccess(GatewayContext context, IpFilterConfig config)
     {
-        context.Response = new MockResponse()
-        {
-            StatusCode = 403,
-            StatusReason = "Forbidden", // TODO use code to reason mapper
-            Headers = { { "Content-Type", ["application/json"] } },
-            Body =
-            {
-                Content = """
-                          {
-                            "statusCode": 403,
-                            "message": "Forbidden"
-                          }
-                          """
-            }
-        };
+        ResponseUtilities.Overwrite(context.Response, 403, "Forbidden");
+        context.Response.Headers["Content-Type"] = ["application/json"];
+        context.Response.Body.Content = """
+                                       {
+                                         "statusCode": 403,
+                                         "message": "Forbidden"
+                                       }
+                                       """;
 
         OnIpDenied.Find(tuple => tuple.Item1(context, config))?.Item2(context, config);
 

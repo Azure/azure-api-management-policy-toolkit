@@ -17,6 +17,8 @@ internal class JsonToXmlHandle : PolicyHandler<JsonToXmlConfig>
 
     protected override void Handle(GatewayContext context, JsonToXmlConfig config)
     {
-        throw new NotImplementedException();
+        // No-op by default in emulator.
+        // JSON to XML conversion is not simulated in tests.
+        // Test authors use CallbackSetup to simulate conversion behavior.
     }
 }

@@ -38,31 +38,32 @@ public class SetQueryParameterCompilationTests
 
         var result = code.CompileDocument();
 
+        var ea = type == "override" ? "" : $@" exists-action=""{type}""";
         var expectedXml =
-            $$"""
-              <policies>
-                  <inbound>
-                      <set-query-parameter name="param1" exists-action="{{type}}">
-                          <value>1</value>
-                      </set-query-parameter>
-                  </inbound>
-                  <backend>
-                      <set-query-parameter name="param1" exists-action="{{type}}">
-                          <value>1</value>
-                      </set-query-parameter>
-                  </backend>
-                  <outbound>
-                      <set-query-parameter name="param1" exists-action="{{type}}">
-                          <value>1</value>
-                      </set-query-parameter>
-                  </outbound>
-                  <on-error>
-                      <set-query-parameter name="param1" exists-action="{{type}}">
-                          <value>1</value>
-                      </set-query-parameter>
-                  </on-error>
-              </policies>
-              """;
+            $"""
+             <policies>
+                 <inbound>
+                     <set-query-parameter name="param1"{ea}>
+                         <value>1</value>
+                     </set-query-parameter>
+                 </inbound>
+                 <backend>
+                     <set-query-parameter name="param1"{ea}>
+                         <value>1</value>
+                     </set-query-parameter>
+                 </backend>
+                 <outbound>
+                     <set-query-parameter name="param1"{ea}>
+                         <value>1</value>
+                     </set-query-parameter>
+                 </outbound>
+                 <on-error>
+                     <set-query-parameter name="param1"{ea}>
+                         <value>1</value>
+                     </set-query-parameter>
+                 </on-error>
+             </policies>
+             """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
 
@@ -135,11 +136,12 @@ public class SetQueryParameterCompilationTests
 
         var result = code.CompileDocument();
 
+        var ea = type == "override" ? "" : $@" exists-action=""{type}""";
         var expectedXml =
             $"""
              <policies>
                  <inbound>
-                     <set-query-parameter name="X-Header" exists-action="{type}">
+                     <set-query-parameter name="X-Header"{ea}>
                          <value>1</value>
                          <value>2</value>
                          <value>3</value>
@@ -173,7 +175,7 @@ public class SetQueryParameterCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-query-parameter name="@("name" + context.RequestId)" exists-action="override">
+                    <set-query-parameter name="@("name" + context.RequestId)">
                         <value>1</value>
                     </set-query-parameter>
                 </inbound>
@@ -205,7 +207,7 @@ public class SetQueryParameterCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-query-parameter name="param1" exists-action="override">
+                    <set-query-parameter name="param1">
                         <value>1</value>
                         <value>@("value" + context.RequestId)</value>
                         <value>2</value>

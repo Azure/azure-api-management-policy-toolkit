@@ -21,8 +21,15 @@ internal class AuthenticationManagedIdentityHandler : PolicyHandler<ManagedIdent
 
     protected override void Handle(GatewayContext context, ManagedIdentityAuthenticationConfig config)
     {
+        // Check context-level token provider first (allows compat layer to override default JWT behavior)
         var provideTokenHook = ProvideTokenHooks.FirstOrDefault(hook => hook.Item1(context, config));
-        var hook = provideTokenHook is not null ? provideTokenHook.Item2 : DefaultTokenProvider;
+        Func<string, string?, string> hook;
+        if (provideTokenHook is not null)
+            hook = provideTokenHook.Item2;
+        else if (context.ManagedIdentityTokenProvider is not null)
+            hook = context.ManagedIdentityTokenProvider;
+        else
+            hook = DefaultTokenProvider;
         var token = CreateTokenByHook(hook, config);
 
         if (!string.IsNullOrWhiteSpace(config.OutputTokenVariableName))

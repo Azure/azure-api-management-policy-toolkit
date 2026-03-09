@@ -47,7 +47,7 @@ public abstract class BaseSetHeaderCompiler : IMethodPolicyHandler
 
         var name = node.ArgumentList.Arguments[0].Expression.ProcessParameter(context);
         element.Add(new XAttribute("name", name));
-        element.Add(new XAttribute("exists-action", _type));
+        element.AddAttributeIfNotDefault<HeaderConfig>("exists-action", _type, nameof(HeaderConfig.ExistsAction));
 
         for (int i = 1; i < arguments.Count; i++)
         {
@@ -84,7 +84,7 @@ public abstract class BaseSetHeaderCompiler : IMethodPolicyHandler
                 continue;
             }
 
-            headerElement.AddAttribute(headerValues, nameof(HeaderConfig.ExistsAction), "exists-action");
+            headerElement.AddAttributeSkipDefault<HeaderConfig>(headerValues, nameof(HeaderConfig.ExistsAction), "exists-action");
 
             if (headerValues.TryGetValue(nameof(HeaderConfig.Values), out var values) &&
                 values.UnnamedValues is not null)

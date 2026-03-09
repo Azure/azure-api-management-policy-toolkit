@@ -65,6 +65,7 @@ public class RateLimitByKeyCompiler : IMethodPolicyHandler
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.RemainingCallsVariableName),
             "remaining-calls-variable-name");
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.TotalCallsHeaderName), "total-calls-header-name");
+        element.AddAttribute(values, nameof(RateLimitByKeyConfig.IncrementAfterResponse), "increment-after-response");
 
         context.AddPolicy(element);
     }

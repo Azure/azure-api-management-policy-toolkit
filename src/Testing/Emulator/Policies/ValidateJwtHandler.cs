@@ -12,6 +12,8 @@ internal class ValidateJwtHandler : PolicyHandler<ValidateJwtConfig>
 
     protected override void Handle(GatewayContext context, ValidateJwtConfig config)
     {
-        throw new NotImplementedException();
+        // No-op by default in emulator.
+        // JWT validation is not simulated in tests.
+        // Test authors use CallbackSetup to simulate validation failures, etc.
     }
 }

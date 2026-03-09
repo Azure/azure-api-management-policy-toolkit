@@ -21,7 +21,7 @@ public class DocumentTypeTests
         """
         <policies>
             <inbound>
-                <set-header name="X-Test" exists-action="override">
+                <set-header name="X-Test">
                     <value>value</value>
                 </set-header>
             </inbound>
@@ -43,7 +43,7 @@ public class DocumentTypeTests
         """
         <policies>
             <inbound>
-                <set-header name="X-Test" exists-action="override">
+                <set-header name="X-Test">
                     <value>value</value>
                 </set-header>
             </inbound>
@@ -64,7 +64,7 @@ public class DocumentTypeTests
         """,
         """
         <fragment>
-            <set-header name="X-Fragment" exists-action="override">
+            <set-header name="X-Fragment">
                 <value>fragment-value</value>
             </set-header>
         </fragment>
@@ -85,7 +85,7 @@ public class DocumentTypeTests
         """,
         """
         <fragment>
-            <set-header name="X-Named-Fragment" exists-action="override">
+            <set-header name="X-Named-Fragment">
                 <value>named-value</value>
             </set-header>
             <base />

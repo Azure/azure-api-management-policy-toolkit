@@ -257,7 +257,7 @@ public class SendRequestTests
                     <set-header name="content-type" exists-action="append">
                         <value>plain/text</value>
                     </set-header>
-                    <set-header name="accept" exists-action="override">
+                    <set-header name="accept">
                         <value>application/json</value>
                         <value>application/xml</value>
                     </set-header>

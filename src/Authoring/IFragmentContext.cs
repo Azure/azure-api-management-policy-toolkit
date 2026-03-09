@@ -105,7 +105,7 @@ public interface IFragmentContext : IHaveExpressionContext
     /// <param name="duration">
     /// Duration in seconds for which the cached entry is valid. Policy expressions are allowed.
     /// </param>
-    void AzureOpenAiSemanticCacheStore([ExpressionAllowed] uint duration);
+    void AzureOpenAiSemanticCacheStore([ExpressionAllowed] int duration);
 
     /// <summary>
     /// Limits tokens used by Azure OpenAI services to prevent overconsumption.<br/>
@@ -171,6 +171,20 @@ public interface IFragmentContext : IHaveExpressionContext
     /// Configuration specifying the cache key, value, duration, and optional caching type.
     /// </param>
     void CacheStoreValue(CacheStoreValueConfig config);
+
+    /// <summary>
+    /// Provides a unified caching solution with stampede protection by combining cache lookup and store operations.<br/>
+    /// On cache hit, the cached value is assigned to the specified variable. On cache miss, the nested value block is executed
+    /// and the resulting variable value is stored in the cache.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-value-policy">cache-value</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the cache key, variable name, expiration, refresh interval, default value, and optional caching type.
+    /// </param>
+    /// <param name="section">
+    /// The nested value block to execute on cache miss to produce the value to cache.
+    /// </param>
+    void CacheValue(CacheValueConfig config, Action section);
 
     /// <summary>
     /// Enforces existence and value of an HTTP header in the request.<br/>
@@ -254,6 +268,15 @@ public interface IFragmentContext : IHaveExpressionContext
     /// Policy in xml format.
     /// </param>
     void InlinePolicy(string policy);
+
+    /// <summary>
+    /// Invokes a request and optionally stores the result in a variable.<br />
+    /// Compiled to custom <c>invoke-request</c> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration for the invoke-request policy.
+    /// </param>
+    void InvokeRequest(InvokeRequestConfig config);
 
     /// <summary>
     /// Invokes a Dapr binding with the specified configuration.<br/>
@@ -346,7 +369,7 @@ public interface IFragmentContext : IHaveExpressionContext
     /// <param name="duration">
     /// Duration in seconds for which the cached entry is valid. Policy expressions are allowed.
     /// </param>
-    void LlmSemanticCacheStore([ExpressionAllowed] uint duration);
+    void LlmSemanticCacheStore([ExpressionAllowed] int duration);
 
     /// <summary>
     /// Limits tokens used by Language Model services to prevent overconsumption.<br/>

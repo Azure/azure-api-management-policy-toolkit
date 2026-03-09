@@ -1,0 +1,21 @@
+<policies>
+	<inbound>
+		<base />
+		<authentication-managed-identity resource="api://service.internal" client-id="{{Runtime-MI-ClientId}}" output-token-variable-name="service-token" ignore-error="false" />
+		<set-header name="Authorization" exists-action="override">
+			<value>@($"Bearer {context.Variables["token"]}")</value>
+		</set-header>
+		<set-backend-service base-url="{{BaseUrl}}" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<set-header name="Server" exists-action="delete" />
+		<find-and-replace from="@("{{BaseUrl}}".Trim('/'))" to="@($"{context.Request.OriginalUrl.Scheme}://{context.Request.OriginalUrl.Host}" + context.Api.Path)" />
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

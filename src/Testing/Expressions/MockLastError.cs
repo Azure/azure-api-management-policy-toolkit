@@ -14,4 +14,5 @@ public class MockLastError : ILastError
     public string Section { get; set; }
     public string Path { get; set; }
     public string PolicyId { get; set; }
+    public int HttpErrorCode { get; set; }
 }
