@@ -471,3 +471,11 @@ $RECYCLE.BIN/
 example/Example.sln
 example/source/Source.Example.csproj
 example/test/Test.Example.csproj
+# Test results
+*.trx
+TestResults/
+
+# Temp output
+output/
+.claude/
+plan.md

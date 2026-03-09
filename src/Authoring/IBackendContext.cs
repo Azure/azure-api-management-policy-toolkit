@@ -76,6 +76,20 @@ public interface IBackendContext : IHaveExpressionContext
     void CacheStoreValue(CacheStoreValueConfig config);
 
     /// <summary>
+    /// Provides a unified caching solution with stampede protection by combining cache lookup and store operations.<br/>
+    /// On cache hit, the cached value is assigned to the specified variable. On cache miss, the nested value block is executed
+    /// and the resulting variable value is stored in the cache.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-value-policy">cache-value</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the cache key, variable name, expiration, refresh interval, default value, and optional caching type.
+    /// </param>
+    /// <param name="section">
+    /// The nested value block to execute on cache miss to produce the value to cache.
+    /// </param>
+    void CacheValue(CacheValueConfig config, Action section);
+
+    /// <summary>
     /// Replaces occurrences of a specified string with another string in the request or response body.<br/>
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/find-and-replace-policy">find-and-replace</a> policy.
     /// </summary>
@@ -115,6 +129,15 @@ public interface IBackendContext : IHaveExpressionContext
     /// Policy in xml format.
     /// </param>
     void InlinePolicy(string policy);
+
+    /// <summary>
+    /// Invokes a request and optionally stores the result in a variable.<br />
+    /// Compiled to custom <c>invoke-request</c> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration for the invoke-request policy.
+    /// </param>
+    void InvokeRequest(InvokeRequestConfig config);
 
     /// <summary>
     /// Converts JSON content to XML format.<br />

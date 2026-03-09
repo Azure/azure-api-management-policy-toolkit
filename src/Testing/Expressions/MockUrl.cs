@@ -9,6 +9,20 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class MockUrl : IUrl
 {
+    public MockUrl() { }
+
+    public MockUrl(Uri uri)
+    {
+        Scheme = uri.Scheme;
+        Host = uri.Host;
+        Port = uri.Port.ToString();
+        Path = uri.AbsolutePath;
+        if (!string.IsNullOrEmpty(uri.Query))
+        {
+            QueryString = uri.Query;
+        }
+    }
+
     public string Scheme { get; set; } = "https";
     public string Host { get; set; } = "contoso.example";
     public string Port { get; set; } = "443";
@@ -35,5 +49,15 @@ public class MockUrl : IUrl
 
             Query = newQuery;
         }
+    }
+
+    public Uri ToUri() => new Uri(ToString());
+
+    public override string ToString()
+    {
+        var port = (Scheme == "https" && Port == "443") || (Scheme == "http" && Port == "80")
+            ? ""
+            : $":{Port}";
+        return $"{Scheme}://{Host}{port}{Path}{QueryString}";
     }
 }

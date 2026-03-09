@@ -12,6 +12,8 @@ internal class LlmSemanticCacheLookupHandler : PolicyHandler<SemanticCacheLookup
 
     protected override void Handle(GatewayContext context, SemanticCacheLookupConfig config)
     {
-        throw new NotImplementedException();
+        // No-op by default in emulator.
+        // LLM semantic cache lookup is not simulated in tests.
+        // Test authors use CallbackSetup to simulate cache hits.
     }
 }

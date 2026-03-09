@@ -40,16 +40,21 @@ public static class ArgumentsExtensions
         return args[0] as T;
     }
 
-    public static (T1, T2) ExtractArguments<T1, T2>(this object?[]? args)
+    public static (T1, T2?) ExtractArguments<T1, T2>(this object?[]? args)
     {
         if (args is not { Length: 2 })
         {
-            throw new ArgumentException("Expected 1 argument", nameof(args));
+            throw new ArgumentException("Expected 2 arguments", nameof(args));
         }
 
         if (args[0] is not T1 arg1)
         {
             throw new ArgumentException($"Expected {typeof(T1).Name} as first argument", nameof(args));
+        }
+
+        if (args[1] is null)
+        {
+            return (arg1, default!);
         }
 
         if (args[1] is not T2 arg2)

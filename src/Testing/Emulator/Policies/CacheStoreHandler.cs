@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -34,7 +35,36 @@ internal class CacheStoreHandler : IPolicyHandler
 
     protected void Handle(GatewayContext context, uint duration, bool cacheResponse)
     {
-        throw new NotImplementedException();
+        if (!cacheResponse)
+        {
+            return;
+        }
+
+        var cache = context.Services.Resolve<ICache>();
+        if (cache is not null)
+        {
+            var cacheKey = context.Request.Url.ToString();
+            cache.SetAsync(
+                cacheKey,
+                new CachedResponse
+                {
+                    StatusCode = context.Response.StatusCode,
+                    StatusReason = context.Response.StatusReason,
+                    Body = context.Response.Body.Content,
+                    Headers = new Dictionary<string, string[]>(context.Response.Headers)
+                },
+                TimeSpan.FromSeconds(duration)).GetAwaiter().GetResult();
+            return;
+        }
+
+        var store = context.CacheStore.GetCache("prefer-external");
+        if (store is null)
+        {
+            return;
+        }
+
+        var cacheStoreKey = context.Request.Url.ToString();
+        store[cacheStoreKey] = new Data.CacheValue(context.Response, (int)duration);
     }
 
     private static (uint, bool) ExtractParameters(object?[]? args)

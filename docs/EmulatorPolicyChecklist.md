@@ -17,7 +17,7 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 |--------|--------|----------|--------|-----------------|--------|
 | ⬜ | AzureOpenAiTokenLimit | Inbound | AzureOpenAiTokenLimitConfig | No-op + callbacks | `emulator/azure-openai-token-limit` |
 | ⬜ | CrossDomain | Inbound | None (no-arg) | No-op + callbacks | `emulator/cross-domain` |
-| ⬜ | FindAndReplace | Inbound, Outbound, Backend, OnError | 2 strings (from, to) | Context mutation | `emulator/find-and-replace` |
+| ✅ | FindAndReplace | Inbound, Outbound, Backend, OnError | 2 strings (from, to) | Context mutation | `emulator/find-and-replace` |
 | ⬜ | GetAuthorizationContext | Inbound, Outbound, Backend | GetAuthorizationContextConfig | External service mock | `emulator/get-authorization-context` |
 | ⬜ | IncludeFragment | All sections | string (fragment-id) | No-op + callbacks | `emulator/include-fragment` |
 | ⬜ | InvokeDaprBinding | Inbound, Outbound, OnError | InvokeDaprBindingConfig | External service mock | `emulator/invoke-dapr-binding` |
@@ -26,10 +26,10 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 | ⬜ | LlmTokenLimit | Inbound | LlmTokenLimitConfig | No-op + callbacks | `emulator/llm-token-limit` |
 | ⬜ | Proxy | Inbound | ProxyConfig | Context mutation | `emulator/proxy` |
 | ⬜ | PublishToDapr | Inbound, Outbound, OnError | PublishToDaprConfig | External service mock | `emulator/publish-to-dapr` |
-| ⬜ | QuotaByKey | Inbound | QuotaByKeyConfig | No-op + callbacks | `emulator/quota-by-key` |
-| ⬜ | RedirectContentUrls | Outbound | None (no-arg) | No-op + callbacks | `emulator/redirect-content-urls` |
-| ⬜ | Retry | Inbound, Outbound, Backend, OnError | RetryConfig + delegate | Wrapper/flow control | `emulator/retry` |
-| ⬜ | SendOneWayRequest | Inbound, Outbound, Backend, OnError | SendOneWayRequestConfig | External service mock | `emulator/send-one-way-request` |
+| ✅ | QuotaByKey | Inbound | QuotaByKeyConfig | No-op + callbacks | `emulator/quota-by-key` |
+| ✅ | RedirectContentUrls | Outbound | None (no-arg) | No-op + callbacks | `emulator/redirect-content-urls` |
+| ✅ | Retry | Inbound, Outbound, Backend, OnError | RetryConfig + delegate | Wrapper/flow control | `emulator/retry` |
+| ✅ | SendOneWayRequest | Inbound, Outbound, Backend, OnError | SendOneWayRequestConfig | External service mock | `emulator/send-one-way-request` |
 | ⬜ | Trace | All sections | TraceConfig | Store interaction | `emulator/trace` |
 | ⬜ | ValidateAzureAdToken | Inbound | ValidateAzureAdTokenConfig | Validation + short-circuit | `emulator/validate-azure-ad-token` |
 | ⬜ | ValidateClientCertificate | Inbound | ValidateClientCertificateConfig | Validation + short-circuit | `emulator/validate-client-certificate` |
@@ -48,6 +48,7 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 |--------|--------|-------------|-----------------|--------|
 | ⬜ | CacheLookup | CacheLookupHandler.cs | Store interaction | `emulator/cache-lookup` |
 | ⬜ | CacheStore | CacheStoreHandler.cs | Store interaction | `emulator/cache-store` |
+| ✅ | CacheValue | CacheValueHandler.cs | Store interaction + wrapper | `emulator/cache-value` |
 | ⬜ | Cors | CorsHandler.cs | Context mutation | `emulator/cors` |
 | ⬜ | EmitMetric | EmitMetricHandler.cs | No-op + callbacks | `emulator/emit-metric` |
 | ⬜ | ForwardRequest | ForwardRequestHandler.cs | External service mock | `emulator/forward-request` |

@@ -40,6 +40,10 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
             throw new NotImplementedException(targetMethod.Name);
         }
 
+        // Track current section handlers so IncludeFragmentHandler can create
+        // a fragment proxy with the correct handler set for the calling section.
+        _context.CurrentSectionHandlers = _handlers;
+
         try
         {
             return handler.Handle(_context, args);
@@ -89,5 +93,22 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
             .Select(t => Activator.CreateInstance(t) as IPolicyHandler)
             .Where(h => h is not null)
             .ToDictionary(h => h!.PolicyName)!;
+    }
+
+    /// <summary>
+    /// Creates a proxy for a different section type using a pre-built handler map.
+    /// Used by IncludeFragmentHandler to create IFragmentContext proxies that share
+    /// the calling section's handlers.
+    /// </summary>
+    internal static SectionContextProxy<TNewSection> CreateWithHandlers<TNewSection>(
+        GatewayContext context,
+        Dictionary<string, IPolicyHandler> handlers) where TNewSection : class
+    {
+        var proxy =
+            (Create(typeof(TNewSection), typeof(SectionContextProxy<TNewSection>)) as
+                SectionContextProxy<TNewSection>)!;
+        proxy._context = context;
+        proxy._handlers = handlers;
+        return proxy;
     }
 }
