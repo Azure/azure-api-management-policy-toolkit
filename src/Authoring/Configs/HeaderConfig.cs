@@ -14,6 +14,7 @@ public record HeaderConfig
     /// <summary>
     /// Specifies the action to take if the header already exists. Possible values are "override" and "skip". Policy expressions are allowed.
     /// </summary>
+    [ApimDefaultValue("override", "exists-action")]
     [ExpressionAllowed]
     public string? ExistsAction { get; init; }
 

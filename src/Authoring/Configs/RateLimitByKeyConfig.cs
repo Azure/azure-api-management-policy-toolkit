@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -62,4 +62,9 @@ public record RateLimitByKeyConfig
     /// Name of the HTTP header to return the total number of calls allowed.
     /// </summary>
     public string? TotalCallsHeaderName { get; init; }
+
+    /// <summary>
+    /// Whether to increment the counter after the response is received. Default is false.
+    /// </summary>
+    public bool? IncrementAfterResponse { get; init; }
 }
