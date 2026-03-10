@@ -19,22 +19,23 @@ public class MockBody : IMessageBody
 
     public T As<T>(bool preserveContent = false)
     {
-        if (Content == null) throw new NullReferenceException();
+        var content = Content ?? string.Empty;
 
         Consumed = !preserveContent;
 
-        if (typeof(T) == typeof(byte[])) return (T)(object)Encoding.UTF8.GetBytes(Content);
-        if (typeof(T) == typeof(string)) return (T)(object)Content;
-        if (typeof(T) == typeof(JObject)) return (T)(object)JObject.Parse(Content);
-        if (typeof(T) == typeof(JToken)) return (T)(object)JToken.Parse(Content);
+        if (typeof(T) == typeof(byte[])) return (T)(object)Encoding.UTF8.GetBytes(content);
+        if (typeof(T) == typeof(string)) return (T)(object)content;
+        if (typeof(T) == typeof(JObject)) return (T)(object)JObject.Parse(content);
+        if (typeof(T) == typeof(JArray)) return (T)(object)JArray.Parse(content);
+        if (typeof(T) == typeof(JToken)) return (T)(object)JToken.Parse(content);
         if (typeof(T) == typeof(XNode))
         {
-            using var reader = new XmlTextReader(Content);
+            using var reader = new XmlTextReader(content);
             return (T)(object)XNode.ReadFrom(reader);
         }
 
-        if (typeof(T) == typeof(XElement)) return (T)(object)XElement.Parse(Content);
-        if (typeof(T) == typeof(XDocument)) return (T)(object)XDocument.Parse(Content);
+        if (typeof(T) == typeof(XElement)) return (T)(object)XElement.Parse(content);
+        if (typeof(T) == typeof(XDocument)) return (T)(object)XDocument.Parse(content);
 
         throw new NotImplementedException();
     }

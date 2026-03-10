@@ -76,7 +76,9 @@ public class InlinePolicyCompiler : IMethodPolicyHandler
                 }
             }
 
-            if (markerToCode.TryGetValue(element.Value, out var valueCode))
+            // Only replace text on leaf elements — setting .Value on a parent
+            // removes all child elements and replaces them with a text node.
+            if (!element.HasElements && markerToCode.TryGetValue(element.Value, out var valueCode))
             {
                 element.Value = valueCode;
             }

@@ -12,6 +12,8 @@ internal class JsonPHandler : PolicyHandler<string>
 
     protected override void Handle(GatewayContext context, string config)
     {
-        throw new NotImplementedException();
+        // No-op by default in emulator.
+        // JSONP wrapping is not simulated in tests.
+        // Test authors use CallbackSetup to simulate JSONP behavior.
     }
 }

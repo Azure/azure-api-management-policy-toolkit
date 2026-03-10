@@ -10,6 +10,16 @@ public class TestDocument(IDocument document)
 {
     public GatewayContext Context { get; init; } = new();
 
+    /// <summary>
+    /// Registers a fragment instance so that IncludeFragment calls with the given ID
+    /// resolve to this instance instead of scanning assemblies via reflection.
+    /// </summary>
+    public TestDocument RegisterFragment(string fragmentId, IFragment fragment)
+    {
+        Context.FragmentRegistry[fragmentId] = fragment;
+        return this;
+    }
+
     public void RunInbound() => this.Handle(Context.InboundProxy.Object, document.Inbound);
     public void RunBackend() => this.Handle(Context.BackendProxy.Object, document.Backend);
     public void RunOutbound() => this.Handle(Context.OutboundProxy.Object, document.Outbound);

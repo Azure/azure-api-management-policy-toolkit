@@ -44,7 +44,7 @@ public class CacheStoreValueTests
         test.SetupCacheStore();
         var cacheValue = cacheStore.InternalCache.Should().ContainKey("key").WhoseValue;
         cacheValue.Value.Should().Be("value");
-        cacheValue.Duration.Should().Be(10);
+        cacheValue.Ttl.TotalSeconds.Should().Be(10);
         cacheStore.ExternalCache.Should().NotContainKey("key");
     }
 
@@ -58,7 +58,7 @@ public class CacheStoreValueTests
 
         var cacheValue = cacheStore.ExternalCache.Should().ContainKey("key").WhoseValue;
         cacheValue.Value.Should().Be("value");
-        cacheValue.Duration.Should().Be(10);
+        cacheValue.Ttl.TotalSeconds.Should().Be(10);
         cacheStore.InternalCache.Should().NotContainKey("key");
     }
 }

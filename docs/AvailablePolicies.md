@@ -30,6 +30,7 @@ Notes:
 - cache-remove-value
 - cache-store
 - cache-store-value
+- cache-value
 - check-header
 - choose (implemented via C# if/else -> choose/when/otherwise)
 - cors

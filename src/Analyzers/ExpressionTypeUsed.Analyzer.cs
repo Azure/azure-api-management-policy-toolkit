@@ -180,6 +180,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IGroup",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ILastError",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IMessageBody",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IAzureVnetInfo",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IOperation",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IPrivateEndpointConnection",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IProduct",

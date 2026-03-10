@@ -12,6 +12,8 @@ internal class LlmEmitTokenMetricHandler : PolicyHandler<EmitTokenMetricConfig>
 
     protected override void Handle(GatewayContext context, EmitTokenMetricConfig config)
     {
-        throw new NotImplementedException();
+        // No-op by default in emulator.
+        // LLM token metric emission is not simulated in tests.
+        // Test authors use CallbackSetup to inspect emitted metrics.
     }
 }

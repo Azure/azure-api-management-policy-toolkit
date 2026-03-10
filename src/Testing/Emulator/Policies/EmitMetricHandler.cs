@@ -16,6 +16,8 @@ internal class EmitMetricHandler : PolicyHandler<EmitMetricConfig>
 
     protected override void Handle(GatewayContext context, EmitMetricConfig config)
     {
-        throw new NotImplementedException();
+        // No-op by default in emulator.
+        // Metric emission is not simulated in tests.
+        // Test authors use CallbackSetup to inspect emitted metrics.
     }
 }

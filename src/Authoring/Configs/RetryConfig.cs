@@ -15,6 +15,12 @@ public record RetryConfig
     public required bool Condition { get; init; }
 
     /// <summary>
+    /// Optional. Runtime-only callback used by the gateway emulator to reevaluate the retry condition after each execution.
+    /// This is ignored by XML compilation and is primarily populated by decompiled documents for APIM-accurate retry behavior.
+    /// </summary>
+    public Func<bool>? ConditionEvaluator { get; init; }
+
+    /// <summary>
     /// A positive number between 1 and 50 specifying the number of retries to attempt. Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]

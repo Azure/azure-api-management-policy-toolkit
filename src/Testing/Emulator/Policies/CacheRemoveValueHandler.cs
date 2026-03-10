@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -17,6 +18,13 @@ internal class CacheRemoveValueHandler : PolicyHandler<CacheRemoveValueConfig>
 
     protected override void Handle(GatewayContext context, CacheRemoveValueConfig config)
     {
+        var cache = context.Services.Resolve<ICache>();
+        if (cache is not null)
+        {
+            cache.RemoveAsync(config.Key).GetAwaiter().GetResult();
+            return;
+        }
+
         var store = context.CacheStore.GetCache(config.CachingType ?? "prefer-external");
         store?.Remove(config.Key);
     }

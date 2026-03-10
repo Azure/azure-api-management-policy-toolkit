@@ -12,4 +12,5 @@ public interface ILastError
     string Section { get; }
     string Path { get; }
     string PolicyId { get; }
+    int HttpErrorCode { get; }
 }

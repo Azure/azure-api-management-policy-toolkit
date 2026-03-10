@@ -14,5 +14,6 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 internal class SetMethodHandler : PolicyHandler<string>
 {
     public override string PolicyName => nameof(IInboundContext.SetMethod);
-    protected override void Handle(GatewayContext context, string method) => context.Request.Method = method;
+    protected override void Handle(GatewayContext context, string method) =>
+        context.Request.Method = method.ToUpperInvariant();
 }

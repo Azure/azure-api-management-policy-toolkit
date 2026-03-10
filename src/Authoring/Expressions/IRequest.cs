@@ -24,4 +24,6 @@ public interface IRequest
     IUrl Url { get; }
 
     IPrivateEndpointConnection? PrivateEndpointConnection { get; }
+
+    IAzureVnetInfo? AzureVnetInfo { get; }
 }

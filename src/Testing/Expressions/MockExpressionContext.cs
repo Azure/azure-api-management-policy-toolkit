@@ -17,7 +17,7 @@ public class MockExpressionContext : IExpressionContext
     public TimeSpan Elapsed { get; set; } = TimeSpan.Zero;
     public bool Tracing { get; set; } = false;
 
-    public Dictionary<string, object> Variables { get; set; } = new Dictionary<string, object>();
+    public Dictionary<string, object> Variables { get; set; } = new ApimVariablesDictionary();
     IReadOnlyDictionary<string, object> IExpressionContext.Variables => Variables;
 
     public MockContextApi Api { get; set; } = new MockContextApi();
