@@ -10,7 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="MSTest" Version="3.11.1"/>
-        <PackageReference Include="coverlet.collector" Version="6.0.4"/>
+        <PackageReference Include="coverlet.collector" Version="8.0.0"/>
         <PackageReference Include="FluentAssertions" Version="7.0.0"/>
     </ItemGroup>
 
