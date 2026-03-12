@@ -1,0 +1,17 @@
+<policies>
+	<inbound>
+		<base />
+		<set-variable name="isEnabled" value="@(Convert.ToBoolean("{{Feature-Enabled}}"))" />
+		<authentication-certificate thumbprint="{{Client-Cert-Thumbprint}}" />
+		<set-backend-service base-url="@(context.Variables.GetValueOrDefault<string>("endpoint", "") + "/instance/" + (Math.Abs(context.RequestId.GetHashCode()) % {{Instance-Count}} + 1))" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

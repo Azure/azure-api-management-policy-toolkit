@@ -1,0 +1,24 @@
+<policies>
+	<inbound>
+		<base />
+		<rate-limit calls="1000" renewal-period="1" />
+		<cache-lookup vary-by-developer="false" vary-by-developer-groups="false" downstream-caching-type="none" />
+		<set-backend-service base-url="{{Foo-Auth-BaseUrl}}/token" />
+		<authentication-certificate thumbprint="{{Foo-Client-Cert-Thumbprint}}" />
+		<rewrite-uri template="keys" copy-unmatched-params="true" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<choose>
+			<when condition="@(context.Response.StatusCode == 200)">
+				<cache-store duration="300" />
+			</when>
+		</choose>
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

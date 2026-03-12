@@ -27,7 +27,8 @@ public class SetBodyCompiler : IMethodPolicyHandler
         }
 
         var value = node.ArgumentList.Arguments[0].Expression.ProcessParameter(context);
-        var element = new XElement("set-body", value);
+        bool useValueElement = false;
+        var element = new XElement("set-body");
         if (node.ArgumentList.Arguments.Count == 2)
         {
             var contentType = node.ArgumentList.Arguments[1].Expression.ProcessExpression(context);
@@ -72,8 +73,19 @@ public class SetBodyCompiler : IMethodPolicyHandler
                 {
                     element.Add(new XAttribute("parse-date", parseDate.Value!));
                 }
+
+                if (contentType.NamedValues.TryGetValue(nameof(SetBodyConfig.UseValueElement), out var useVal) &&
+                    useVal.Value == "true")
+                {
+                    useValueElement = true;
+                }
             }
         }
+
+        if (useValueElement)
+            element.Add(new XElement("value", value));
+        else
+            element.Add(value);
 
         context.AddPolicy(element);
     }
@@ -102,10 +114,18 @@ public class SetBodyCompiler : IMethodPolicyHandler
             return;
         }
 
-        var bodyElement = new XElement("set-body", content.Value!);
+        var useValueElement = config.TryGetValue(nameof(BodyConfig.UseValueElement), out var useVal) &&
+                              useVal.Value == "true";
+
+        var bodyElement = new XElement("set-body");
         bodyElement.AddAttribute(config, nameof(BodyConfig.Template), "template");
         bodyElement.AddAttribute(config, nameof(BodyConfig.XsiNil), "xsi-nil");
         bodyElement.AddAttribute(config, nameof(BodyConfig.ParseDate), "parse-date");
+
+        if (useValueElement)
+            bodyElement.Add(new XElement("value", content.Value!));
+        else
+            bodyElement.Add(content.Value!);
         element.Add(bodyElement);
     }
 }

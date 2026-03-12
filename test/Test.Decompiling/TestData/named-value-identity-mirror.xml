@@ -1,0 +1,29 @@
+<policies>
+	<inbound>
+		<base />
+		<set-backend-service base-url="{{Backend-BaseUrl}}" />
+		<authentication-managed-identity resource="{{Backend-Audience}}" client-id="{{Runtime-MI-ClientId}}" output-token-variable-name="mi-access-token" ignore-error="false" />
+		<set-header name="Authorization" exists-action="override">
+			<value>@($"Bearer {context.Variables["mi-access-token"]}")</value>
+		</set-header>
+		<choose>
+			<when condition="@{
+				int forkPercentage = {{Mirror-Traffic-Percentage}};
+				return forkPercentage > 0 && forkPercentage <= 100;
+			}">
+				<send-one-way-request mode="copy">
+					<set-url>@("https://{{BaseUrl}}" + context.Request.OriginalUrl.Path)</set-url>
+				</send-one-way-request>
+			</when>
+		</choose>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

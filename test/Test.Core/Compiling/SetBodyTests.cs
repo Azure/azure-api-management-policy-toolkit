@@ -62,16 +62,7 @@ public class SetBodyTests
             }
         }
         """,
-        """
-        <policies>
-            <inbound>
-                <set-body>@{return context.RequestId.ToString();}</set-body>
-            </inbound>
-            <outbound>
-                <set-body>@{return context.RequestId.ToString();}</set-body>
-            </outbound>
-        </policies>
-        """,
+        "<policies>\r\n    <inbound>\r\n        <set-body>@{\r\nreturn context.RequestId.ToString();\r\n}</set-body>\r\n    </inbound>\r\n    <outbound>\r\n        <set-body>@{\r\nreturn context.RequestId.ToString();\r\n}</set-body>\r\n    </outbound>\r\n</policies>",
         DisplayName = "Should compile set body policy with expressions"
     )]
     [DataRow(

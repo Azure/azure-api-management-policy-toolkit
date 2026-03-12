@@ -38,31 +38,32 @@ public class SetHeaderCompilationTests
 
         var result = code.CompileDocument();
 
+        var ea = type == "override" ? "" : $@" exists-action=""{type}""";
         var expectedXml =
-            $$"""
-              <policies>
-                  <inbound>
-                      <set-header name="X-Header" exists-action="{{type}}">
-                          <value>1</value>
-                      </set-header>
-                  </inbound>
-                  <backend>
-                      <set-header name="X-Header" exists-action="{{type}}">
-                          <value>1</value>
-                      </set-header>
-                  </backend>
-                  <outbound>
-                      <set-header name="X-Header" exists-action="{{type}}">
-                          <value>1</value>
-                      </set-header>
-                  </outbound>
-                  <on-error>
-                      <set-header name="X-Header" exists-action="{{type}}">
-                          <value>1</value>
-                      </set-header>
-                  </on-error>
-              </policies>
-              """;
+            $"""
+             <policies>
+                 <inbound>
+                     <set-header name="X-Header"{ea}>
+                         <value>1</value>
+                     </set-header>
+                 </inbound>
+                 <backend>
+                     <set-header name="X-Header"{ea}>
+                         <value>1</value>
+                     </set-header>
+                 </backend>
+                 <outbound>
+                     <set-header name="X-Header"{ea}>
+                         <value>1</value>
+                     </set-header>
+                 </outbound>
+                 <on-error>
+                     <set-header name="X-Header"{ea}>
+                         <value>1</value>
+                     </set-header>
+                 </on-error>
+             </policies>
+             """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
 
@@ -139,18 +140,19 @@ public class SetHeaderCompilationTests
 
         var result = code.CompileDocument();
 
+        var ea = type == "override" ? "" : $@" exists-action=""{type}""";
         var expectedXml =
             $"""
              <policies>
                  <inbound>
-                     <set-header name="X-Header" exists-action="{type}">
+                     <set-header name="X-Header"{ea}>
                          <value>1</value>
                          <value>2</value>
                          <value>3</value>
                      </set-header>
                  </inbound>
                  <outbound>
-                     <set-header name="X-Header" exists-action="{type}">
+                     <set-header name="X-Header"{ea}>
                          <value>3</value>
                          <value>2</value>
                          <value>1</value>
@@ -188,12 +190,12 @@ public class SetHeaderCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header name="@("name" + context.RequestId)" exists-action="override">
+                    <set-header name="@("name" + context.RequestId)">
                         <value>1</value>
                     </set-header>
                 </inbound>
                 <outbound>
-                    <set-header name="@("name" + context.RequestId)" exists-action="override">
+                    <set-header name="@("name" + context.RequestId)">
                         <value>1</value>
                     </set-header>
                 </outbound>
@@ -229,14 +231,14 @@ public class SetHeaderCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header name="X-Header" exists-action="override">
+                    <set-header name="X-Header">
                         <value>1</value>
                         <value>@("value" + context.RequestId)</value>
                         <value>2</value>
                     </set-header>
                 </inbound>
                 <outbound>
-                    <set-header name="X-Header" exists-action="override">
+                    <set-header name="X-Header">
                         <value>1</value>
                         <value>@("value" + context.RequestId)</value>
                         <value>2</value>

@@ -1,0 +1,42 @@
+<!--
+  Test XML covering all {{named-value}} scenarios for roundtrip testing.
+  Scenarios:
+  1. {{token}} as entire attribute value (attribute-exact)
+  2. {{token}} mixed with text in attribute value (attribute-mixed)
+  3. {{token}} in @(...) single-line expression
+  4. {{token}} in @{...} multi-line expression
+  5. {{token}} inside string literal within expression (Convert.ToBoolean("{{token}}"))
+  6. {{token}} in int attribute (calls="{{token}}")
+  7. {{token}} in bool attribute (condition that uses Convert.ToBoolean)
+-->
+<policies>
+	<inbound>
+		<base />
+		<!-- Scenario 1: exact token as attribute value -->
+		<authentication-certificate thumbprint="{{Foo-Client-Cert-Thumbprint}}" />
+		<!-- Scenario 2: token mixed with text -->
+		<set-backend-service base-url="{{Api-Backend-Url}}/v2.0/prediction" />
+		<!-- Scenario 3: token in single-line expression -->
+		<set-variable name="isEnabled" value="@(Convert.ToBoolean("{{FeatureEnabled}}"))" />
+		<!-- Scenario 4: token in multi-line expression body -->
+		<set-variable name="endpoint" value="@{
+			var baseUrl = "{{Endpoint-Base}}";
+			return baseUrl + "/api/v1";
+		}" />
+		<!-- Scenario 5: token as int value -->
+		<rate-limit-by-key calls="{{RateLimit-Calls}}" renewal-period="{{RateLimit-Period}}" counter-key="@(context.Subscription.Id)" />
+		<!-- Scenario 6: multiple tokens in one attribute -->
+		<set-header name="Authorization" exists-action="override">
+			<value>{{AuthHeaderValue}}</value>
+		</set-header>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
