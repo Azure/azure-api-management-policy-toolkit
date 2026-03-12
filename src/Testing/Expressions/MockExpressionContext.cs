@@ -48,4 +48,18 @@ public class MockExpressionContext : IExpressionContext
     IProduct IExpressionContext.Product => Product;
 
     public Action<string> Trace { get; set; } = (message) => { };
+
+    private Dictionary<string, string> _namedValues = new();
+
+    public void SetNamedValues(IDictionary<string, string> values)
+    {
+        foreach (var kvp in values)
+            _namedValues[kvp.Key] = kvp.Value;
+    }
+
+    public dynamic NamedValue(string name)
+    {
+        var value = _namedValues.TryGetValue(name, out var v) ? v : null;
+        return new ConfigValue(value);
+    }
 }

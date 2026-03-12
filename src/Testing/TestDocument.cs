@@ -10,6 +10,9 @@ public class TestDocument(IDocument document)
 {
     public GatewayContext Context { get; init; } = new();
 
+    public void UseNamedValues(IDictionary<string, string> values)
+        => Context.SetNamedValues(values);
+
     /// <summary>
     /// Registers a fragment instance so that IncludeFragment calls with the given ID
     /// resolve to this instance instead of scanning assemblies via reflection.

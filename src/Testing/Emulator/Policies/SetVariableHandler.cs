@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -16,5 +17,5 @@ internal class SetVariableHandler : PolicyHandler<string, object>
     public override string PolicyName => nameof(IInboundContext.SetVariable);
 
     protected override void Handle(GatewayContext context, string name, object value) =>
-        context.Variables[name] = value;
+        context.Variables[name] = value is ConfigValue configValue ? (string?)configValue ?? string.Empty : value;
 }

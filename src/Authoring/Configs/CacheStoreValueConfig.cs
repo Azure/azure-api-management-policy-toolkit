@@ -19,10 +19,11 @@ public record CacheStoreValueConfig
 
     /// <summary>
     /// Required. Specifies the value to store in the cache.<br/>
+    /// Accepts any type; the APIM gateway can cache arbitrary objects, not only strings.<br/>
     /// Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public required string Value { get; init; }
+    public required object Value { get; init; }
 
     /// <summary>
     /// Required. Specifies the duration in seconds for which the cached value is valid.<br/>
