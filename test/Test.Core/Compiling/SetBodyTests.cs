@@ -152,6 +152,29 @@ public class SetBodyTests
         """,
         DisplayName = "Should compile set body policy with ParseDate in config"
     )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBody("content", new SetBodyConfig {
+                    UseValueElement = true,
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-body>
+                    <value>content</value>
+                </set-body>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set body policy with UseValueElement wrapping content"
+    )]
     public void ShouldCompileForwardRequestPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);

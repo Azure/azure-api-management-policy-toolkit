@@ -141,6 +141,19 @@ public class PolicyDecompilerContext
         return value;
     }
 
+    public string HandleDoubleValue(string value, string suggestedName)
+    {
+        if (IsExpression(value))
+        {
+            return CreateExpressionMethodReference(value, suggestedName, "double");
+        }
+        if (IsNamedValueToken(value))
+        {
+            return NamedValueCall(value, "double");
+        }
+        return value;
+    }
+
     public string HandleConditionExpression(string value, string suggestedName)
     {
         value = value.Trim();
@@ -530,6 +543,15 @@ public class PolicyDecompilerContext
         if (value != null)
         {
             props.Add($"{propName} = {HandleIntValue(value, propName)}");
+        }
+    }
+
+    public void AddOptionalDoubleProp(List<string> props, XElement element, string xmlAttr, string propName)
+    {
+        var value = element.Attribute(xmlAttr)?.Value;
+        if (value != null)
+        {
+            props.Add($"{propName} = {HandleDoubleValue(value, propName)}");
         }
     }
 

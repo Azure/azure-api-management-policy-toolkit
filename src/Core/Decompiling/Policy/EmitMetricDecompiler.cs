@@ -15,11 +15,7 @@ public class EmitMetricDecompiler : IPolicyDecompiler
         var props = new List<string>();
         context.AddRequiredStringProp(props, element, "name", "Name");
 
-        var valueAttr = element.Attribute("value")?.Value;
-        if (valueAttr != null)
-        {
-            props.Add($"Value = {valueAttr}");
-        }
+        context.AddOptionalDoubleProp(props, element, "value", "Value");
 
         context.AddOptionalStringProp(props, element, "namespace", "Namespace");
 

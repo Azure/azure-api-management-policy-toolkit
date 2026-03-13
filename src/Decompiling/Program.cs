@@ -164,7 +164,12 @@ generateCommand.SetHandler(async (context) =>
             var preprocessed = PolicyDecompiler.PreprocessXml(xml);
             XDocument doc;
             try { doc = XDocument.Parse(preprocessed); }
-            catch { skipped++; continue; }
+            catch (Exception ex)
+            {
+                failed++;
+                await Console.Error.WriteLineAsync($"Error parsing {relativePath}: {ex.Message}");
+                continue;
+            }
 
             var rootElement = doc.Root?.Name.LocalName;
             if (rootElement != "policies" && rootElement != "fragment") { skipped++; continue; }

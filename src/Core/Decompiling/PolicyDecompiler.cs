@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -16,55 +17,19 @@ public class PolicyDecompiler
 
     public PolicyDecompiler()
     {
-        IPolicyDecompiler[] decompilers =
-        [
-            new BaseDecompiler(),
-            new SetVariableDecompiler(),
-            new SetHeaderDecompiler(),
-            new SetQueryParameterDecompiler(),
-            new SetBodyDecompiler(),
-            new SetStatusDecompiler(),
-            new SetMethodDecompiler(),
-            new RewriteUriDecompiler(),
-            new IncludeFragmentDecompiler(),
-            new FindAndReplaceDecompiler(),
-            new RedirectContentUrlsDecompiler(),
-            new JsonPDecompiler(),
-            new AuthenticationBasicDecompiler(),
-            new AuthenticationCertificateDecompiler(),
-            new AuthenticationManagedIdentityDecompiler(),
-            new SetBackendServiceDecompiler(),
-            new ForwardRequestDecompiler(),
-            new CacheLookupDecompiler(),
-            new CacheLookupValueDecompiler(),
-            new CacheStoreDecompiler(),
-            new CacheStoreValueDecompiler(),
-            new CacheRemoveValueDecompiler(),
-            new CacheValueDecompiler(),
-            new RateLimitDecompiler(),
-            new RateLimitByKeyDecompiler(),
-            new QuotaDecompiler(),
-            new QuotaByKeyDecompiler(),
-            new ReturnResponseDecompiler(),
-            new SendRequestDecompiler(),
-            new SendOneWayRequestDecompiler(),
-            new InvokeRequestDecompiler(),
-            new CorsDecompiler(),
-            new ValidateJwtDecompiler(),
-            new IpFilterDecompiler(),
-            new CheckHeaderDecompiler(),
-            new TraceDecompiler(),
-            new LogToEventHubDecompiler(),
-            new MockResponseDecompiler(),
-            new JsonToXmlDecompiler(),
-            new XmlToJsonDecompiler(),
-            new EmitMetricDecompiler(),
-            new GetAuthorizationContextDecompiler(),
-            new ChooseDecompiler(),
-            new RetryDecompiler(),
-            new WaitDecompiler(),
-            new LimitConcurrencyDecompiler(),
-        ];
+        var decompilers = Assembly.GetExecutingAssembly()
+            .GetTypes()
+            .Where(type =>
+                type is
+                {
+                    IsClass: true,
+                    IsAbstract: false,
+                    IsPublic: true,
+                    Namespace: "Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling.Policy"
+                }
+                && type != typeof(InlinePolicyDecompiler)
+                && typeof(IPolicyDecompiler).IsAssignableFrom(type))
+            .Select(type => (IPolicyDecompiler)Activator.CreateInstance(type)!);
 
         foreach (var decompiler in decompilers)
         {
