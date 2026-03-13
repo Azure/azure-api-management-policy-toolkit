@@ -1,0 +1,26 @@
+<policies>
+	<inbound>
+		<base />
+		<set-variable name="Backend-Endpoint" value="@{
+			var config = (JObject)context.Variables["Properties"];
+			var caps = (JArray)config["caps"];
+			string endpoint = (caps?.FirstOrDefault(c => c["name"].ToString() == "EndpointOverride") as JObject)?.GetValue("value")?.ToString();
+			return endpoint ?? "default.example.com";
+		}" />
+		<set-backend-service base-url="@($"https://{context.Variables["Backend-Endpoint"]}/api/v1")" />
+		<authentication-managed-identity resource="{{Backend-Audience}}" client-id="{{Runtime-MI-ClientId}}" output-token-variable-name="service-token" ignore-error="false" />
+		<set-header name="Authorization" exists-action="override">
+			<value>@($"Bearer {context.Variables["service-token"]}")</value>
+		</set-header>
+		<include-fragment fragment-id="routing-headers" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -1,0 +1,27 @@
+<policies>
+	<inbound>
+		<cors>
+			<allowed-origins>
+				<origin>*</origin>
+			</allowed-origins>
+			<allowed-methods>
+				<method>*</method>
+			</allowed-methods>
+			<allowed-headers>
+				<header>*</header>
+			</allowed-headers>
+		</cors>
+		<base />
+		<authentication-certificate thumbprint="{{Client-Cert}}" />
+		<set-backend-service base-url="{{BaseUrl}}/api/v2" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -23,4 +23,9 @@ public record SetBodyConfig
     /// Optional. Specifies whether to parse date values in the body content.
     /// </summary>
     public bool? ParseDate { get; init; }
+
+    /// <summary>
+    /// Optional. When true, wraps the body content in a &lt;value&gt; child element.
+    /// </summary>
+    public bool? UseValueElement { get; init; }
 }

@@ -67,7 +67,7 @@ public class NamedValueTests
         """
         <policies>
             <inbound>
-                <set-header name="Authorization" exists-action="override">
+                <set-header name="Authorization">
                     <value>{{Auth-Scheme}} {{Auth-Token}}</value>
                 </set-header>
             </inbound>

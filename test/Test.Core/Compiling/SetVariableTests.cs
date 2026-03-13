@@ -80,13 +80,7 @@ public class SetVariableTests
             }
         }
         """,
-        """
-        <policies>
-            <inbound>
-                <set-variable name="Inbound" value="@{return context.RequestId.ToString();}" />
-            </inbound>
-        </policies>
-        """,
+        "<policies>\r\n    <inbound>\r\n        <set-variable name=\"Inbound\" value=\"@{\r\nreturn context.RequestId.ToString();\r\n}\" />\r\n    </inbound>\r\n</policies>",
         DisplayName = "Should compile set variable policy with multi line expression"
     )]
     public void ShouldCompileSetVariablePolicy(string code, string expectedXml)

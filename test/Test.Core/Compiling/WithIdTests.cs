@@ -27,7 +27,7 @@ public class WithIdCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header id="my-header-id" name="X-Header" exists-action="override">
+                    <set-header id="my-header-id" name="X-Header">
                         <value>1</value>
                     </set-header>
                 </inbound>
@@ -69,22 +69,22 @@ public class WithIdCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header id="inbound-id" name="X-Header" exists-action="override">
+                    <set-header id="inbound-id" name="X-Header">
                         <value>1</value>
                     </set-header>
                 </inbound>
                 <backend>
-                    <set-header id="backend-id" name="X-Header" exists-action="override">
+                    <set-header id="backend-id" name="X-Header">
                         <value>1</value>
                     </set-header>
                 </backend>
                 <outbound>
-                    <set-header id="outbound-id" name="X-Header" exists-action="override">
+                    <set-header id="outbound-id" name="X-Header">
                         <value>1</value>
                     </set-header>
                 </outbound>
                 <on-error>
-                    <set-header id="onerror-id" name="X-Header" exists-action="override">
+                    <set-header id="onerror-id" name="X-Header">
                         <value>1</value>
                     </set-header>
                 </on-error>
@@ -114,7 +114,7 @@ public class WithIdCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header id="last" name="X-Header" exists-action="override">
+                    <set-header id="last" name="X-Header">
                         <value>1</value>
                     </set-header>
                 </inbound>
@@ -145,10 +145,10 @@ public class WithIdCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header id="first-id" name="X-First" exists-action="override">
+                    <set-header id="first-id" name="X-First">
                         <value>1</value>
                     </set-header>
-                    <set-header name="X-Second" exists-action="override">
+                    <set-header name="X-Second">
                         <value>2</value>
                     </set-header>
                 </inbound>
@@ -216,7 +216,7 @@ public class WithIdCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header id="constant-id" name="X-Header" exists-action="override">
+                    <set-header id="constant-id" name="X-Header">
                         <value>1</value>
                     </set-header>
                 </inbound>
@@ -252,12 +252,12 @@ public class WithIdCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header id="outer-id" name="X-Outer" exists-action="override">
+                    <set-header id="outer-id" name="X-Outer">
                         <value>1</value>
                     </set-header>
                     <choose>
                         <when condition="@(true)">
-                            <set-header name="X-Inner" exists-action="override">
+                            <set-header name="X-Inner">
                                 <value>2</value>
                             </set-header>
                         </when>
@@ -296,7 +296,7 @@ public class WithIdCompilationTests
                 <inbound>
                     <choose>
                         <when condition="@(true)">
-                            <set-header id="inner-id" name="X-Inner" exists-action="override">
+                            <set-header id="inner-id" name="X-Inner">
                                 <value>1</value>
                             </set-header>
                         </when>
@@ -332,19 +332,19 @@ public class WithIdCompilationTests
             """
             <policies>
                 <inbound>
-                    <set-header id="first-id" name="X-First" exists-action="override">
+                    <set-header id="first-id" name="X-First">
                         <value>1</value>
                     </set-header>
-                    <set-header name="X-Second" exists-action="override">
+                    <set-header name="X-Second">
                         <value>2</value>
                     </set-header>
-                    <set-header id="third-id" name="X-Third" exists-action="override">
+                    <set-header id="third-id" name="X-Third">
                         <value>3</value>
                     </set-header>
-                    <set-header name="X-Fourth" exists-action="override">
+                    <set-header name="X-Fourth">
                         <value>4</value>
                     </set-header>
-                    <set-header id="fifth-id" name="X-Fifth" exists-action="override">
+                    <set-header id="fifth-id" name="X-Fifth">
                         <value>5</value>
                     </set-header>
                 </inbound>

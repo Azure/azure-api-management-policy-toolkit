@@ -374,7 +374,7 @@ public static class CompilerUtils
     public static T Normalize<T>(T node) where T : SyntaxNode
     {
         var unformatted = (T)new TriviaRemoverRewriter().Visit(node);
-        return unformatted.NormalizeWhitespace("", "");
+        return unformatted.NormalizeWhitespace("", "\n");
     }
 
     private static readonly Regex NamedValueCallPattern = new(

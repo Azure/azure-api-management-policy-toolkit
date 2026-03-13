@@ -1,0 +1,21 @@
+<policies>
+	<inbound>
+		<base />
+		<return-response>
+			<set-status code="410" reason="Gone" />
+			<set-header name="Content-Type" exists-action="override">
+				<value>application/json</value>
+			</set-header>
+			<set-body>{"error":{"code":"Gone","message":"Service API 'v1.0' has been deprecated. Please upgrade to the latest version at https://example.com/upgrade-guide."}}</set-body>
+		</return-response>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
