@@ -250,6 +250,8 @@ public class RoundTripTests
     [DataRow("llm-semantic-cache-store.xml")]
     [DataRow("azure-openai-token-limit.xml")]
     [DataRow("llm-token-limit.xml")]
+    [DataRow("cross-domain.xml")]
+    [DataRow("proxy.xml")]
     public void RealPolicyFile_RoundTrips(string fileName)
     {
         var filePath = Path.Combine("TestData", fileName);

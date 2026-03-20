@@ -1,0 +1,21 @@
+<policies>
+	<inbound>
+		<base />
+		<xsl-transform>
+			<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+				<xsl:template match="/">
+					<root><xsl:value-of select="." /></root>
+				</xsl:template>
+			</xsl:stylesheet>
+		</xsl-transform>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

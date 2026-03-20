@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<proxy url="http://proxy.example.com:8080" username="admin" password="secret123" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

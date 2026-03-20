@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<validate-headers specified-header-action="ignore" unspecified-header-action="prevent" errors-variable-name="header-errors" />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
