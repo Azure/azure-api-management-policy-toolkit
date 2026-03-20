@@ -231,6 +231,25 @@ public class RoundTripTests
     [DataRow("managed-identity-fragment.xml")]
     [DataRow("cache-conditional-store.xml")]
     [DataRow("managed-identity-find-replace.xml")]
+    [DataRow("llm-content-safety.xml")]
+    [DataRow("validate-content.xml")]
+    [DataRow("validate-client-certificate.xml")]
+    [DataRow("validate-azure-ad-token.xml")]
+    [DataRow("validate-headers.xml")]
+    [DataRow("validate-parameters.xml")]
+    [DataRow("validate-status-code.xml")]
+    [DataRow("validate-odata-request.xml")]
+    [DataRow("send-service-bus-message.xml")]
+    [DataRow("invoke-darp-binding.xml")]
+    [DataRow("publish-to-darp.xml")]
+    [DataRow("azure-openai-emit-token-metric.xml")]
+    [DataRow("llm-emit-token-metric.xml")]
+    [DataRow("azure-openai-semantic-cache-lookup.xml")]
+    [DataRow("llm-semantic-cache-lookup.xml")]
+    [DataRow("azure-openai-semantic-cache-store.xml")]
+    [DataRow("llm-semantic-cache-store.xml")]
+    [DataRow("azure-openai-token-limit.xml")]
+    [DataRow("llm-token-limit.xml")]
     public void RealPolicyFile_RoundTrips(string fileName)
     {
         var filePath = Path.Combine("TestData", fileName);
@@ -251,6 +270,7 @@ public class RoundTripTests
     /// </summary>
     [TestMethod]
     [DataRow("rate-limit-by-key-retry.xml")]
+    [DataRow("xsl-transform.xml")]
     public void ComplexPolicyFile_DecompilesAndCompiles(string fileName)
     {
         var filePath = Path.Combine("TestData", fileName);

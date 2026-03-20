@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<azure-openai-semantic-cache-store duration="300" />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
