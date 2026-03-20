@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<jsonp callback-parameter-name="cb" />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

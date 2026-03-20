@@ -1,0 +1,24 @@
+<policies>
+	<inbound>
+		<base />
+		<wait for="all">
+			<send-request response-variable-name="response1" mode="new" timeout="30">
+				<set-url>https://api.example.com/resource1</set-url>
+				<set-method>GET</set-method>
+			</send-request>
+			<send-request response-variable-name="response2" mode="new" timeout="30">
+				<set-url>https://api.example.com/resource2</set-url>
+				<set-method>GET</set-method>
+			</send-request>
+		</wait>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

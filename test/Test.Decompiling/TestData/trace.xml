@@ -1,0 +1,19 @@
+<policies>
+	<inbound>
+		<base />
+		<trace source="my-api" severity="information">
+			<message>Request received</message>
+			<metadata name="userId" value="12345" />
+			<metadata name="environment" value="production" />
+		</trace>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

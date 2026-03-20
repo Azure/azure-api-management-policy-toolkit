@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+	</inbound>
+	<backend>
+		<base />
+		<forward-request timeout="30" follow-redirects="true" buffer-request-body="true" buffer-response="false" fail-on-error-status-code="true" />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

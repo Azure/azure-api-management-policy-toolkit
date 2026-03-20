@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<cache-store-value key="my-cache-key" value="stored-data" duration="3600" caching-type="prefer-external" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
