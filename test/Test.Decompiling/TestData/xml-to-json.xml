@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<xml-to-json kind="direct" apply="always" consider-accept-header="true" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

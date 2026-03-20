@@ -1,0 +1,17 @@
+<policies>
+	<inbound>
+		<base />
+		<azure-openai-semantic-cache-lookup score-threshold="0.05" embeddings-backend-id="embeddings-backend" embeddings-backend-auth="system-assigned" ignore-system-messages="true" max-message-count="10">
+			<vary-by>user-id</vary-by>
+		</azure-openai-semantic-cache-lookup>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

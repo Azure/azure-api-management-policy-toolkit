@@ -1,0 +1,18 @@
+<policies>
+	<inbound>
+		<base />
+		<emit-metric name="api-requests" namespace="custom-metrics" value="1">
+			<dimension name="API" value="my-api" />
+			<dimension name="Method" />
+		</emit-metric>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

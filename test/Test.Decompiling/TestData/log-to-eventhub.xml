@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<log-to-eventhub logger-id="my-logger">my log message</log-to-eventhub>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

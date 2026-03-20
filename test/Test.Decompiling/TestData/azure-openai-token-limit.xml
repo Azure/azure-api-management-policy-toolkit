@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<azure-openai-token-limit counter-key="my-key" estimate-prompt-token="true" tokens-per-minute="5000" remaining-tokens-header-name="x-remaining-tokens" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

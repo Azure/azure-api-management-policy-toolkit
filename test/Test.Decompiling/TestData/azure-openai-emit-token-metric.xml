@@ -1,0 +1,18 @@
+<policies>
+	<inbound>
+		<base />
+		<azure-openai-emit-token-metric namespace="my-namespace">
+			<dimension name="Subscription ID" value="sub-123" />
+			<dimension name="API ID" />
+		</azure-openai-emit-token-metric>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

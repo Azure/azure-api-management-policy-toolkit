@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<cache-lookup-value key="my-cache-key" variable-name="cachedValue" default-value="none" caching-type="external" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<get-authorization-context provider-id="my-provider" authorization-id="my-auth" context-variable-name="auth-context" identity-type="managed" ignore-error="true" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

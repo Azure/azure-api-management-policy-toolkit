@@ -1,0 +1,21 @@
+<policies>
+	<inbound>
+		<base />
+		<send-service-bus-message queue-name="my-queue" namespace="my-ns.servicebus.windows.net" client-id="my-client-id">
+			<message-properties>
+				<message-property name="correlationId">@(context.RequestId)</message-property>
+				<message-property name="source">api-gateway</message-property>
+			</message-properties>
+			<payload>@(context.Request.Body.As&lt;string&gt;())</payload>
+		</send-service-bus-message>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

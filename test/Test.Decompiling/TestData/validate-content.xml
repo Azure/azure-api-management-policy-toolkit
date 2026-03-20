@@ -1,0 +1,21 @@
+<policies>
+    <inbound>
+        <base />
+        <validate-content unspecified-content-type-action="prevent" max-size="102400" size-exceeded-action="detect" errors-variable-name="contentValidationErrors">
+            <content-type-map any-content-type-value="application/json" missing-content-type-value="application/octet-stream">
+                <type from="application/hal+json" to="application/json" />
+            </content-type-map>
+            <content validate-as="json" action="detect" type="application/json" schema-id="my-schema" allow-additional-properties="true" />
+            <content validate-as="xml" action="prevent" type="application/xml" />
+        </validate-content>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

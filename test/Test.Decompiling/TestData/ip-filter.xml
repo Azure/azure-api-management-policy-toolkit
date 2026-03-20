@@ -1,0 +1,18 @@
+<policies>
+	<inbound>
+		<base />
+		<ip-filter action="allow">
+			<address>192.168.1.1</address>
+			<address-range from="10.0.0.0" to="10.255.255.255" />
+		</ip-filter>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

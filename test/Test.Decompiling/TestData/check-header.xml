@@ -1,0 +1,17 @@
+<policies>
+	<inbound>
+		<base />
+		<check-header name="Authorization" failed-check-httpcode="401" failed-check-error-message="Not authorized" ignore-case="true">
+			<value>Bearer token123</value>
+		</check-header>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -1,0 +1,18 @@
+<policies>
+	<inbound>
+		<base />
+		<llm-emit-token-metric>
+			<dimension name="API ID" value="api-1" />
+			<dimension name="Operation" />
+		</llm-emit-token-metric>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
