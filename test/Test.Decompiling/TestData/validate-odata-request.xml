@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<validate-odata-request error-variable-name="odata-errors" default-odata-version="4.0" min-odata-version="4.0" max-odata-version="4.01" max-size="100" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

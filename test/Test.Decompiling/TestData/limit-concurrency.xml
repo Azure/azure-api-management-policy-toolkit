@@ -1,0 +1,17 @@
+<policies>
+	<inbound>
+		<base />
+		<limit-concurrency key="@(context.Request.IpAddress)" max-count="5">
+			<set-variable name="concurrency-limited" value="true" />
+		</limit-concurrency>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

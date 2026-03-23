@@ -1,0 +1,35 @@
+<policies>
+    <inbound>
+        <base />
+        <validate-azure-ad-token tenant-id="contoso.onmicrosoft.com" header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" output-token-variable-name="jwt-token">
+            <backend-application-ids>
+                <application-id>backend-app-id-1</application-id>
+            </backend-application-ids>
+            <client-application-ids>
+                <application-id>app-id-1</application-id>
+                <application-id>app-id-2</application-id>
+            </client-application-ids>
+            <audiences>
+                <audience>https://api.example.com</audience>
+            </audiences>
+            <required-claims>
+                <claim name="roles" match="any">
+                    <value>admin</value>
+                    <value>reader</value>
+                </claim>
+                <claim name="aud" match="all">
+                    <value>https://api.example.com</value>
+                </claim>
+            </required-claims>
+        </validate-azure-ad-token>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

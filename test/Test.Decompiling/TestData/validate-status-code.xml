@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<validate-status-code unspecified-status-code-action="prevent" error-variable-name="status-code-errors" />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

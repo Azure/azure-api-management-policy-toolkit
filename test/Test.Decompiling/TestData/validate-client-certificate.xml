@@ -1,0 +1,20 @@
+<policies>
+    <inbound>
+        <base />
+        <validate-client-certificate validate-revocation="true" validate-trust="true" validate-not-before="true" validate-not-after="true">
+            <identities>
+                <identity thumbprint="A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2" subject="CN=example.com" dns-name="example.com" issuer-subject="CN=Issuing CA" />
+                <identity serial-number="1234567890ABCDEF" common-name="api.example.com" />
+            </identities>
+        </validate-client-certificate>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

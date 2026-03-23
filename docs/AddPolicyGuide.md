@@ -15,6 +15,17 @@ When adding a new policy, you will typically need to create or modify the follow
 - **[Support compilation](#support-compilation)**: `src/Core/Compiling/Policy/YourPolicyCompiler.cs` (Exampe: `RateLimitCompiler.cs`)
 - **[Provide automated tests](#provide-automated-tests)**: `test/Test.Core/Compiling/YourPolicyTests.cs` (Exampe: `RateLimitTests.cs`)
 - **[Document your policy](#document-your-policy)**: `docs/AvailablePolicies.md`
+- **[Implement a decompiler](#implement-a-decompiler)**: `src/Core/Decompiling/Policy/YourPolicyDecompiler.cs` (Example: `SetMethodDecompiler.cs`)
+- **[Create round-trip tests](#create-round-trip-tests)**: `test/Test.Decompiling/TestData/your-policy.xml` + DataRow in `RoundTripTests.cs`
+
+| Artifact | Location | Naming |
+|---|---|---|
+| Config record | `src/Authoring/Configs/{PolicyName}Config.cs` | `{PolicyName}Config` |
+| Section interface method | `src/Authoring/I{Section}Context.cs` | `{PolicyName}(config)` |
+| Compiler | `src/Core/Compiling/Policy/{PolicyName}Compiler.cs` | `{PolicyName}Compiler` |
+| Compiler tests | `test/Test.Core/Compiling/{PolicyName}Tests.cs` | `{PolicyName}Tests` |
+| Decompiler | `src/Core/Decompiling/Policy/{PolicyName}Decompiler.cs` | `{PolicyName}Decompiler` |
+| Round-trip test XML | `test/Test.Decompiling/TestData/{policy-name}.xml` | DataRow in `RoundTripTests.cs` |
 
 We recommend using existing policies as detailed examples, such as `RateLimit` or `Quota` policies. These contain all possible aspects of a policy compilation implementation.
 
@@ -154,6 +165,25 @@ public class YourPolicyTests : PolicyCompilerTestBase
     }
 }
 ```
+
+### Implement a decompiler
+
+- Create a decompiler class `src/Core/Decompiling/Policy/YourPolicyDecompiler.cs` implementing `IPolicyDecompiler`.
+  This class converts XML policy elements back into C# method calls, enabling round-trip workflows.
+  - Make sure that the class is in the `Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling.Policy` namespace.
+    Decompilers are discovered via reflection — no manual DI registration is needed.
+  - The `PolicyName` property must return the XML element name (e.g. `"your-policy"`).
+  - Implement the `Decompile` method to generate the corresponding C# code using the `CodeWriter`.
+  - Reference examples by complexity:
+    - **Simple (direct parameters)**: `SetMethodDecompiler.cs`
+    - **Config-based (attributes + child elements)**: `EmitMetricDecompiler.cs`
+    - **Complex (nested configs, multiple children)**: `ValidateJwtDecompiler.cs`
+
+### Create round-trip tests
+
+- Create a test XML file `test/Test.Decompiling/TestData/your-policy.xml` containing a representative policy document that exercises required and optional parameters.
+- Add a `[DataRow("your-policy.xml")]` entry to the `RealPolicyFile_RoundTrips` method in `test/Test.Decompiling/RoundTripTests.cs`.
+- The round-trip test validates that XML → C# → XML produces semantically equivalent output with no loss.
 
 ### Document your policy
 

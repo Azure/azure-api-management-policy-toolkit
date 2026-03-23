@@ -1,0 +1,21 @@
+<policies>
+	<inbound>
+		<base />
+		<invoke-darp-binding name="my-binding" operation="create" ignore-error="true" response-variable-name="bindingResponse" timeout="30" template="my-template" content-type="application/json">
+			<metadata>
+				<item key="source">api-gateway</item>
+				<item key="trackingId">@(context.RequestId)</item>
+			</metadata>
+			<data>@(context.Request.Body.As&lt;string&gt;())</data>
+		</invoke-darp-binding>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

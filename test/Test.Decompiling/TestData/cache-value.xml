@@ -1,0 +1,19 @@
+<policies>
+	<inbound>
+		<base />
+		<cache-value key="my-cache-key" variable-name="cachedResult" expires-after="600" caching-type="prefer-external">
+			<value>
+				<set-variable name="temp" value="computed" />
+			</value>
+		</cache-value>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

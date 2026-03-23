@@ -6,6 +6,8 @@ Before the Policy toolkit, policy documents were written in Razor format, which 
 
 The policy toolkit changes that. It allows you to write policy documents in C# language, which is more natural and doesn't require you to jump between C# and XML for expression creation. Creating policy documents in C# also brings the advantage of using simple C# code for unit testing of policy documents.
 
+The toolkit also includes a **decompiler** that converts existing APIM policy XML documents into C# code, enabling round-trip workflows: decompile existing policies to C#, edit them, then compile back to XML. See the [available policies](docs/AvailablePolicies.md) for supported policies and the `src/Decompiling/` CLI tool for batch decompilation.
+
 ## Documentation
 
 :exclamation: Packages are only avaliable for download from github release. We are working to bring them to public nuget.

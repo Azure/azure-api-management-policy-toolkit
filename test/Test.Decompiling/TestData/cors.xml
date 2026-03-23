@@ -1,0 +1,31 @@
+<policies>
+	<inbound>
+		<base />
+		<cors allow-credentials="true">
+			<allowed-origins>
+				<origin>https://example.com</origin>
+				<origin>https://api.example.com</origin>
+			</allowed-origins>
+			<allowed-methods preflight-result-max-age="300">
+				<method>GET</method>
+				<method>POST</method>
+			</allowed-methods>
+			<allowed-headers>
+				<header>Content-Type</header>
+				<header>Authorization</header>
+			</allowed-headers>
+			<expose-headers>
+				<header>X-Custom-Header</header>
+			</expose-headers>
+		</cors>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -1,0 +1,19 @@
+<policies>
+	<inbound>
+		<base />
+		<quota calls="1000" bandwidth="10000" renewal-period="3600">
+			<api name="orders-api" calls="500" bandwidth="5000">
+				<operation name="create-order" calls="100" bandwidth="1000" />
+			</api>
+		</quota>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

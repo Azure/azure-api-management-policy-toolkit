@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<quota-by-key counter-key="@(context.Subscription.Id)" calls="500" bandwidth="10000" renewal-period="3600" increment-condition="@(context.Response.StatusCode == 200)" increment-count="2" first-period-start="2024-01-01T00:00:00Z" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

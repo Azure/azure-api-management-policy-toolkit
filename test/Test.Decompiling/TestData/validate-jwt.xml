@@ -1,0 +1,27 @@
+<policies>
+	<inbound>
+		<base />
+		<validate-jwt header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" require-expiration-time="true" require-signed-tokens="true">
+			<audiences>
+				<audience>https://api.example.com</audience>
+			</audiences>
+			<issuers>
+				<issuer>https://sts.windows.net/tenant-id/</issuer>
+			</issuers>
+			<required-claims>
+				<claim name="aud" match="all">
+					<value>https://api.example.com</value>
+				</claim>
+			</required-claims>
+		</validate-jwt>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -1,0 +1,17 @@
+<policies>
+	<inbound>
+		<base />
+		<set-query-parameter name="api-version" exists-action="override">
+			<value>2024-01</value>
+		</set-query-parameter>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<redirect-content-urls />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

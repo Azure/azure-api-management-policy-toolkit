@@ -1,0 +1,15 @@
+<policies>
+	<inbound>
+		<base />
+		<cache-remove-value key="my-cache-key" caching-type="prefer-external" />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
