@@ -1,0 +1,20 @@
+<policies>
+	<inbound>
+		<base />
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<publish-event>
+			<targets>
+				<graphql-subscriptions id="onUserCreated" />
+				<graphql-subscriptions id="onUserUpdated" />
+			</targets>
+		</publish-event>
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

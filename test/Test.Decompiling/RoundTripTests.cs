@@ -276,6 +276,7 @@ public class RoundTripTests
     [DataRow("cache-value.xml")]
     [DataRow("check-header.xml")]
     [DataRow("emit-metric.xml")]
+    [DataRow("publish-event.xml")]
     [DataRow("validate-jwt.xml")]
     public void RealPolicyFile_RoundTrips(string fileName)
     {
