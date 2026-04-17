@@ -24,6 +24,7 @@ public class RateLimitByKeyDecompiler : IPolicyDecompiler
         context.AddOptionalStringProp(props, element, "remaining-calls-variable-name", "RemainingCallsVariableName");
         context.AddOptionalStringProp(props, element, "total-calls-header-name", "TotalCallsHeaderName");
         context.AddOptionalBoolProp(props, element, "increment-after-response", "IncrementAfterResponse");
+        context.AddOptionalBoolProp(props, element, "flexible-retry-window", "FlexibleRetryWindow");
         PolicyDecompilerContext.EmitConfigCall(writer, prefix, "RateLimitByKey", "RateLimitByKeyConfig", props);
     }
 }

@@ -67,4 +67,9 @@ public record RateLimitByKeyConfig
     /// Whether to increment the counter after the response is received. Default is false.
     /// </summary>
     public bool? IncrementAfterResponse { get; init; }
+
+    /// <summary>
+    /// Whether to use a flexible retry window. When true, the retry-after period adjusts dynamically.
+    /// </summary>
+    public bool? FlexibleRetryWindow { get; init; }
 }

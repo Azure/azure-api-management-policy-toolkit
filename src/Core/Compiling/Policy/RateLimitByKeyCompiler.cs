@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System.Xml.Linq;
@@ -66,6 +66,7 @@ public class RateLimitByKeyCompiler : IMethodPolicyHandler
             "remaining-calls-variable-name");
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.TotalCallsHeaderName), "total-calls-header-name");
         element.AddAttribute(values, nameof(RateLimitByKeyConfig.IncrementAfterResponse), "increment-after-response");
+        element.AddAttribute(values, nameof(RateLimitByKeyConfig.FlexibleRetryWindow), "flexible-retry-window");
 
         context.AddPolicy(element);
     }
