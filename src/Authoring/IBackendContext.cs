@@ -337,6 +337,15 @@ public interface IBackendContext : IHaveExpressionContext
     void Trace(TraceConfig config);
 
     /// <summary>
+    /// Resolves a request to a backend SQL database.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/sql-data-source-policy">sql-data-source</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying SQL connection information, request details, and optional timeout settings.
+    /// </param>
+    void SqlDataSource(SqlDataSourceConfig config);
+
+    /// <summary>
     /// Executes its immediate child policies in parallel, and waits for either all or one of its immediate
     /// child policies to complete before it completes.<br/>
     /// The wait policy can have as its immediate child policies one or more of the following: send-request,
