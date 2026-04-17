@@ -29,6 +29,7 @@ public class SetBodyDecompiler : IPolicyDecompiler
         context.AddOptionalStringProp(configProps, element, "template", "Template");
         context.AddOptionalStringProp(configProps, element, "xsi-nil", "XsiNil");
         context.AddOptionalBoolProp(configProps, element, "parse-date", "ParseDate");
+        context.AddOptionalBoolProp(configProps, element, "html-decode-expression", "HtmlDecodeExpression");
         if (valueChild != null)
             configProps.Add("UseValueElement = true");
 

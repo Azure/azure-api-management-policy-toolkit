@@ -28,4 +28,10 @@ public record SetBodyConfig
     /// Optional. When true, wraps the body content in a &lt;value&gt; child element.
     /// </summary>
     public bool? UseValueElement { get; init; }
+
+    /// <summary>
+    /// Optional. Controls whether HTML entity decoding is applied to the expression result in Liquid templates.
+    /// Default is true.
+    /// </summary>
+    public bool? HtmlDecodeExpression { get; init; }
 }

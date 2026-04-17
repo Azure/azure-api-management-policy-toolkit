@@ -74,6 +74,11 @@ public class SetBodyCompiler : IMethodPolicyHandler
                     element.Add(new XAttribute("parse-date", parseDate.Value!));
                 }
 
+                if (contentType.NamedValues.TryGetValue(nameof(SetBodyConfig.HtmlDecodeExpression), out var htmlDecode))
+                {
+                    element.Add(new XAttribute("html-decode-expression", htmlDecode.Value!));
+                }
+
                 if (contentType.NamedValues.TryGetValue(nameof(SetBodyConfig.UseValueElement), out var useVal) &&
                     useVal.Value == "true")
                 {
@@ -121,6 +126,7 @@ public class SetBodyCompiler : IMethodPolicyHandler
         bodyElement.AddAttribute(config, nameof(BodyConfig.Template), "template");
         bodyElement.AddAttribute(config, nameof(BodyConfig.XsiNil), "xsi-nil");
         bodyElement.AddAttribute(config, nameof(BodyConfig.ParseDate), "parse-date");
+        bodyElement.AddAttribute(config, nameof(BodyConfig.HtmlDecodeExpression), "html-decode-expression");
 
         if (useValueElement)
             bodyElement.Add(new XElement("value", content.Value!));
