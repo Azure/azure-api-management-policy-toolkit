@@ -47,6 +47,12 @@ public record SetBackendServiceConfig
     public string? SfListenerName { get; init; }
 
     /// <summary>
+    /// Specifies the Service Fabric replica type (e.g., "primary" or "secondary"). Policy expressions are allowed.
+    /// </summary>
+    [ExpressionAllowed]
+    public string? SfReplicaType { get; init; }
+
+    /// <summary>
     /// Specifies the Dapr application ID. Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
