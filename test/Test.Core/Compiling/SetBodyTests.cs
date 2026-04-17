@@ -175,6 +175,57 @@ public class SetBodyTests
         """,
         DisplayName = "Should compile set body policy with UseValueElement wrapping content"
     )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBody("inbound", new SetBodyConfig {
+                    HtmlDecodeExpression = true,
+                });
+            }
+            public void Outbound(IOutboundContext context) {
+                context.SetBody("outbound", new SetBodyConfig {
+                    HtmlDecodeExpression = false,
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-body html-decode-expression="true">inbound</set-body>
+            </inbound>
+            <outbound>
+                <set-body html-decode-expression="false">outbound</set-body>
+            </outbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set body policy with HtmlDecodeExpression in config"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBody("inbound", new SetBodyConfig {
+                    Template = "liquid",
+                    HtmlDecodeExpression = false,
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-body template="liquid" html-decode-expression="false">inbound</set-body>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set body policy with template and HtmlDecodeExpression"
+    )]
     public void ShouldCompileForwardRequestPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
