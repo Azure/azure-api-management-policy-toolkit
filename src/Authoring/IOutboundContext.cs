@@ -254,6 +254,15 @@ public interface IOutboundContext : IHaveExpressionContext
     void PublishToDarp(PublishToDarpConfig config);
 
     /// <summary>
+    /// Publishes an event to one or more GraphQL subscriptions.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/publish-event-policy">publish-event</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the GraphQL subscription targets for the publish-event policy.
+    /// </param>
+    void PublishEvent(PublishEventConfig config);
+
+    /// <summary>
     /// Redirects URLs in the response content to a specified hostname and scheme.<br/>
     /// This policy rewrites URLs in the response body to point to the gateway URL instead of the backend service URL.<br/>
     /// Useful when backend services return absolute URLs that need to be redirected through the API Management gateway.<br/>
