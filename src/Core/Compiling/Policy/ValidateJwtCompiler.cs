@@ -57,7 +57,7 @@ public class ValidateJwtCompiler : IMethodPolicyHandler
         }
 
         HandleKeys(context, element, values, nameof(ValidateJwtConfig.IssuerSigningKeys), "issuer-signing-keys");
-        HandleKeys(context, element, values, nameof(ValidateJwtConfig.DescriptionKeys), "decryption-keys");
+        HandleKeys(context, element, values, nameof(ValidateJwtConfig.DecryptionKeys), "decryption-keys");
         GenericCompiler.HandleList(element, values, nameof(ValidateJwtConfig.Audiences), "audiences", "audience");
         GenericCompiler.HandleList(element, values, nameof(ValidateJwtConfig.Issuers), "issuers", "issuer");
 
