@@ -324,6 +324,54 @@ public class SetBackendServiceTests
             public void Inbound(IInboundContext context) {
                 context.SetBackendService(new SetBackendServiceConfig 
                 { 
+                    BackendId = "id",
+                    SfReplicaType = "primary"
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="id" sf-replica-type="primary" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with sf replica type"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
+                    BackendId = "id",
+                    SfReplicaType = Exp(context.ExpressionContext)
+                });
+            }
+            public bool Exp(ExpressionContext context)
+                => context.User.Email.EndsWith("@contoso.example") ? "primary" : "secondary";
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-backend-service backend-id="id" sf-replica-type="@(context.User.Email.EndsWith("@contoso.example") ? "primary" : "secondary")" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile set backend service policy with expression in sf replica type"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetBackendService(new SetBackendServiceConfig 
+                { 
                     BackendId = "dapr",
                     DaprAppId = "app1"
                 });
