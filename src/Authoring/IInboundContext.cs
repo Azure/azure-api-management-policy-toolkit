@@ -631,6 +631,15 @@ public interface IInboundContext : IHaveExpressionContext
     void ValidateContent(ValidateContentConfig config);
 
     /// <summary>
+    /// Validates a GraphQL request against configured rules.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-graphql-request-policy">validate-graphql-request</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the validation parameters, including depth limits, size limits, complexity, and authorization rules.
+    /// </param>
+    void ValidateGraphqlRequest(ValidateGraphqlRequestConfig config);
+
+    /// <summary>
     /// Validates a JWT (JSON Web Token) in the request.<br/>
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/validate-jwt-policy">validate-jwt</a> policy.
     /// </summary>
