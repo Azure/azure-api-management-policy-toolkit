@@ -17,6 +17,8 @@ public class SendRequestDecompiler : IPolicyDecompiler
         context.AddOptionalStringProp(props, element, "mode", "Mode");
         context.AddOptionalIntProp(props, element, "timeout", "Timeout");
         context.AddOptionalBoolProp(props, element, "ignore-error", "IgnoreError");
+        context.AddOptionalBoolProp(props, element, "buffer-response", "BufferResponse");
+        context.AddOptionalBoolProp(props, element, "fail-on-error-status-code", "FailOnErrorStatusCode");
 
         var url = element.Element("set-url");
         if (url != null)

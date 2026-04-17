@@ -29,6 +29,8 @@ public record SendRequestConfig
     /// Specifies whether to ignore errors. If set to true, errors are ignored.
     /// </summary>
     public bool? IgnoreError { get; init; }
+    public bool? BufferResponse { get; init; }
+    public bool? FailOnErrorStatusCode { get; init; }
 
     /// <summary>
     /// Specifies the URL to send the request to.

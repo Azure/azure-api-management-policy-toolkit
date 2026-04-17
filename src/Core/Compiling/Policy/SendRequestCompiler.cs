@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System.Xml.Linq;
@@ -37,6 +37,8 @@ public class SendRequestCompiler : IMethodPolicyHandler
         element.AddAttribute(values, nameof(SendRequestConfig.Mode), "mode");
         element.AddAttribute(values, nameof(SendRequestConfig.Timeout), "timeout");
         element.AddAttribute(values, nameof(SendRequestConfig.IgnoreError), "ignore-error");
+        element.AddAttribute(values, nameof(SendRequestConfig.BufferResponse), "buffer-response");
+        element.AddAttribute(values, nameof(SendRequestConfig.FailOnErrorStatusCode), "fail-on-error-status-code");
 
         if (values.TryGetValue(nameof(SendRequestConfig.Url), out var url))
         {
