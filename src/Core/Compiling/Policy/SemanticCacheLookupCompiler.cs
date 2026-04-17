@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System.Xml.Linq;
@@ -74,6 +74,7 @@ public abstract class BaseSemanticCacheLookupCompiler : IMethodPolicyHandler
 
         element.AddAttribute(values, nameof(SemanticCacheLookupConfig.IgnoreSystemMessages), "ignore-system-messages");
         element.AddAttribute(values, nameof(SemanticCacheLookupConfig.MaxMessageCount), "max-message-count");
+        element.AddAttribute(values, nameof(SemanticCacheLookupConfig.CacheId), "cache-id");
 
         if (values.TryGetValue(nameof(SemanticCacheLookupConfig.VaryBy), out var varyByInitializer))
         {

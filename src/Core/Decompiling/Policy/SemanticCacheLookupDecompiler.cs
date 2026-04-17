@@ -37,6 +37,7 @@ public abstract class BaseSemanticCacheLookupDecompiler : IPolicyDecompiler
         context.AddRequiredExprStringProp(props, element, "embeddings-backend-auth", "EmbeddingsBackendAuth");
         context.AddOptionalBoolExprProp(props, element, "ignore-system-messages", "IgnoreSystemMessages");
         context.AddOptionalUIntProp(props, element, "max-message-count", "MaxMessageCount");
+        context.AddOptionalStringProp(props, element, "cache-id", "CacheId");
 
         var varyByElements = element.Elements("vary-by").ToList();
         if (varyByElements.Count > 0)

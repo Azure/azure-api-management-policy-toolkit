@@ -1,15 +1,4 @@
 <policies>
-	<inbound>
-		<base />
-		<llm-semantic-cache-lookup score-threshold="0.05" embeddings-backend-id="my-embeddings" embeddings-backend-auth="managed-identity" />
-	</inbound>
-	<backend>
-		<base />
-	</backend>
-	<outbound>
-		<base />
-	</outbound>
-	<on-error>
-		<base />
-	</on-error>
+<inbound><base />
+<llm-semantic-cache-lookup score-threshold="0.05" embeddings-backend-id="my-embeddings" embeddings-backend-auth="managed-identity" cache-id="llm-cache" /></inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error>
 </policies>

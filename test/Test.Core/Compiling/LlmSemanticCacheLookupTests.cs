@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
@@ -83,6 +83,32 @@ public class LlmSemanticCacheLookupTests
         </policies>
         """,
         DisplayName = "Should compile llm-semantic-cache-lookup policy with max-message-count"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context)
+            {
+                context.LlmSemanticCacheLookup(new SemanticCacheLookupConfig
+                {
+                    ScoreThreshold = 0.05,
+                    EmbeddingsBackendId = "llm-backend",
+                    EmbeddingsBackendAuth = "system-assigned",
+                    CacheId = "my-external-cache"
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <llm-semantic-cache-lookup score-threshold="0.05" embeddings-backend-id="llm-backend" embeddings-backend-auth="system-assigned" cache-id="my-external-cache" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile llm-semantic-cache-lookup policy with cache-id"
     )]
     [DataRow(
         """
