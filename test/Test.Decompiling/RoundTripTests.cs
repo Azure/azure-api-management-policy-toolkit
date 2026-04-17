@@ -201,6 +201,20 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void SetBody_HtmlDecodeExpression_RoundTrips()
+    {
+        var xml = """<policies><inbound><set-body html-decode-expression="true">test body</set-body></inbound></policies>""";
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    public void SetBody_AllAttributes_RoundTrips()
+    {
+        var xml = """<policies><inbound><set-body template="liquid" xsi-nil="blank" parse-date="false" html-decode-expression="true">test body</set-body></inbound></policies>""";
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
     public void FullPolicySections_RoundTrips()
     {
         var xml = """

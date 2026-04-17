@@ -352,6 +352,37 @@ public class SendRequestTests
                 context.SendRequest(new SendRequestConfig {
                     ResponseVariableName = "variable",
                     Body = new BodyConfig {
+                        Template = "liquid",
+                        XsiNil = "blank",
+                        ParseDate = false,
+                        HtmlDecodeExpression = true,
+                        Content = "body",
+                    },
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <send-request response-variable-name="variable">
+                    <set-body template="liquid" xsi-nil="blank" parse-date="false" html-decode-expression="true">body</set-body>
+                </send-request>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile send request policy with body and HtmlDecodeExpression"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context)
+            {
+                context.SendRequest(new SendRequestConfig {
+                    ResponseVariableName = "variable",
+                    Body = new BodyConfig {
                         Content = Exp(context.ExpressionContext),
                     },
                 });

@@ -179,6 +179,35 @@ public class ReturnResponseTests
         [Document]
         public class PolicyDocument : IDocument
         {
+            public void Inbound(IInboundContext context) { 
+                context.ReturnResponse(new ReturnResponseConfig {
+                    Body = new BodyConfig {
+                        Template = "liquid",
+                        XsiNil = "blank",
+                        ParseDate = false,
+                        HtmlDecodeExpression = true,
+                        Content = "body",
+                    },
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <return-response>
+                    <set-body template="liquid" xsi-nil="blank" parse-date="false" html-decode-expression="true">body</set-body>
+                </return-response>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile return response policy with body and HtmlDecodeExpression"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
             public void Inbound(IInboundContext context)
             {
                 context.ReturnResponse(new ReturnResponseConfig {
