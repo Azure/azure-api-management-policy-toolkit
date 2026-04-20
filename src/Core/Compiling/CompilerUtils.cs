@@ -121,6 +121,12 @@ public static class CompilerUtils
             return value.Contains("{{") ? value : $"{{{{{value}}}}}";
         }
 
+        if (compilation.SyntaxTrees.Contains(expressionMethod.SyntaxTree))
+        {
+            var methodModel = compilation.GetSemanticModel(expressionMethod.SyntaxTree);
+            expressionMethod = (MethodDeclarationSyntax)new ConstFoldingRewriter(methodModel).Visit(expressionMethod);
+        }
+
         expressionMethod = Normalize(expressionMethod);
 
         if (expressionMethod.Body != null)
