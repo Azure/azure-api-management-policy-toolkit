@@ -15,7 +15,7 @@ public class ConstFoldingRewriterTests
             public void Inbound(IInboundContext context) {
                 context.SetVariable("issuer", GetIssuer(context.ExpressionContext));
             }
-            string GetIssuer(IExpressionContext ctx) => ctx.User.Id == MyConstants.Issuer ? "yes" : "no";
+            string GetIssuer(IExpressionContext context) => context.User.Id == MyConstants.Issuer ? "yes" : "no";
         }
         """,
         """
@@ -27,7 +27,7 @@ public class ConstFoldingRewriterTests
         """
         <policies>
             <inbound>
-                <set-variable name="issuer" value="@(context.User.Id == "https://my-issuer.example.com"; ? "yes" : "no")" />
+                <set-variable name="issuer" value="@(context.User.Id == "https://my-issuer.example.com" ? "yes" : "no")" />
             </inbound>
         </policies>
         """,
