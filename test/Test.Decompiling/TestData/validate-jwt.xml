@@ -2,6 +2,10 @@
 	<inbound>
 		<base />
 		<validate-jwt header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" require-expiration-time="true" require-signed-tokens="true">
+			<decryption-keys>
+				<key id="base64-key-id">dGVzdA==</key>
+				<key certificate-id="cert-1" />
+			</decryption-keys>
 			<audiences>
 				<audience>https://api.example.com</audience>
 			</audiences>

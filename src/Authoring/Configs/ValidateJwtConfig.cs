@@ -78,9 +78,9 @@ public record ValidateJwtConfig
     public KeyConfig[]? IssuerSigningKeys { get; init; }
 
     /// <summary>
-    /// Specifies the description keys.
+    /// Specifies the decryption keys.
     /// </summary>
-    public KeyConfig[]? DescriptionKeys { get; init; }
+    public KeyConfig[]? DecryptionKeys { get; init; }
 
     /// <summary>
     /// Specifies the allowed audiences.

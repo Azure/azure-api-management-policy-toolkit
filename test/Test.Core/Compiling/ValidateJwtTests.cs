@@ -541,7 +541,7 @@ public class ValidateJwtTests
                 context.ValidateJwt(new ValidateJwtConfig
                 {
                     HeaderName = "Authorization",
-                    DescriptionKeys = [
+                    DecryptionKeys = [
                         new Base64KeyConfig { Id = "kid1", Value = "Base64Key" },
                         new CertificateKeyConfig { Id = "kid2", CertificateId = "certificate-id" },
                         new AsymmetricKeyConfig { Id = "kid3", Modulus = "modulus", Exponent = "exponent" },
