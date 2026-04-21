@@ -236,6 +236,7 @@ public class RoundTripTests
     [DataRow("validate-client-certificate.xml")]
     [DataRow("validate-azure-ad-token.xml")]
     [DataRow("validate-headers.xml")]
+    [DataRow("validate-graphql-request.xml")]
     [DataRow("validate-parameters.xml")]
     [DataRow("validate-status-code.xml")]
     [DataRow("validate-odata-request.xml")]
