@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -45,6 +45,12 @@ public record SemanticCacheLookupConfig
     /// </summary>
     [ExpressionAllowed]
     public uint MaxMessageCount { get; init; }
+
+    /// <summary>
+    /// Optional. Identifier of a named cache instance to use for semantic cache lookup.<br/>
+    /// When specified, targets a specific external cache rather than the built-in cache.
+    /// </summary>
+    public string? CacheId { get; init; }
 
     /// <summary>
     /// Optional. Array of request properties to vary the cache by.<br/>

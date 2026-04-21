@@ -1,7 +1,7 @@
 <policies>
 	<inbound>
 		<base />
-		<llm-semantic-cache-lookup score-threshold="0.05" embeddings-backend-id="my-embeddings" embeddings-backend-auth="managed-identity" />
+		<llm-semantic-cache-lookup score-threshold="0.05" embeddings-backend-id="my-embeddings" embeddings-backend-auth="managed-identity" cache-id="llm-cache" />
 	</inbound>
 	<backend>
 		<base />
