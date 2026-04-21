@@ -266,6 +266,7 @@ public class RoundTripTests
     [DataRow("log-to-eventhub.xml")]
     [DataRow("mock-response.xml")]
     [DataRow("redirect-content-urls.xml")]
+    [DataRow("set-backend-service.xml")]
     [DataRow("set-method.xml")]
     [DataRow("set-query-parameter.xml")]
     [DataRow("xml-to-json.xml")]

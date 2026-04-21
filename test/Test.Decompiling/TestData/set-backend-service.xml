@@ -1,0 +1,15 @@
+<policies>
+    <inbound>
+        <base />
+    </inbound>
+    <backend>
+        <base />
+        <set-backend-service backend-id="my-sf-backend" sf-resolve-condition="true" sf-service-instance-name="fabric:/myapp/myservice" sf-partition-key="partition1" sf-listener-name="listener1" sf-replica-type="primary" />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>
