@@ -19,6 +19,7 @@ public class SetBackendServiceDecompiler : IPolicyDecompiler
         context.AddOptionalStringProp(props, element, "sf-service-instance-name", "SfServiceInstanceName");
         context.AddOptionalStringProp(props, element, "sf-partition-key", "SfPartitionKey");
         context.AddOptionalStringProp(props, element, "sf-listener-name", "SfListenerName");
+        context.AddOptionalStringProp(props, element, "sf-replica-type", "SfReplicaType");
         context.AddOptionalStringProp(props, element, "dapr-app-id", "DaprAppId");
         context.AddOptionalStringProp(props, element, "dapr-method", "DaprMethod");
         context.AddOptionalStringProp(props, element, "dapr-namespace", "DaprNamespace");
