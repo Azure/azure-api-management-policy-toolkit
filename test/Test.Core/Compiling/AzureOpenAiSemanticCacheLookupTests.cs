@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
@@ -83,6 +83,32 @@ public class AzureOpenAiSemanticCacheLookupTests
         </policies>
         """,
         DisplayName = "Should compile azure-openai-semantic-cache-lookup policy with max-message-count"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context)
+            {
+                context.AzureOpenAiSemanticCacheLookup(new SemanticCacheLookupConfig
+                {
+                    ScoreThreshold = 0.05,
+                    EmbeddingsBackendId = "openai-backend",
+                    EmbeddingsBackendAuth = "system-assigned",
+                    CacheId = "my-external-cache"
+                });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <azure-openai-semantic-cache-lookup score-threshold="0.05" embeddings-backend-id="openai-backend" embeddings-backend-auth="system-assigned" cache-id="my-external-cache" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile azure-openai-semantic-cache-lookup policy with cache-id"
     )]
     [DataRow(
         """

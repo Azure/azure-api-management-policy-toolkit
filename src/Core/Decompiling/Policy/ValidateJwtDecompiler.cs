@@ -36,7 +36,7 @@ public class ValidateJwtDecompiler : IPolicyDecompiler
         }
 
         EmitJwtKeys(context, element, "issuer-signing-keys", "IssuerSigningKeys", props);
-        EmitJwtKeys(context, element, "decryption-keys", "DescriptionKeys", props);
+        EmitJwtKeys(context, element, "decryption-keys", "DecryptionKeys", props);
 
         var audiences = element.Element("audiences")?.Elements("audience")
             .Select(e => PolicyDecompilerContext.GetElementText(e)).ToList();
