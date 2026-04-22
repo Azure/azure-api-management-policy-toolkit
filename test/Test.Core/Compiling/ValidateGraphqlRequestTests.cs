@@ -279,6 +279,62 @@ public class ValidateGraphqlRequestTests
         """,
         DisplayName = "Should compile validate-graphql-request policy with single attribute and authorize"
     )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.ValidateGraphqlRequest(new ValidateGraphqlRequestConfig
+                {
+                    ErrorVariableName = GetErrorVariableName(context.ExpressionContext)
+                });
+            }
+
+            private string GetErrorVariableName(IExpressionContext context) => context.Variables["error-var"];
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <validate-graphql-request error-variable-name="@(context.Variables["error-var"])" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile validate-graphql-request policy with expression in error-variable-name"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.ValidateGraphqlRequest(new ValidateGraphqlRequestConfig
+                {
+                    ErrorVariableName = GetErrorVariableName(context.ExpressionContext),
+                    MaxDepth = GetMaxDepth(context.ExpressionContext),
+                    MaxSize = GetMaxSize(context.ExpressionContext),
+                    MaxTotalDepth = GetMaxTotalDepth(context.ExpressionContext),
+                    MaxComplexity = GetMaxComplexity(context.ExpressionContext)
+                });
+            }
+
+            private string GetErrorVariableName(IExpressionContext context) => context.Variables["error-var"];
+            private int GetMaxDepth(IExpressionContext context) => (int)context.Variables["max-depth"];
+            private long GetMaxSize(IExpressionContext context) => (long)context.Variables["max-size"];
+            private int GetMaxTotalDepth(IExpressionContext context) => (int)context.Variables["max-total-depth"];
+            private int GetMaxComplexity(IExpressionContext context) => (int)context.Variables["max-complexity"];
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <validate-graphql-request error-variable-name="@(context.Variables["error-var"])" max-depth="@((int)context.Variables["max-depth"])" max-size="@((long)context.Variables["max-size"])" max-total-depth="@((int)context.Variables["max-total-depth"])" max-complexity="@((int)context.Variables["max-complexity"])" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile validate-graphql-request policy with expressions in all attributes"
+    )]
     public void ShouldCompileValidateGraphqlRequestPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
