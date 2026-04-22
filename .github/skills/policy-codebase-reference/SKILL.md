@@ -172,6 +172,14 @@ When implementing a new emulator handler, choose the closest structural match:
 | Custom flow control / wrapper | `ReturnResponseHandler` | — |
 | AzureOpenAi variant (inherits Llm) | `AzureOpenAiEmitTokenMetricHandler` | — |
 
+## Common Pitfalls
+
+| Pitfall | Rule |
+|---------|------|
+| Modifying `.csproj` files | Do **not** change `Compiling.csproj` or `Testing.csproj` unless explicitly required. Reformatting, reordering, or encoding changes (BOM, line endings) cause noisy diffs and will be rejected in review. |
+| Missing `IFragmentContext` entry | Every method added to a section interface (`IInboundContext`, `IOutboundContext`, etc.) must also be added to `IFragmentContext.cs`. See the authoring skill for details. |
+| Missing expression tests | Every property marked `[ExpressionAllowed]` in a config must have a corresponding expression test `[DataRow]`. See the testing skill section 3 for the pattern. |
+
 ## Build and Test Commands
 
 ```bash
