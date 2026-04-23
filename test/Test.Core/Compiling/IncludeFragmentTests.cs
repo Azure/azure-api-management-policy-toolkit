@@ -123,8 +123,8 @@ public class IncludeFragmentTests
         """,
         DisplayName = "Should compile include-fragment policy using objects with variables in sections"
     )]
-    public void ShouldCompileIncludeFragmentPolicyViaObject(string code, string fragment, string expectedXml)
+    public void ShouldCompileIncludeFragmentPolicyWithVariables(string code, string fragment, string expectedXml)
     {
-        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+        code.CompileDocument(fragment).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
 }

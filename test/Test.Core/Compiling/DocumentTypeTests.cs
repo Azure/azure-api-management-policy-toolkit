@@ -135,7 +135,6 @@ public class DocumentTypeTests
             <set-header name="X-Named-Fragment">
                 <value>@(context.Variables.GetValueOrDefault<string>("my-fragment-my-variable", ""))</value>
             </set-header>
-            <base />
         </fragment>
         """,
         DisplayName = "Should compile named policy fragment with variables using Fragment method"

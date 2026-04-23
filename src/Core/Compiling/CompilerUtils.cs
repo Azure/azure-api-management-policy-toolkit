@@ -26,6 +26,39 @@ public static class CompilerUtils
                 return FindCode(syntax, context);
             case MemberAccessExpressionSyntax syntax:
                 return FindCode(syntax, context);
+            case IdentifierNameSyntax syntax:
+            {
+                var identifierName = syntax.Identifier.ValueText;
+                var property = context.SyntaxRoot
+                    .DescendantNodes()
+                    .OfType<PropertyDeclarationSyntax>()
+                    .FirstOrDefault(p => p.Identifier.ValueText == identifierName);
+                if (property is not null)
+                {
+                    var fragVarAttr = property.AttributeLists
+                        .SelectMany(al => al.Attributes)
+                        .FirstOrDefault(a => a.Name.ToString() is "FragmentVariable" or "FragmentVariableAttribute");
+                    if (fragVarAttr is not null)
+                    {
+                        var classDecl = property.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault();
+                        var fragmentId = ExtractFragmentId(classDecl);
+                        string? varName = null;
+                        var defaultValue = "";
+                        foreach (var arg in fragVarAttr.ArgumentList?.Arguments
+                                     ?? Enumerable.Empty<AttributeArgumentSyntax>())
+                        {
+                            if (arg.NameEquals is null)
+                                varName = (arg.Expression as LiteralExpressionSyntax)?.Token.ValueText;
+                            else if (arg.NameEquals.Name.Identifier.ValueText == "DefaultValue")
+                                defaultValue = (arg.Expression as LiteralExpressionSyntax)?.Token.ValueText ?? "";
+                        }
+                        varName ??= identifierName;
+                        return
+                            $"@(context.Variables.GetValueOrDefault<string>(\"{fragmentId}-{varName}\", \"{defaultValue}\"))";
+                    }
+                }
+                goto default;
+            }
             // case InterpolatedStringExpressionSyntax syntax:
             //     var interpolationParts = syntax.Contents.Select(c => c switch
             //     {
@@ -375,6 +408,42 @@ public static class CompilerUtils
 
         values = result;
         return true;
+    }
+
+    private static readonly Regex KebabCasePattern = new(@"(?<!^)([A-Z])", RegexOptions.Compiled);
+
+    internal static string ToKebabCase(string name) =>
+        KebabCasePattern.Replace(name, "-$1").ToLowerInvariant();
+
+    internal static string ExtractFragmentId(ClassDeclarationSyntax? classDecl)
+    {
+        if (classDecl is not null)
+        {
+            var docAttr = classDecl.AttributeLists
+                .SelectMany(al => al.Attributes)
+                .FirstOrDefault(a => a.Name.ToString() is "Document" or "DocumentAttribute");
+            var firstPositionalArg = docAttr?.ArgumentList?.Arguments
+                .FirstOrDefault(a => a.NameEquals is null);
+            var attrName = (firstPositionalArg?.Expression as LiteralExpressionSyntax)?.Token.ValueText;
+            if (attrName is not null) return attrName;
+            return ToKebabCase(classDecl.Identifier.ValueText);
+        }
+        return "unknown";
+    }
+
+    internal static string? GetFragmentVariableName(ClassDeclarationSyntax? classDecl, string propertyName)
+    {
+        if (classDecl is null) return propertyName;
+        var property = classDecl.DescendantNodes()
+            .OfType<PropertyDeclarationSyntax>()
+            .FirstOrDefault(p => p.Identifier.ValueText == propertyName);
+        if (property is null) return propertyName;
+        var fragVarAttr = property.AttributeLists
+            .SelectMany(al => al.Attributes)
+            .FirstOrDefault(a => a.Name.ToString() is "FragmentVariable" or "FragmentVariableAttribute");
+        if (fragVarAttr is null) return null;
+        var positionalArg = fragVarAttr.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals is null);
+        return (positionalArg?.Expression as LiteralExpressionSyntax)?.Token.ValueText ?? propertyName;
     }
 
     public static T Normalize<T>(T node) where T : SyntaxNode
