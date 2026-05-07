@@ -1,90 +1,218 @@
+name: $(BuildDefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
 trigger: none
 pr: none
 
+resources:
+  repositories:
+    - repository: 1ESPipelineTemplates
+      type: git
+      name: 1ESPipelineTemplates/1ESPipelineTemplates
+      ref: refs/tags/release
+
 variables:
-  mainProjectPath: '$(Build.Repository.LocalPath)/*.sln'
-  exampleProjectFolder: '$(Build.Repository.LocalPath)/example/'
-  exampleProjectPath: '$(Build.Repository.LocalPath)/example/*.sln'
-  outputFolder: '$(Build.Repository.LocalPath)/output/'
+  BuildConfiguration: 'Release'
+  mainProjectPath: '$(Build.SourcesDirectory)/apim-policy-toolkit.sln'
+  exampleProjectFolder: '$(Build.SourcesDirectory)/example/'
+  exampleProjectPath: '$(Build.SourcesDirectory)/example/Example.sln'
+  outputFolder: '$(Build.SourcesDirectory)/output/'
 
-pool:
-  vmImage: 'ubuntu-latest'
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: Azure-Pipelines-1ESPT-ExDShared
+      image: windows-2022
+      os: windows
+    sdl:
+      sourceAnalysisPool:
+        name: Azure-Pipelines-1ESPT-ExDShared
+        image: windows-2022
+        os: windows
+    stages:
+      - stage: build
+        displayName: 'Build, sign and stage NuGet packages'
+        jobs:
+          - job: build
+            displayName: 'Build, test, sign and pack'
+            templateContext:
+              outputs:
+                - output: pipelineArtifact
+                  displayName: 'Publish signed NuGet packages'
+                  targetPath: '$(outputFolder)'
+                  artifactName: SignedPackages
+            steps:
+              - task: UseDotNet@2
+                displayName: 'Setup .NET 8 SDK'
+                inputs:
+                  packageType: 'sdk'
+                  version: '8.x'
 
-steps:
-  - checkout: self
-    displayName: 'Checkout Repository'
+              - task: NuGetCommand@2
+                displayName: 'NuGet restore main solution'
+                inputs:
+                  restoreSolution: '$(mainProjectPath)'
 
-  - task: UseDotNet@2
-    inputs:
-      packageType: 'sdk'
-      version: '8.x'
-    displayName: 'Setup dotnet'
+              - task: DotNetCoreCLI@2
+                displayName: 'Build main solution'
+                inputs:
+                  command: 'build'
+                  projects: '$(mainProjectPath)'
+                  arguments: '--configuration $(BuildConfiguration) --no-restore'
 
-  - task: NuGetCommand@2
-    inputs:
-      restoreSolution: '$(mainProjectPath)'
-    displayName: 'NuGet Restore Main Solution'
+              - task: DotNetCoreCLI@2
+                displayName: 'Test main solution'
+                inputs:
+                  command: 'test'
+                  projects: '$(mainProjectPath)'
+                  arguments: '--configuration $(BuildConfiguration) --no-build'
 
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: 'build'
-      projects: '$(mainProjectPath)'
-    displayName: 'Build Main Solution'
+              - task: EsrpCodeSigning@5
+                displayName: 'ESRP sign produced assemblies'
+                condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+                inputs:
+                  ConnectedServiceName: 'api-management-policy-toolkit-code-sig'
+                  AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
+                  AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+                  AuthAKVName: 'policytoolkitcodesign'
+                  AuthCertName: 'policy-toolkit-code-sign-cert'
+                  AuthSignCertName: 'policy-toolkit-code-sign-cert'
+                  FolderPath: '$(Build.SourcesDirectory)/src'
+                  Pattern: |
+                    **/bin/$(BuildConfiguration)/**/Authoring.dll
+                    **/bin/$(BuildConfiguration)/**/Analyzers.dll
+                    **/bin/$(BuildConfiguration)/**/Core.dll
+                    **/bin/$(BuildConfiguration)/**/Compiling.dll
+                    **/bin/$(BuildConfiguration)/**/Compiling.exe
+                    **/bin/$(BuildConfiguration)/**/Decompiling.dll
+                    **/bin/$(BuildConfiguration)/**/Decompiling.exe
+                    **/bin/$(BuildConfiguration)/**/Testing.dll
+                  UseMinimatch: true
+                  signConfigType: 'inlineSignParams'
+                  inlineOperation: |
+                    [
+                      {
+                        "keyCode": "CP-230012",
+                        "operationSetCode": "SigntoolSign",
+                        "parameters": [
+                          { "parameterName": "OpusName", "parameterValue": "Microsoft" },
+                          { "parameterName": "OpusInfo", "parameterValue": "http://www.microsoft.com" },
+                          { "parameterName": "FileDigest", "parameterValue": "/fd \"SHA256\"" },
+                          { "parameterName": "PageHash", "parameterValue": "/NPH" },
+                          { "parameterName": "TimeStamp", "parameterValue": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256" }
+                        ],
+                        "toolName": "sign",
+                        "toolVersion": "1.0"
+                      },
+                      {
+                        "keyCode": "CP-230012",
+                        "operationSetCode": "SigntoolVerify",
+                        "parameters": [],
+                        "toolName": "sign",
+                        "toolVersion": "1.0"
+                      }
+                    ]
+                  SessionTimeout: '20'
+                  MaxConcurrency: '50'
+                  MaxRetryAttempts: '5'
+                  PendingAnalysisWaitTimeoutMinutes: '5'
 
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: 'test'
-      projects: '$(mainProjectPath)'
-    displayName: 'Test Main Solution'
+              - task: DotNetCoreCLI@2
+                displayName: 'Pack NuGet packages'
+                inputs:
+                  command: 'pack'
+                  packagesToPack: '$(mainProjectPath)'
+                  configuration: '$(BuildConfiguration)'
+                  nobuild: true
 
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: 'pack'
-      packagesToPack: '$(mainProjectPath)'
-    displayName: 'Create NuGet Packages from Main Solution'
+              - task: EsrpCodeSigning@5
+                displayName: 'ESRP sign NuGet packages'
+                condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+                inputs:
+                  ConnectedServiceName: 'api-management-policy-toolkit-code-sig'
+                  AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
+                  AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+                  AuthAKVName: 'policytoolkitcodesign'
+                  AuthCertName: 'policy-toolkit-code-sign-cert'
+                  AuthSignCertName: 'policy-toolkit-code-sign-cert'
+                  FolderPath: '$(outputFolder)'
+                  Pattern: '*.nupkg'
+                  signConfigType: 'inlineSignParams'
+                  inlineOperation: |
+                    [
+                      {
+                        "keyCode": "CP-401405",
+                        "operationSetCode": "NuGetSign",
+                        "parameters": [],
+                        "toolName": "sign",
+                        "toolVersion": "1.0"
+                      },
+                      {
+                        "keyCode": "CP-401405",
+                        "operationSetCode": "NuGetVerify",
+                        "parameters": [],
+                        "toolName": "sign",
+                        "toolVersion": "1.0"
+                      }
+                    ]
+                  SessionTimeout: '60'
+                  MaxConcurrency: '50'
+                  MaxRetryAttempts: '5'
+                  PendingAnalysisWaitTimeoutMinutes: '5'
 
-  - task: NuGetCommand@2
-    inputs:
-      restoreSolution: '$(mainProjectPath)'
-    displayName: 'NuGet Restore Example Solution'
+              - task: NuGetCommand@2
+                displayName: 'Verify signed NuGet packages'
+                condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+                inputs:
+                  command: 'custom'
+                  arguments: 'verify -All -Verbosity detailed $(outputFolder)*.nupkg'
 
-  - script: dotnet tool restore
-    displayName: 'Restore .NET Tools for Example Project'
-    workingDirectory: '$(exampleProjectFolder)'
+              - task: NuGetCommand@2
+                displayName: 'NuGet restore example solution'
+                inputs:
+                  restoreSolution: '$(exampleProjectPath)'
 
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: 'build'
-      projects: '$(exampleProjectPath)'
-    displayName: 'Build Example Solution'
+              - script: dotnet tool restore
+                displayName: 'Restore .NET tools for example project'
+                workingDirectory: '$(exampleProjectFolder)'
 
-  - task: DotNetCoreCLI@2
-    inputs:
-      command: 'test'
-      projects: '$(exampleProjectPath)'
-    displayName: 'Test Example Solution'
+              - task: DotNetCoreCLI@2
+                displayName: 'Build example solution'
+                inputs:
+                  command: 'build'
+                  projects: '$(exampleProjectPath)'
+                  arguments: '--configuration $(BuildConfiguration) --no-restore'
 
-  - task: onebranch.pipeline.signing@1
-    displayName: 'Sign NuGet package'
-    inputs:
-      command: 'sign'
-      signing_environment: 'azure-ado'
-      cp_code: CP-401405
-      signing_profile: 'external_distribution'
-      #      signing_profile: 'CP-401405'
-      files_to_sign: '*.nupkg'
-      search_root: '$(outputFolder)'
+              - task: DotNetCoreCLI@2
+                displayName: 'Test example solution'
+                inputs:
+                  command: 'test'
+                  projects: '$(exampleProjectPath)'
+                  arguments: '--configuration $(BuildConfiguration) --no-build'
 
-  - task: NuGetCommand@2
-    inputs:
-      command: 'verify'
-      packagesToVerify: '*.nupkg'
-    displayName: 'Verify Signed NuGet Packages'
-    workingDirectory: '$(outputFolder)'
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathToPublish: '$(outputFolder)'
-      artifactName: 'SignedPackages'
-      publishLocation: 'Container'
-    displayName: 'Upload Signed NuGet Packages'
+      - stage: publish
+        displayName: 'Publish to NuGet.org'
+        dependsOn: build
+        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+        jobs:
+          - deployment: publish_nuget
+            displayName: 'Push signed NuGet packages'
+            environment: 'nuget-org'
+            templateContext:
+              type: releaseJob
+              isProduction: true
+              inputs:
+                - input: pipelineArtifact
+                  artifactName: SignedPackages
+                  targetPath: '$(Pipeline.Workspace)/SignedPackages'
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - task: 1ES.PublishNuget@1
+                      displayName: 'Push to NuGet.org'
+                      inputs:
+                        packagesToPush: '$(Pipeline.Workspace)/SignedPackages/*.nupkg'
+                        packageParentPath: '$(Pipeline.Workspace)/SignedPackages'
+                        nuGetFeedType: external
+                        publishFeedCredentials: 'api-management-policy-toolkit-nuget-connection'
