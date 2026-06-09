@@ -25,7 +25,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="my-key" calls="100" renewal-period="300" />
+                <quota-by-key calls="100" renewal-period="300" counter-key="my-key" />
             </inbound>
         </policies>
         """,
@@ -49,7 +49,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="my-key" bandwidth="100" renewal-period="300" />
+                <quota-by-key bandwidth="100" renewal-period="300" counter-key="my-key" />
             </inbound>
         </policies>
         """,
@@ -74,7 +74,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="my-key" calls="100" bandwidth="101" renewal-period="300" />
+                <quota-by-key calls="100" bandwidth="101" renewal-period="300" counter-key="my-key" />
             </inbound>
         </policies>
         """,
@@ -100,7 +100,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="@(context.Variables["my-key"].ToString())" calls="100" renewal-period="300" />
+                <quota-by-key calls="100" renewal-period="300" counter-key="@(context.Variables["my-key"].ToString())" />
             </inbound>
         </policies>
         """,
@@ -125,7 +125,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="my-key" calls="100" renewal-period="300" increment-condition="true" />
+                <quota-by-key calls="100" renewal-period="300" counter-key="my-key" increment-condition="true" />
             </inbound>
         </policies>
         """,
@@ -152,7 +152,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="my-key" calls="100" renewal-period="300" increment-condition="@(!context.User.Email.EndsWith("@contoso.example"))" />
+                <quota-by-key calls="100" renewal-period="300" counter-key="my-key" increment-condition="@(!context.User.Email.EndsWith("@contoso.example"))" />
             </inbound>
         </policies>
         """,
@@ -177,7 +177,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="my-key" calls="100" renewal-period="300" increment-count="5" />
+                <quota-by-key calls="100" renewal-period="300" counter-key="my-key" increment-count="5" />
             </inbound>
         </policies>
         """,
@@ -204,7 +204,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="my-key" calls="100" renewal-period="300" increment-count="@(!context.User.Email.EndsWith("@contoso.example") ? 5 : 10)" />
+                <quota-by-key calls="100" renewal-period="300" counter-key="my-key" increment-count="@(!context.User.Email.EndsWith("@contoso.example") ? 5 : 10)" />
             </inbound>
         </policies>
         """,
@@ -229,7 +229,7 @@ public class QuotaByKeyTests
         """
         <policies>
             <inbound>
-                <quota-by-key counter-key="my-key" calls="100" renewal-period="300" first-period-start="2025-01-01T00:00:00Z" />
+                <quota-by-key calls="100" renewal-period="300" counter-key="my-key" first-period-start="2025-01-01T00:00:00Z" />
             </inbound>
         </policies>
         """,

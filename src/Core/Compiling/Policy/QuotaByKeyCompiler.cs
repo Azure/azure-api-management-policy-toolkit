@@ -24,7 +24,7 @@ public class QuotaByKeyCompiler : IMethodPolicyHandler
 
         XElement element = new("quota-by-key");
 
-        if (!element.AddAttribute(values, nameof(QuotaByKeyConfig.CounterKey), "counter-key"))
+        if (!values.ContainsKey(nameof(QuotaByKeyConfig.CounterKey)))
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,
@@ -35,10 +35,9 @@ public class QuotaByKeyCompiler : IMethodPolicyHandler
             return;
         }
 
-        bool isCallsAdded = element.AddAttribute(values, nameof(QuotaByKeyConfig.Calls), "calls");
-        bool isBandwidthAdded = element.AddAttribute(values, nameof(QuotaByKeyConfig.Bandwidth), "bandwidth");
-
-        if (!isCallsAdded && !isBandwidthAdded)
+        bool hasCalls = values.ContainsKey(nameof(QuotaByKeyConfig.Calls));
+        bool hasBandwidth = values.ContainsKey(nameof(QuotaByKeyConfig.Bandwidth));
+        if (!hasCalls && !hasBandwidth)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.AtLeastOneOfTwoShouldBeDefined,
@@ -50,7 +49,7 @@ public class QuotaByKeyCompiler : IMethodPolicyHandler
             return;
         }
 
-        if (!element.AddAttribute(values, nameof(QuotaByKeyConfig.RenewalPeriod), "renewal-period"))
+        if (!values.ContainsKey(nameof(QuotaByKeyConfig.RenewalPeriod)))
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,
@@ -61,6 +60,10 @@ public class QuotaByKeyCompiler : IMethodPolicyHandler
             return;
         }
 
+        element.AddAttribute(values, nameof(QuotaByKeyConfig.Calls), "calls");
+        element.AddAttribute(values, nameof(QuotaByKeyConfig.Bandwidth), "bandwidth");
+        element.AddAttribute(values, nameof(QuotaByKeyConfig.RenewalPeriod), "renewal-period");
+        element.AddAttribute(values, nameof(QuotaByKeyConfig.CounterKey), "counter-key");
         element.AddAttribute(values, nameof(QuotaByKeyConfig.IncrementCondition), "increment-condition");
         element.AddAttribute(values, nameof(QuotaByKeyConfig.IncrementCount), "increment-count");
         element.AddAttribute(values, nameof(QuotaByKeyConfig.FirstPeriodStart), "first-period-start");

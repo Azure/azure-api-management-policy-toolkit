@@ -23,7 +23,7 @@ public class SendRequestCompiler : IMethodPolicyHandler
 
         var element = new XElement("send-request");
 
-        if (!element.AddAttribute(values, nameof(SendRequestConfig.ResponseVariableName), "response-variable-name"))
+        if (!values.ContainsKey(nameof(SendRequestConfig.ResponseVariableName)))
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,
@@ -35,6 +35,7 @@ public class SendRequestCompiler : IMethodPolicyHandler
         }
 
         element.AddAttribute(values, nameof(SendRequestConfig.Mode), "mode");
+        element.AddAttribute(values, nameof(SendRequestConfig.ResponseVariableName), "response-variable-name");
         element.AddAttribute(values, nameof(SendRequestConfig.Timeout), "timeout");
         element.AddAttribute(values, nameof(SendRequestConfig.IgnoreError), "ignore-error");
 

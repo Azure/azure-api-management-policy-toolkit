@@ -21,7 +21,8 @@ public class ConstFoldingRewriter : CSharpSyntaxRewriter
         var symbolInfo = _semanticModel.GetSymbolInfo(node);
         var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault();
 
-        if (symbol is IFieldSymbol { IsConst: true } field && field.ConstantValue is not null)
+        if (symbol is IFieldSymbol { IsConst: true } field && field.ConstantValue is not null
+            && field.ContainingType?.TypeKind != TypeKind.Enum)
         {
             return field.ConstantValue switch
             {

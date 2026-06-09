@@ -23,13 +23,6 @@ public class CorsDecompiler : IPolicyDecompiler
             props.Add($"AllowedOrigins = new[] {{ {string.Join(", ", origins.Select(PolicyDecompilerContext.Literal))} }}");
         }
 
-        var headers = element.Element("allowed-headers")?.Elements("header")
-            .Select(e => PolicyDecompilerContext.GetElementText(e)).ToList();
-        if (headers != null && headers.Count > 0)
-        {
-            props.Add($"AllowedHeaders = new[] {{ {string.Join(", ", headers.Select(PolicyDecompilerContext.Literal))} }}");
-        }
-
         var methodsEl = element.Element("allowed-methods");
         if (methodsEl != null)
         {
@@ -44,6 +37,13 @@ public class CorsDecompiler : IPolicyDecompiler
             {
                 props.Add($"AllowedMethods = new[] {{ {string.Join(", ", methods.Select(PolicyDecompilerContext.Literal))} }}");
             }
+        }
+
+        var headers = element.Element("allowed-headers")?.Elements("header")
+            .Select(e => PolicyDecompilerContext.GetElementText(e)).ToList();
+        if (headers != null && headers.Count > 0)
+        {
+            props.Add($"AllowedHeaders = new[] {{ {string.Join(", ", headers.Select(PolicyDecompilerContext.Literal))} }}");
         }
 
         var exposeHeaders = element.Element("expose-headers")?.Elements("header")

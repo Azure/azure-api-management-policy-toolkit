@@ -53,6 +53,28 @@ public class CorsCompiler : IMethodPolicyHandler
 
         element.Add(new XElement("allowed-origins", origins));
 
+        if (values.TryGetValue(nameof(CorsConfig.AllowedMethods), out var allowedMethods))
+        {
+            var allowedMethodsElement = new XElement("allowed-methods");
+            allowedMethodsElement.AddAttribute(values, nameof(CorsConfig.PreflightResultMaxAge),
+                "preflight-result-max-age");
+            var methods = (allowedMethods.UnnamedValues ?? [])
+                .Select(m => new XElement("method", m.Value!))
+                .ToArray<object>();
+            if (methods.Length == 0)
+            {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.RequiredParameterIsEmpty,
+                    allowedMethods.Node.GetLocation(),
+                    "cors",
+                    nameof(CorsConfig.AllowedMethods)
+                ));
+            }
+
+            allowedMethodsElement.Add(methods);
+            element.Add(allowedMethodsElement);
+        }
+
         if (!values.TryGetValue(nameof(CorsConfig.AllowedHeaders), out var allowedHeaders))
         {
             context.Report(Diagnostic.Create(
@@ -79,28 +101,6 @@ public class CorsCompiler : IMethodPolicyHandler
         }
 
         element.Add(new XElement("allowed-headers", headers));
-
-        if (values.TryGetValue(nameof(CorsConfig.AllowedMethods), out var allowedMethods))
-        {
-            var allowedMethodsElement = new XElement("allowed-methods");
-            allowedMethodsElement.AddAttribute(values, nameof(CorsConfig.PreflightResultMaxAge),
-                "preflight-result-max-age");
-            var methods = (allowedMethods.UnnamedValues ?? [])
-                .Select(m => new XElement("method", m.Value!))
-                .ToArray<object>();
-            if (methods.Length == 0)
-            {
-                context.Report(Diagnostic.Create(
-                    CompilationErrors.RequiredParameterIsEmpty,
-                    allowedMethods.Node.GetLocation(),
-                    "cors",
-                    nameof(CorsConfig.AllowedMethods)
-                ));
-            }
-
-            allowedMethodsElement.Add(methods);
-            element.Add(allowedMethodsElement);
-        }
 
         if (values.TryGetValue(nameof(CorsConfig.ExposeHeaders), out var exposeHeaders))
         {

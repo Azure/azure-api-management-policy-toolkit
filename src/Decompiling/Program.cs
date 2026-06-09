@@ -306,12 +306,14 @@ static string BuildNamespace(string baseNamespace, string relativeDir)
 
 static string GetFragmentId(string fullPath, string basePath)
 {
-    var relativePath = Path.GetRelativePath(basePath, fullPath);
-    var relativeDir = Path.GetDirectoryName(relativePath) ?? "";
-    var segments = relativeDir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-        .Where(s => s.Length > 0)
-        .ToArray();
-
-    // The fragment ID is typically the parent directory name
-    return segments.Length > 0 ? segments[^1] : Path.GetFileNameWithoutExtension(fullPath);
+    // Fragment ID is the filename stem, removing known fragment suffixes.
+    // E.g., "validate-api-authorization.fragment.xml" → "validate-api-authorization"
+    // This matches the fragment-id used in <include-fragment fragment-id="..."/> references.
+    var filename = Path.GetFileName(fullPath);
+    foreach (var suffix in new[] { ".fragment.xml", ".fragment.cs", ".fragment" })
+    {
+        if (filename.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            return filename[..^suffix.Length];
+    }
+    return Path.GetFileNameWithoutExtension(fullPath);
 }

@@ -73,7 +73,7 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" mode="new" />
+                <send-request mode="new" response-variable-name="variable" />
             </inbound>
         </policies>
         """,
@@ -98,7 +98,7 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" mode="@("n" + "e" + "w")" />
+                <send-request mode="@("n" + "e" + "w")" response-variable-name="variable" />
             </inbound>
         </policies>
         """,
@@ -491,7 +491,7 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" mode="new" timeout="100" ignore-error="false">
+                <send-request mode="new" response-variable-name="variable" timeout="100" ignore-error="false">
                     <set-url>https://test.example</set-url>
                     <set-method>POST</set-method>
                     <set-header name="content-type">

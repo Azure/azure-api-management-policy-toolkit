@@ -152,13 +152,13 @@ public class CorsTests
                     <allowed-origins>
                         <origin>contoso.com</origin>
                     </allowed-origins>
-                    <allowed-headers>
-                        <header>accept</header>
-                    </allowed-headers>
                     <allowed-methods>
                         <method>PUT</method>
                         <method>DELETE</method>
                     </allowed-methods>
+                    <allowed-headers>
+                        <header>accept</header>
+                    </allowed-headers>
                 </cors>
             </inbound>
         </policies>
@@ -188,13 +188,13 @@ public class CorsTests
                     <allowed-origins>
                         <origin>contoso.com</origin>
                     </allowed-origins>
-                    <allowed-headers>
-                        <header>accept</header>
-                    </allowed-headers>
                     <allowed-methods preflight-result-max-age="100">
                         <method>PUT</method>
                         <method>DELETE</method>
                     </allowed-methods>
+                    <allowed-headers>
+                        <header>accept</header>
+                    </allowed-headers>
                 </cors>
             </inbound>
         </policies>

@@ -156,6 +156,39 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void Cors_Decompiler_Preserves_Methods_Before_Headers_Order()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <cors>
+                        <allowed-origins>
+                            <origin>contoso.com</origin>
+                        </allowed-origins>
+                        <allowed-methods preflight-result-max-age="100">
+                            <method>PUT</method>
+                            <method>DELETE</method>
+                        </allowed-methods>
+                        <allowed-headers>
+                            <header>accept</header>
+                        </allowed-headers>
+                        <expose-headers>
+                            <header>x-test</header>
+                        </expose-headers>
+                    </cors>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml.Trim(), "RoundTripPolicy", "RoundTripTest");
+
+        csharp.IndexOf("AllowedMethods", StringComparison.Ordinal).Should().BeGreaterThan(-1);
+        csharp.IndexOf("AllowedHeaders", StringComparison.Ordinal).Should().BeGreaterThan(-1);
+        csharp.IndexOf("AllowedMethods", StringComparison.Ordinal)
+            .Should().BeLessThan(csharp.IndexOf("AllowedHeaders", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public void ReturnResponse_RoundTrips()
     {
         var xml = """
