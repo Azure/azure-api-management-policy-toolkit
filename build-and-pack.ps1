@@ -44,9 +44,10 @@ try {
         Write-Host ""
         Write-Host "Copying packages to $packagesDir..." -ForegroundColor Yellow
 
-        # Clear NuGet cache for decompiling and authoring to force re-install of new version
+        # Clear NuGet cache for decompiling, compiling, and authoring to force re-install of new version
         $cachesToClear = @(
             "$env:USERPROFILE\.nuget\packages\decompiling",
+            "$env:USERPROFILE\.nuget\packages\microsoft.azure.apimanagement.policytoolkit.compiling",
             "$env:USERPROFILE\.nuget\packages\microsoft.azure.apimanagement.policytoolkit.authoring"
         )
         foreach ($cachePath in $cachesToClear) {
@@ -59,6 +60,10 @@ try {
         $resolverCachePath = "$env:USERPROFILE\.dotnet\toolResolverCache\1\decompiling"
         if (Test-Path $resolverCachePath) {
             Remove-Item $resolverCachePath -Recurse -Force
+        }
+        $compilerResolverCachePath = "$env:USERPROFILE\.dotnet\toolResolverCache\1\microsoft.azure.apimanagement.policytoolkit.compiling"
+        if (Test-Path $compilerResolverCachePath) {
+            Remove-Item $compilerResolverCachePath -Recurse -Force
         }
 
         Copy-Item "$outputDir\*.nupkg" $packagesDir -Force
