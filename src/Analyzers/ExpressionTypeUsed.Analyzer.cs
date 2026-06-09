@@ -37,6 +37,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "System.Boolean",
         "System.Byte",
         "System.Char",
+        "System.Collections.Generic.CollectionExtensions",
         "System.Collections.Generic.Dictionary<TKey, TValue>",
         "System.Collections.Generic.HashSet<T>",
         "System.Collections.Generic.ICollection<T>",
@@ -67,6 +68,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "System.IO.StringWriter",
         "System.Linq.Enumerable",
         "System.Math",
+        "System.MemoryExtensions",
         "System.MidpointRounding",
         "System.Net.IPAddress",
         "System.Net.WebUtility",
@@ -191,6 +193,11 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUrl",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUser",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IUserIdentity",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.Authorization",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.BasicAuthCredentials",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.DictionaryExtensions",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.Jwt",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.StringExtensions",
 
         #endregion Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
     };

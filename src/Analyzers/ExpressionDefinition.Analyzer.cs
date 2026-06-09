@@ -39,6 +39,7 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
         "System.Int16",
         "System.Int32",
         "System.Int64",
+        "System.Object",
         "System.String",
         "System.UInt16",
         "System.UInt32",

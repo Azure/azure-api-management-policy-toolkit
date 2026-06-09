@@ -22,7 +22,7 @@ public class SetStatusDecompiler : IPolicyDecompiler
         }
         else
         {
-            writer.AppendLine($"{prefix}SetStatus(new StatusConfig {{ Code = {codeExpr} }});");
+            writer.AppendLine($"{prefix}SetStatus(new StatusConfig {{ Code = {codeExpr}, Reason = \"\" }});");
         }
     }
 }

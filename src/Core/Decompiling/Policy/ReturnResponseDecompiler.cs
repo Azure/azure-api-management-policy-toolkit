@@ -28,7 +28,7 @@ public class ReturnResponseDecompiler : IPolicyDecompiler
             }
             else
             {
-                props.Add($"Status = new StatusConfig {{ Code = {codeExpr} }}");
+                props.Add($"Status = new StatusConfig {{ Code = {codeExpr}, Reason = \"\" }}");
             }
         }
 

@@ -1,5 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+//
+//
 
 using System.CommandLine;
 using System.Globalization;
@@ -275,7 +277,7 @@ static string BuildClassName(string fullPath, string basePath, string suffix)
     string nameBasis;
     if (segments.Length > 0)
     {
-        nameBasis = segments[^1];
+        nameBasis = segments[^1] + Path.GetFileNameWithoutExtension(fullPath);
     }
     else
     {

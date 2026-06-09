@@ -20,4 +20,12 @@ public static class StringExtensions
 
     public static bool TryParseJwt(this string? value, [MaybeNullWhen(false)] out Jwt token)
         => (token = value.AsJwt()) is not null;
+
+    /// <summary>
+    /// Returns the string itself as a nullable string, treating it as the first (and only) element.
+    /// This extension shadows <see cref="Enumerable.FirstOrDefault{TSource}(IEnumerable{TSource})"/>
+    /// so that code calling <c>.FirstOrDefault()</c> on a <c>string?</c> (from Claims.GetValueOrDefault)
+    /// compiles correctly, returning <c>string?</c> rather than <c>char?</c>.
+    /// </summary>
+    public static string? FirstOrDefault(this string s) => s;
 }

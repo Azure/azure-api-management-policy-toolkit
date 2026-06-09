@@ -134,6 +134,10 @@ public class PolicyDecompiler
     {
         writer.AppendLine("using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;");
         writer.AppendLine("using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;");
+        writer.AppendLine("using Newtonsoft.Json.Linq;");
+        writer.AppendLine("using System.Text;");
+        writer.AppendLine("using System.Text.RegularExpressions;");
+        writer.AppendLine("using System.Xml.Linq;");
         writer.AppendLine();
     }
 

@@ -77,9 +77,12 @@ public class PolicyDecompilerContext
 
     #region Expression Handling
 
-    public bool IsExpression(string value) =>
-        (value.StartsWith("@(") && value.EndsWith(")")) ||
-        (value.StartsWith("@{") && value.EndsWith("}"));
+    public bool IsExpression(string value)
+    {
+        var trimmed = value.Trim();
+        return (trimmed.StartsWith("@(") && trimmed.EndsWith(")")) ||
+               (trimmed.StartsWith("@{") && trimmed.EndsWith("}"));
+    }
 
     public string HandleValue(string value, string suggestedName, string returnType = "string")
     {
@@ -172,6 +175,7 @@ public class PolicyDecompilerContext
 
     public string CreateExpressionMethodReference(string value, string suggestedName, string returnType)
     {
+        value = value.Trim();
         if (value.StartsWith("@(") && value.EndsWith(")"))
         {
             var body = value.Substring(2, value.Length - 3);
