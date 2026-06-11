@@ -1,5 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+//
+//
 
 using System.Xml.Linq;
 
@@ -48,7 +50,7 @@ public class DirectoryCompiler(DocumentCompiler compiler)
                     Console.Error.WriteLine(error.ToString());
                 }
 
-                var policyFileName = document.ExtractDocumentFileName(semantics);
+                var policyFileName = Path.GetFileNameWithoutExtension(file) + ".xml";
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
                     Element = documentResult.Document,

@@ -1,5 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+//
+//
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.IO;
 using Microsoft.CodeAnalysis;
@@ -65,7 +67,7 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
                     await Console.Error.WriteLineAsync(error.ToString());
                 }
 
-                var policyFileName = document.ExtractDocumentFileName(semantics);
+                var policyFileName = Path.GetFileNameWithoutExtension(syntaxTree.FilePath) + ".xml";
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
                     Element = documentResult.Document,
