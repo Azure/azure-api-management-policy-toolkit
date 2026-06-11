@@ -48,7 +48,7 @@ public class PolicyDecompiler
         _context.Reset();
 
         var preprocessed = PreprocessXml(xml);
-        var doc = XDocument.Parse(preprocessed);
+        var doc = XDocument.Parse(preprocessed, LoadOptions.PreserveWhitespace);
         var policies = doc.Root
             ?? throw new ArgumentException("Invalid XML: missing root element.");
 
@@ -102,7 +102,7 @@ public class PolicyDecompiler
         _context.Reset();
 
         var preprocessed = PreprocessXml(xml);
-        var doc = XDocument.Parse(preprocessed);
+        var doc = XDocument.Parse(preprocessed, LoadOptions.PreserveWhitespace);
         var fragment = doc.Root
             ?? throw new ArgumentException("Invalid XML: missing root element.");
 

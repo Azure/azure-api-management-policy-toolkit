@@ -14,23 +14,33 @@ public class SetBodyDecompiler : IPolicyDecompiler
         var prefix = PolicyDecompilerContext.GetContextPrefix(element, contextVar);
 
         var valueChild = element.Element("value");
-        string content;
+        string contentExpr;
         if (valueChild != null)
         {
-            content = PolicyDecompilerContext.GetElementTextOrValue(valueChild);
+            contentExpr = context.HandleValue(PolicyDecompilerContext.GetElementTextOrValue(valueChild), "BodyExpression");
+        }
+        else if (element.Nodes().Any(n => n is XElement))
+        {
+            // Liquid template with XML body (e.g. SOAP envelope) — serialize children verbatim.
+            // Do NOT call HandleValue: Liquid {{tokens}} must not be converted to NamedValue calls.
+            // Use SaveOptions.None (formatted) so element-only children (e.g. <ValidFrom>) retain
+            // whitespace between their child elements, which is needed for round-trip fidelity.
+            var innerXml = string.Concat(element.Nodes().Select(n => n.ToString(SaveOptions.None)));
+            contentExpr = PolicyDecompilerContext.Literal(innerXml);
         }
         else
         {
-            content = PolicyDecompilerContext.GetElementText(element);
+            contentExpr = context.HandleValue(PolicyDecompilerContext.GetElementText(element), "BodyExpression");
         }
-        var contentExpr = context.HandleValue(content, "BodyExpression");
 
         var configProps = new List<string>();
         context.AddOptionalStringProp(configProps, element, "template", "Template");
         context.AddOptionalStringProp(configProps, element, "xsi-nil", "XsiNil");
         context.AddOptionalBoolProp(configProps, element, "parse-date", "ParseDate");
         if (valueChild != null)
+        {
             configProps.Add("UseValueElement = true");
+        }
 
         if (configProps.Count > 0)
         {

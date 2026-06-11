@@ -628,12 +628,23 @@ public class PolicyDecompilerContext
     public string BuildBodyConfigProperty(XElement bodyElement)
     {
         var valueChild = bodyElement.Element("value");
-        string content;
+        string contentExpr;
         if (valueChild != null)
-            content = GetElementTextOrValue(valueChild);
+        {
+            contentExpr = HandleValue(GetElementTextOrValue(valueChild), "BodyContent");
+        }
+        else if (bodyElement.Nodes().Any(n => n is XElement))
+        {
+            // Liquid template with XML body — serialize children verbatim, preserving Liquid tokens.
+            // Use SaveOptions.None (formatted) so element-only children retain whitespace between
+            // their child elements, which is needed for round-trip fidelity.
+            var innerXml = string.Concat(bodyElement.Nodes().Select(n => n.ToString(SaveOptions.None)));
+            contentExpr = Literal(innerXml);
+        }
         else
-            content = GetElementText(bodyElement);
-        var contentExpr = HandleValue(content, "BodyContent");
+        {
+            contentExpr = HandleValue(GetElementText(bodyElement), "BodyContent");
+        }
 
         var bodyProps = new List<string> { $"Content = {contentExpr}" };
         var template = bodyElement.Attribute("template")?.Value;

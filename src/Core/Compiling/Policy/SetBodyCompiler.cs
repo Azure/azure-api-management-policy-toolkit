@@ -85,7 +85,7 @@ public class SetBodyCompiler : IMethodPolicyHandler
         if (useValueElement)
             element.Add(new XElement("value", value));
         else
-            element.Add(value);
+            AddBodyContent(element, value);
 
         context.AddPolicy(element);
     }
@@ -125,7 +125,36 @@ public class SetBodyCompiler : IMethodPolicyHandler
         if (useValueElement)
             bodyElement.Add(new XElement("value", content.Value!));
         else
-            bodyElement.Add(content.Value!);
+            AddBodyContent(bodyElement, content.Value!);
         element.Add(bodyElement);
+    }
+
+    /// <summary>
+    /// Adds body content to a set-body element. When the content is raw XML (starts with '&lt;'),
+    /// it is parsed and added as XML nodes so that markup is not escaped. Otherwise it is added
+    /// as a plain text node (the existing behaviour for expressions and plain strings).
+    /// </summary>
+    private static void AddBodyContent(XElement element, string content)
+    {
+        var trimmed = content?.TrimStart();
+        if (!string.IsNullOrEmpty(trimmed) && trimmed.StartsWith("<"))
+        {
+            try
+            {
+                // Wrap in a root element so multiple top-level nodes and namespace-prefixed
+                // elements are parsed correctly. Use PreserveWhitespace so that any formatting
+                // whitespace in the body (e.g. newlines between <Year>/<Month>/<Day>) is kept as
+                // text nodes and written verbatim by CustomXmlWriter.WriteNodes.
+                var doc = XDocument.Parse("<__root__>" + content + "</__root__>", LoadOptions.PreserveWhitespace);
+                foreach (var node in doc.Root!.Nodes())
+                    element.Add(node);
+                return;
+            }
+            catch
+            {
+                // Fall through to plain-text path if the XML is not parseable.
+            }
+        }
+        element.Add(content!);
     }
 }

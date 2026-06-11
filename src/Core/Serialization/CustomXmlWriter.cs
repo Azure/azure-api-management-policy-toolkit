@@ -40,7 +40,7 @@ public sealed class CustomXmlWriter : IDisposable
 
         if (element.HasElements)
         {
-            WriteElements(element.Elements());
+            WriteNodes(element.Nodes());
         }
         else if (!string.IsNullOrEmpty(element.Value))
         {
@@ -50,11 +50,26 @@ public sealed class CustomXmlWriter : IDisposable
         _xmlWriter.WriteEndElement();
     }
 
-    private void WriteElements(IEnumerable<XElement> elements)
+    private void WriteNodes(IEnumerable<XNode> nodes)
     {
-        foreach (var element in elements)
+        foreach (var node in nodes)
         {
-            Write(element);
+            switch (node)
+            {
+                case XElement childElement:
+                    Write(childElement);
+                    break;
+                case XText textNode when string.IsNullOrWhiteSpace(textNode.Value):
+                    // Whitespace-only text nodes (indentation from formatted body) — write as
+                    // whitespace so that siblings and their children are separated in the output.
+                    _xmlWriter.WriteWhitespace(textNode.Value);
+                    break;
+                case XText textNode:
+                    // Non-whitespace text nodes (e.g., Liquid {% if %} tags in mixed content)
+                    // are written raw so that special characters like > are not re-escaped.
+                    _xmlWriter.WriteRaw(textNode.Value);
+                    break;
+            }
         }
     }
 
