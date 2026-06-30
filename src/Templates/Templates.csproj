@@ -1,43 +1,41 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <Version>1.0.0</Version>
-        <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Templates</PackageId>
-        <Authors>Microsoft</Authors>
-        <Company>Microsoft Corporation</Company>
-        <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
-        <Product>Azure API Management Policy Toolkit</Product>
-        <PackageIcon>pkgicon.png</PackageIcon>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
-        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
-        <Description>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Templates</PackageId>
+    <Authors>Microsoft</Authors>
+    <Company>Microsoft Corporation</Company>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <Product>Azure API Management Policy Toolkit</Product>
+    <PackageIcon>pkgicon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <Description>
             Azure API Management Policy Toolkit Templates is a library which contains custom templates for dotnet.
             Read more about it at https://github.com/Azure/azure-api-management-policy-toolkit
         </Description>
-        <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Templates</PackageTags>
-        <NeutralLanguage>en-US</NeutralLanguage>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-    </PropertyGroup>
-
-    <PropertyGroup>
-        <PackageType>Template</PackageType>
-        <TargetFramework>netstandard2.0</TargetFramework>
-        <IncludeContentInPack>true</IncludeContentInPack>
-        <IncludeBuildOutput>false</IncludeBuildOutput>
-        <ContentTargetFolders>content</ContentTargetFolders>
-        <PackageOutputPath>..\..\output</PackageOutputPath>
-        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <Compile Remove="**\*"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\"/>
-        <None Include="README.md" Pack="true" PackagePath="\"/>
-    </ItemGroup>
+    <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Templates</PackageTags>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageType>Template</PackageType>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <PackageOutputPath>..\..\output</PackageOutputPath>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="**\*" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>

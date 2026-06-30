@@ -9,7 +9,7 @@ namespace Test.Core.IO;
 public class PathUtilsTests
 {
     [TestMethod]
-    [DynamicData(nameof(PrepareOutputPath_ShouldHandlePathsCorrectly_Data), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(PrepareOutputPath_ShouldHandlePathsCorrectly_Data))]
     public void PrepareOutputPath_ShouldHandlePathsCorrectly(string actualPath, string extension, string expectedPath)
     {
         var actual = PathUtils.PrepareOutputPath(actualPath, extension);
@@ -68,7 +68,7 @@ public class PathUtilsTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(IsNotInObjOrBinFolder_ChecksCorrectly_Data), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(IsNotInObjOrBinFolder_ChecksCorrectly_Data))]
     public void IsNotInObjOrBinFolder_ChecksCorrectly(string path, bool expected)
     {
         PathUtils.IsNotInObjOrBinFolder(path).Should().Be(expected);

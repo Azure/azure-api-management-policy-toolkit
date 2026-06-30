@@ -1,50 +1,46 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <Version>1.0.0</Version>
-        <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Testing</PackageId>
-        <Authors>Microsoft</Authors>
-        <Company>Microsoft Corporation</Company>
-        <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
-        <Product>Azure API Management Policy Toolkit</Product>
-        <PackageIcon>pkgicon.png</PackageIcon>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
-        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
-        <Description>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Testing</PackageId>
+    <Authors>Microsoft</Authors>
+    <Company>Microsoft Corporation</Company>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <Product>Azure API Management Policy Toolkit</Product>
+    <PackageIcon>pkgicon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <Description>
             Azure API Management Policy Toolkit Testing is a library which helps in testing expressions and policy documents created in code.
             Read more about it at https://github.com/Azure/azure-api-management-policy-toolkit
         </Description>
-        <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Policy Testing;Policy Expression Testing</PackageTags>
-        <NeutralLanguage>en-US</NeutralLanguage>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-    </PropertyGroup>
-
-    <PropertyGroup>
-        <TargetFramework>.net8</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <IsPackable>true</IsPackable>
-        <PackageOutputPath>..\..\output</PackageOutputPath>
-        <IncludeBuildOutput>true</IncludeBuildOutput>
-        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-        <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
-        <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Testing</RootNamespace>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
-        <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.17.0"/>
-        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\Authoring\Authoring.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\"/>
-        <None Include="README.md" Pack="true" PackagePath="\"/>
-    </ItemGroup>
+    <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Policy Testing;Policy Expression Testing</PackageTags>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <PackageOutputPath>..\..\output</PackageOutputPath>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
+    <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Testing</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.17.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Authoring\Authoring.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>

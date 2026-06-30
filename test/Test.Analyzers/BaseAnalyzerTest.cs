@@ -6,7 +6,6 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.Testing.Verifiers;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers.Test;
 
@@ -15,8 +14,8 @@ public class BaseAnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, MSTestV
 {
     public BaseAnalyzerTest(string source, params DiagnosticResult[] diags)
     {
-        ReferenceAssemblies = new ReferenceAssemblies("net8.0",
-            new PackageIdentity("Microsoft.NETCore.App.Ref", "8.0.0"), Path.Combine("ref", "net8.0"));
+        ReferenceAssemblies = new ReferenceAssemblies("net10.0",
+            new PackageIdentity("Microsoft.NETCore.App.Ref", "10.0.0"), Path.Combine("ref", "net10.0"));
         TestState.AdditionalReferences.Add(
             MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location));
         TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Expression<>).Assembly.Location));

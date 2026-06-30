@@ -1,49 +1,44 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <Version>1.0.0</Version>
-        <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling</PackageId>
-        <Authors>Microsoft</Authors>
-        <Company>Microsoft Corporation</Company>
-        <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
-        <Product>Azure API Management Policy Toolkit</Product>
-        <PackageIcon>pkgicon.png</PackageIcon>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
-        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
-        <Description>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling</PackageId>
+    <Authors>Microsoft</Authors>
+    <Company>Microsoft Corporation</Company>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <Product>Azure API Management Policy Toolkit</Product>
+    <PackageIcon>pkgicon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <Description>
             Azure API Management Policy Toolkit Compiling is a dotnet tool allowing you to transform policy document(s) from C# code to XML.
             Read more about it at https://github.com/Azure/azure-api-management-policy-toolkit
         </Description>
-        <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Compiling;Policy Toolkit Compiling</PackageTags>
-        <NeutralLanguage>en-US</NeutralLanguage>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-    </PropertyGroup>
-
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>.net8</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling</RootNamespace>
-
-        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-        <PackAsTool>true</PackAsTool>
-        <ToolCommandName>azure-apim-policy-compiler</ToolCommandName>
-        <PackageOutputPath>..\..\output</PackageOutputPath>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.6"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\Core\Core.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\"/>
-        <None Include="README.md" Pack="true" PackagePath="\"/>
-    </ItemGroup>
+    <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Compiling;Policy Toolkit Compiling</PackageTags>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling</RootNamespace>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>azure-apim-policy-compiler</ToolCommandName>
+    <PackageOutputPath>..\..\output</PackageOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.9" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>

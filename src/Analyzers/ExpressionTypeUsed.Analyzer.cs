@@ -28,7 +28,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             SyntaxKind.AnonymousObjectCreationExpression);
     }
 
-    private readonly static IReadOnlySet<string> AllowedTypes = new HashSet<string>()
+    private readonly static IReadOnlyCollection<string> AllowedTypes = new HashSet<string>()
     {
         #region mslib
 
@@ -195,8 +195,8 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         #endregion Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
     };
 
-    private readonly static IReadOnlyDictionary<string, IReadOnlySet<string>> AllowedInTypes =
-        new Dictionary<string, IReadOnlySet<String>>()
+    private readonly static IReadOnlyDictionary<string, IReadOnlyCollection<string>> AllowedInTypes =
+        new Dictionary<string, IReadOnlyCollection<string>>()
         {
             { "Newtonsoft.Json.JsonConvert", new HashSet<string>() { "SerializeObject", "DeserializeObject" } },
             {
@@ -272,8 +272,8 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             },
         };
 
-    private readonly static IReadOnlyDictionary<string, IReadOnlySet<string>> DisallowedInTypes =
-        new Dictionary<string, IReadOnlySet<String>>()
+    private readonly static IReadOnlyDictionary<string, IReadOnlyCollection<string>> DisallowedInTypes =
+        new Dictionary<string, IReadOnlyCollection<string>>()
         {
             { "System.Xml.Linq.XDocument", new HashSet<string>() { "Load" } },
         };

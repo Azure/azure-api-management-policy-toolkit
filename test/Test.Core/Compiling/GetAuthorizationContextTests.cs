@@ -6,7 +6,7 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 [TestClass]
 public class GetAuthorizationContextTests
 {
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(
         """
         [Document]
