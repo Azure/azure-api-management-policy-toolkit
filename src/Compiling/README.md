@@ -10,6 +10,12 @@ Install the Microsoft Azure Api Management Policy Toolkit compiler CLI tool with
 dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
 ```
 
+## Output format
+
+By default the compiler emits documents in the `rawxml` policy format. Pass `--policy-format xml` to emit the
+standards-compliant `xml` content format instead. See the [Output format guide][of] for the trade-offs between the
+two formats and how they map to the API Management content format.
+
 ### Inspect generated policy
 
 ```cshtml
@@ -65,6 +71,8 @@ more information, see the [Code of Conduct FAQ][coc_faq] or contact
 [nuget]: https://www.nuget.org/
 
 [qs]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/QuickStart.md
+
+[of]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/OutputFormat.md
 
 [ep]: https://github.com/Azure/azure-api-management-policy-toolkit/tree/main/example
 

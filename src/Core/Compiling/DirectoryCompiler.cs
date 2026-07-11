@@ -58,6 +58,7 @@ public class DirectoryCompiler(DocumentCompiler compiler)
                     OutputFilePath = PathUtils.PrepareOutputPath(policyFileName, options.FileExtension),
                     FormatCode = options.FormatCode,
                     XmlWriterSettings = options.XmlWriterSettings,
+                    RawXml = options.RawXml,
                 });
                 Console.Out.WriteLine($"File '{targetFile}' created");
             }

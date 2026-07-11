@@ -65,10 +65,31 @@ public class CustomXmlWriterTests
         result.Should().Be($"<element>{expression}</element>");
     }
 
-    private string Serialize(XElement element)
+    [TestMethod]
+    public void ShouldEncodeExpressionInElementValueWhenNotRaw()
+    {
+        var element = new XElement("element", "@(context.Request.Body.As<string>())");
+
+        var result = Serialize(element, rawExpressions: false);
+
+        result.Should().Be("<element>@(context.Request.Body.As&lt;string&gt;())</element>");
+    }
+
+    [TestMethod]
+    public void ShouldEncodeExpressionInAttributeWhenNotRaw()
+    {
+        var element = new XElement("element",
+            new XAttribute("condition", "@(context.Request.Url.Path.StartsWith(\"/v1/\"))"));
+
+        var result = Serialize(element, rawExpressions: false);
+
+        result.Should().Be("<element condition=\"@(context.Request.Url.Path.StartsWith(&quot;/v1/&quot;))\" />");
+    }
+
+    private string Serialize(XElement element, bool rawExpressions = true)
     {
         var builder = new StringBuilder();
-        using (var writer = CustomXmlWriter.Create(builder, TestSettings))
+        using (var writer = CustomXmlWriter.Create(builder, TestSettings, rawExpressions))
         {
             writer.Write(element);
         }

@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 using Microsoft.CodeAnalysis;
@@ -13,6 +14,36 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 public static class RazorCodeFormatter
 {
     private readonly static Regex CSharpCodeStart = new Regex("(@\\()|(@{)", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Reflows the C# inside policy expressions (<c>@(...)</c> and <c>@{...}</c>) directly
+    /// on the document tree, operating on the raw (unescaped) expression text stored in
+    /// attribute and leaf element values.
+    /// <para>
+    /// This is used for the <c>xml</c> output format, where expressions are XML-encoded
+    /// during serialization and therefore cannot be reformatted from the serialized
+    /// string (the entities would be reparsed as C# and corrupted). Formatting the tree
+    /// before serialization lets the writer encode the already-formatted expressions.
+    /// </para>
+    /// </summary>
+    public static void FormatExpressions(XElement element)
+    {
+        foreach (var node in element.DescendantsAndSelf())
+        {
+            foreach (var attribute in node.Attributes())
+            {
+                if (CSharpCodeStart.IsMatch(attribute.Value))
+                {
+                    attribute.Value = Format(attribute.Value);
+                }
+            }
+
+            if (!node.HasElements && CSharpCodeStart.IsMatch(node.Value))
+            {
+                node.Value = Format(node.Value);
+            }
+        }
+    }
 
     public static string Format(string code)
     {
