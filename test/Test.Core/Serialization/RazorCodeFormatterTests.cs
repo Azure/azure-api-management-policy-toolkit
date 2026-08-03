@@ -1,6 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text;
+using System.Xml;
+using System.Xml.Linq;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
 [TestClass]
@@ -141,5 +145,44 @@ public class RazorCodeFormatterTests
                                   <v>*</v>
                               <element>
                               """.ReplaceLineEndings());
+    }
+
+    [TestMethod]
+    public void ShouldFormatExpressionsOnElementValueBeforeEncoding()
+    {
+        var element = new XElement("element", "@(context.Request.Body.As<string>()  ??  \"x\")");
+
+        RazorCodeFormatter.FormatExpressions(element);
+        var result = SerializeXml(element);
+
+        result.Should().Be("<element>@(context.Request.Body.As&lt;string&gt;() ?? \"x\")</element>");
+    }
+
+    [TestMethod]
+    public void ShouldFormatExpressionsInAttributeBeforeEncoding()
+    {
+        var element = new XElement("element",
+            new XAttribute("condition", "@(context.Request.Url.Path.StartsWith( \"/v1/\" ))"));
+
+        RazorCodeFormatter.FormatExpressions(element);
+        var result = SerializeXml(element);
+
+        result.Should()
+            .Be("<element condition=\"@(context.Request.Url.Path.StartsWith(&quot;/v1/&quot;))\" />");
+    }
+
+    private static string SerializeXml(XElement element)
+    {
+        var settings = new XmlWriterSettings
+        {
+            OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Fragment,
+        };
+        var builder = new StringBuilder();
+        using (var writer = CustomXmlWriter.Create(builder, settings, rawExpressions: false))
+        {
+            writer.Write(element);
+        }
+
+        return builder.ToString();
     }
 }

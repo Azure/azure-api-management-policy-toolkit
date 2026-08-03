@@ -75,6 +75,7 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
                     OutputFilePath = PathUtils.PrepareOutputPath(policyFileName, options.FileExtension),
                     FormatCode = options.FormatCode,
                     XmlWriterSettings = options.XmlWriterSettings,
+                    RawXml = options.RawXml,
                 });
                 await Console.Out.WriteLineAsync($"File '{targetFile}' created");
             }

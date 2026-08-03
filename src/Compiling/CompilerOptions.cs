@@ -14,6 +14,7 @@ public class CompilerOptions
     private string OutputPath { get; }
     private bool Format { get; }
     private string FileExtension { get; }
+    private bool RawXml { get; }
 
     private XmlWriterSettings XmlWriterSettings => new()
     {
@@ -33,7 +34,31 @@ public class CompilerOptions
 
         FileExtension = configuration["ext"] ?? "xml";
         Format = bool.TryParse(configuration["format"] ?? "true", out var fmt) && fmt;
+        RawXml = ParseRawXml(configuration["policy-format"] ?? configuration["pf"]);
     }
+
+    private static bool ParseRawXml(string? policyFormat)
+    {
+        if (string.IsNullOrEmpty(policyFormat))
+        {
+            return true;
+        }
+
+        if (policyFormat.Equals("rawxml", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (policyFormat.Equals("xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        throw new ArgumentException(
+            $"Invalid policy format value '{policyFormat}'. Use 'rawxml' (default) or 'xml'.");
+    }
+
+
 
     public bool IsProjectSource
     {
@@ -68,6 +93,7 @@ public class CompilerOptions
         FormatCode = Format,
         FileExtension = FileExtension,
         XmlWriterSettings = XmlWriterSettings,
+        RawXml = RawXml,
     };
 
     public ProjectCompilerOptions ToProjectCompilerOptions() => new()
@@ -80,5 +106,6 @@ public class CompilerOptions
         FormatCode = Format,
         FileExtension = FileExtension,
         XmlWriterSettings = XmlWriterSettings,
+        RawXml = RawXml,
     };
 }

@@ -10,16 +10,20 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 public sealed class CustomXmlWriter : IDisposable
 {
     private readonly XmlWriter _xmlWriter;
+    private readonly bool _rawExpressions;
 
-    public static CustomXmlWriter Create(StringBuilder stringBuilder, XmlWriterSettings? options = null) =>
-        new CustomXmlWriter(XmlWriter.Create(stringBuilder, options));
+    public static CustomXmlWriter Create(StringBuilder stringBuilder, XmlWriterSettings? options = null,
+        bool rawExpressions = true) =>
+        new CustomXmlWriter(XmlWriter.Create(stringBuilder, options), rawExpressions);
 
-    public static CustomXmlWriter Create(string outputFileName, XmlWriterSettings? options = null) =>
-        new CustomXmlWriter(XmlWriter.Create(outputFileName, options));
+    public static CustomXmlWriter Create(string outputFileName, XmlWriterSettings? options = null,
+        bool rawExpressions = true) =>
+        new CustomXmlWriter(XmlWriter.Create(outputFileName, options), rawExpressions);
 
-    CustomXmlWriter(XmlWriter xmlWriter)
+    CustomXmlWriter(XmlWriter xmlWriter, bool rawExpressions)
     {
         _xmlWriter = xmlWriter;
+        _rawExpressions = rawExpressions;
     }
 
     public void Flush() => _xmlWriter.Flush();
@@ -72,12 +76,20 @@ public sealed class CustomXmlWriter : IDisposable
     private void WriteValue(string value)
     {
         var trimmed = value.TrimStart();
-        if (trimmed.StartsWith("@(") || trimmed.StartsWith("@{"))
+        if (_rawExpressions && (trimmed.StartsWith("@(") || trimmed.StartsWith("@{")))
         {
+            // rawxml format: policy expressions are written verbatim, keeping any
+            // characters that are otherwise reserved in XML (e.g. unescaped quotes
+            // and angle brackets in generic type arguments like As<JObject>()).
+            // This mirrors the Razor-like format Azure API Management accepts and
+            // returns for the 'rawxml' policy content type.
             _xmlWriter.WriteRaw(value);
         }
         else
         {
+            // xml format: everything is XML-encoded, so expressions become valid XML
+            // (e.g. As<JObject>() -> As&lt;JObject&gt;(), "x" -> &quot;x&quot;). This
+            // matches the 'xml' policy content type Azure API Management persists.
             _xmlWriter.WriteString(value);
         }
     }
