@@ -21,7 +21,9 @@ public class ConstFoldingRewriter : CSharpSyntaxRewriter
         var symbolInfo = _semanticModel.GetSymbolInfo(node);
         var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault();
 
-        if (symbol is IFieldSymbol { IsConst: true } field && field.ConstantValue is not null)
+        if (symbol is IFieldSymbol { IsConst: true } field
+            && field.ConstantValue is not null
+            && IsDefinedInSource(field))
         {
             return field.ConstantValue switch
             {
@@ -37,4 +39,11 @@ public class ConstFoldingRewriter : CSharpSyntaxRewriter
 
         return base.VisitMemberAccessExpression(node);
     }
+
+    // Only fold constants declared in the user's source code. Constants and enum members
+    // from referenced or runtime assemblies (e.g. System.*, Newtonsoft.*, Microsoft.*) must be
+    // left intact, otherwise things like StringComparison.OrdinalIgnoreCase would fold to their
+    // underlying value (5) and break the emitted policy expression.
+    private static bool IsDefinedInSource(IFieldSymbol field) =>
+        !field.DeclaringSyntaxReferences.IsDefaultOrEmpty;
 }
