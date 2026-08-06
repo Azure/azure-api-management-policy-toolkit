@@ -1,61 +1,55 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <Version>1.0.0</Version>
-        <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring</PackageId>
-        <Authors>Microsoft</Authors>
-        <Company>Microsoft Corporation</Company>
-        <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
-        <Product>Azure API Management Policy Toolkit</Product>
-        <PackageIcon>pkgicon.png</PackageIcon>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
-        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
-        <Description>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring</PackageId>
+    <Authors>Microsoft</Authors>
+    <Company>Microsoft Corporation</Company>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <Product>Azure API Management Policy Toolkit</Product>
+    <PackageIcon>pkgicon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <Description>
             Azure API Management Policy Toolkit Authoring is a library allowing creation of policy documents in code.
             Read more about it at https://github.com/Azure/azure-api-management-policy-toolkit
         </Description>
-        <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Authoring policies</PackageTags>
-        <NeutralLanguage>en-US</NeutralLanguage>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-    </PropertyGroup>
-
-    <PropertyGroup>
-        <TargetFramework>.net8</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <IsPackable>true</IsPackable>
-        <PackageOutputPath>..\..\output</PackageOutputPath>
-        <IncludeBuildOutput>true</IncludeBuildOutput>
-        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-        <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring</RootNamespace>
-        <TargetsForTfmSpecificContentInPackage>
+    <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Authoring policies</PackageTags>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <PackageOutputPath>..\..\output</PackageOutputPath>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring</RootNamespace>
+    <TargetsForTfmSpecificContentInPackage>
             $(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput
         </TargetsForTfmSpecificContentInPackage>
-    </PropertyGroup>
-
-    <PropertyGroup>
-        <NoWarn>1591</NoWarn> <!-- Disable warning CS1591: Missing XML comment for publicly visible type or member, should be removed in the future -->
-    </PropertyGroup>
-
+  </PropertyGroup>
+  <PropertyGroup>
+    <NoWarn>1591</NoWarn>
+    <!-- Disable warning CS1591: Missing XML comment for publicly visible type or member, should be removed in the future -->
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Analyzers\Analyzers.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <Target Name="_AddAnalyzersToOutput">
     <ItemGroup>
-        <ProjectReference Include="..\Analyzers\Analyzers.csproj"/>
+      <TfmSpecificPackageFile Include="$(OutputPath)\Analyzers.dll" PackagePath="analyzers/dotnet/cs" />
+      <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="" />
     </ItemGroup>
-
-    <ItemGroup>
-        <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\"/>
-        <None Include="README.md" Pack="true" PackagePath="\"/>
-    </ItemGroup>
-
-    <Target Name="_AddAnalyzersToOutput">
-        <ItemGroup>
-            <TfmSpecificPackageFile Include="$(OutputPath)\Analyzers.dll"
-                                    PackagePath="analyzers/dotnet/cs"/>
-            <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath=""/>
-        </ItemGroup>
-    </Target>
-
+  </Target>
 </Project>

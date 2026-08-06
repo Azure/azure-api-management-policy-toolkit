@@ -21,6 +21,30 @@
       "path": "test/Project.Test.csproj"
     }
   ],
+  "symbols": {
+    "Framework": {
+      "type": "parameter",
+      "datatype": "choice",
+      "description": "The target framework for generated projects.",
+      "displayName": "Target framework",
+      "defaultValue": "net10.0",
+      "replaces": "net10.0",
+      "choices": [
+        {
+          "choice": "net8.0",
+          "description": ".NET 8"
+        },
+        {
+          "choice": "net9.0",
+          "description": ".NET 9"
+        },
+        {
+          "choice": "net10.0",
+          "description": ".NET 10"
+        }
+      ]
+    }
+  },
   "postActions": [
     {
       "actionId": "D396686C-DE0E-4DE6-906D-291CD29FC5DE",

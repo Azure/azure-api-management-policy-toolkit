@@ -1,23 +1,44 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling</RootNamespace>
-
-        <PackAsTool>true</PackAsTool>
-        <ToolCommandName>azure-apim-policy-decompiler</ToolCommandName>
-        <PackageOutputPath>..\..\output</PackageOutputPath>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\Core\Core.csproj" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <PackageId>Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling</PackageId>
+    <Authors>Microsoft</Authors>
+    <Company>Microsoft Corporation</Company>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <Product>Azure API Management Policy Toolkit</Product>
+    <PackageIcon>pkgicon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/Azure/azure-api-management-policy-toolkit</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <Description>
+            Azure API Management Policy Toolkit Decompiling is a dotnet tool allowing you to transform policy document(s) from XML to C# code.
+            Read more about it at https://github.com/Azure/azure-api-management-policy-toolkit
+        </Description>
+    <PackageTags>Azure;Azure API Management;API Gateway;API Management;Policy;Policies;Policy Toolkit;Decompiling;Policy Toolkit Decompiling</PackageTags>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling</RootNamespace>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>azure-apim-policy-decompiler</ToolCommandName>
+    <PackageOutputPath>..\..\output</PackageOutputPath>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>
