@@ -71,7 +71,7 @@ extends:
                 displayName: 'ESRP sign produced assemblies'
                 condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
                 inputs:
-                  ConnectedServiceName: 'api-management-policy-toolkit-code-sig'
+                  ConnectedServiceName: 'api-management-policy-toolkit-code-sign'
                   AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
                   AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
                   AuthAKVName: 'policytoolkitcodesign'
@@ -129,7 +129,7 @@ extends:
                 displayName: 'ESRP sign NuGet packages'
                 condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
                 inputs:
-                  ConnectedServiceName: 'api-management-policy-toolkit-code-sig'
+                  ConnectedServiceName: 'api-management-policy-toolkit-code-sign'
                   AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
                   AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
                   AuthAKVName: 'policytoolkitcodesign'
