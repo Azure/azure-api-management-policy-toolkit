@@ -13,8 +13,6 @@ resources:
 variables:
   BuildConfiguration: 'Release'
   mainProjectPath: '$(Build.SourcesDirectory)/apim-policy-toolkit.sln'
-  exampleProjectFolder: '$(Build.SourcesDirectory)/example/'
-  exampleProjectPath: '$(Build.SourcesDirectory)/example/Example.sln'
   outputFolder: '$(Build.SourcesDirectory)/output/'
 
 extends:
@@ -166,29 +164,6 @@ extends:
                 inputs:
                   command: 'custom'
                   arguments: 'verify -All -Verbosity detailed $(outputFolder)*.nupkg'
-
-              - task: NuGetCommand@2
-                displayName: 'NuGet restore example solution'
-                inputs:
-                  restoreSolution: '$(exampleProjectPath)'
-
-              - script: dotnet tool restore
-                displayName: 'Restore .NET tools for example project'
-                workingDirectory: '$(exampleProjectFolder)'
-
-              - task: DotNetCoreCLI@2
-                displayName: 'Build example solution'
-                inputs:
-                  command: 'build'
-                  projects: '$(exampleProjectPath)'
-                  arguments: '--configuration $(BuildConfiguration) --no-restore'
-
-              - task: DotNetCoreCLI@2
-                displayName: 'Test example solution'
-                inputs:
-                  command: 'test'
-                  projects: '$(exampleProjectPath)'
-                  arguments: '--configuration $(BuildConfiguration) --no-build'
 
       - stage: publish
         displayName: 'Publish to NuGet.org'
