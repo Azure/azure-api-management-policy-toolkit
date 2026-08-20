@@ -49,7 +49,11 @@ extends:
               - task: NuGetCommand@2
                 displayName: 'NuGet restore main solution'
                 inputs:
+                  command: restore
                   restoreSolution: '$(mainProjectPath)'
+                  feedsToUse: select
+                  vstsFeed: 'ApiManagement'
+                  includeNuGetOrg: false
 
               - task: DotNetCoreCLI@2
                 displayName: 'Build main solution'
