@@ -188,11 +188,12 @@ extends:
                   MaxRetryAttempts: '5'
                   PendingAnalysisWaitTimeoutMinutes: '5'
 
-              - task: NuGetCommand@2
+              - task: DotNetCoreCLI@2
                 displayName: 'Verify signed NuGet packages'
                 inputs:
                   command: 'custom'
-                  arguments: 'verify -All -Verbosity detailed $(outputFolder)\*.nupkg'
+                  custom: 'nuget'
+                  arguments: 'verify --all --verbosity detailed $(outputFolder)\*.nupkg'
 
       - stage: publish
         displayName: 'Publish to NuGet.org'
