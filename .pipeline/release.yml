@@ -39,7 +39,6 @@ extends:
                   displayName: 'Upload NuGet package artifact'
                   targetPath: '$(outputFolder)'
                   artifactName: SignedPackages
-                  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
             steps:
               - task: PowerShell@2
                 displayName: 'Set package version'
