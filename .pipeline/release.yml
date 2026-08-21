@@ -1,4 +1,4 @@
-name: $(BuildDefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+name: $(BuildDefinitionName)_$(Date:yyyyMMdd)$(Rev:.r)
 
 trigger: none
 pr: none
@@ -9,11 +9,11 @@ resources:
       type: git
       name: 1ESPipelineTemplates/1ESPipelineTemplates
       ref: refs/tags/release
-
-variables:
-  BuildConfiguration: 'Release'
-  mainProjectPath: '$(Build.SourcesDirectory)/apim-policy-toolkit.sln'
-  outputFolder: '$(Build.ArtifactStagingDirectory)'
+  pipelines:
+    - pipeline: signedPackages
+      project: One
+      source: '\OneBranch\AAPT-APIManagement\Azure-API-Management-Policy-Toolkit-Build'
+      trigger: none
 
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
@@ -22,183 +22,10 @@ extends:
       name: Azure-Pipelines-1ESPT-ExDShared
       image: windows-2022
       os: windows
-    sdl:
-      sourceAnalysisPool:
-        name: Azure-Pipelines-1ESPT-ExDShared
-        image: windows-2022
-        os: windows
     stages:
-      - stage: build
-        displayName: 'Build, sign and stage NuGet packages'
-        jobs:
-          - job: build
-            displayName: 'Build, test, sign and pack'
-            templateContext:
-              outputs:
-                - output: pipelineArtifact
-                  displayName: 'Upload NuGet package artifact'
-                  targetPath: '$(outputFolder)'
-                  artifactName: SignedPackages
-            steps:
-              - task: PowerShell@2
-                displayName: 'Set package version'
-                inputs:
-                  targetType: inline
-                  script: |
-                    $sourceBranch = $env:BUILD_SOURCEBRANCH
-
-                    if ($sourceBranch.StartsWith('refs/tags/'))
-                    {
-                        if ($sourceBranch -notmatch '^refs/tags/v(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$')
-                        {
-                            throw "Release tags must use the format v<major>.<minor>.<patch>[-prerelease]."
-                        }
-
-                        $packageVersion = $Matches.version
-                    }
-                    else
-                    {
-                        $packageVersion = "0.0.0-ci.$env:BUILD_BUILDID"
-                    }
-
-                    Write-Host "Package version: $packageVersion"
-                    Write-Host "##vso[task.setvariable variable=PackageVersion]$packageVersion"
-                    Write-Host "##vso[build.updatebuildnumber]$packageVersion"
-
-              - task: UseDotNet@2
-                displayName: 'Setup .NET 8 SDK'
-                inputs:
-                  packageType: 'sdk'
-                  version: '8.x'
-
-              - task: NuGetCommand@2
-                displayName: 'NuGet restore main solution'
-                inputs:
-                  command: restore
-                  restoreSolution: '$(mainProjectPath)'
-                  feedsToUse: select
-                  vstsFeed: 'ApiManagement'
-                  includeNuGetOrg: false
-
-              - task: DotNetCoreCLI@2
-                displayName: 'Build main solution'
-                inputs:
-                  command: 'build'
-                  projects: '$(mainProjectPath)'
-                  arguments: '--configuration $(BuildConfiguration) --no-restore /p:Version=$(PackageVersion)'
-
-              - task: DotNetCoreCLI@2
-                displayName: 'Test main solution'
-                inputs:
-                  command: 'test'
-                  projects: '$(mainProjectPath)'
-                  arguments: '--configuration $(BuildConfiguration) --no-build'
-
-              - task: EsrpCodeSigning@5
-                displayName: 'ESRP sign produced assemblies'
-                inputs:
-                  ConnectedServiceName: 'api-management-policy-toolkit-code-sign'
-                  AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
-                  AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-                  AuthAKVName: 'policytoolkitcodesign'
-                  AuthCertName: 'policy-toolkit-esrp-login'
-                  AuthSignCertName: 'policy-toolkit-code-sign-cert'
-                  FolderPath: '$(Build.SourcesDirectory)/src'
-                  Pattern: |
-                    **/bin/$(BuildConfiguration)/**/Authoring.dll
-                    **/bin/$(BuildConfiguration)/**/Analyzers.dll
-                    **/bin/$(BuildConfiguration)/**/Core.dll
-                    **/bin/$(BuildConfiguration)/**/Compiling.dll
-                    **/bin/$(BuildConfiguration)/**/Compiling.exe
-                    **/bin/$(BuildConfiguration)/**/Decompiling.dll
-                    **/bin/$(BuildConfiguration)/**/Decompiling.exe
-                    **/bin/$(BuildConfiguration)/**/Testing.dll
-                  UseMinimatch: true
-                  signConfigType: 'inlineSignParams'
-                  inlineOperation: |
-                    [
-                      {
-                        "keyCode": "CP-230012",
-                        "operationSetCode": "SigntoolSign",
-                        "parameters": [
-                          { "parameterName": "OpusName", "parameterValue": "Microsoft" },
-                          { "parameterName": "OpusInfo", "parameterValue": "http://www.microsoft.com" },
-                          { "parameterName": "FileDigest", "parameterValue": "/fd \"SHA256\"" },
-                          { "parameterName": "PageHash", "parameterValue": "/NPH" },
-                          { "parameterName": "TimeStamp", "parameterValue": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256" }
-                        ],
-                        "toolName": "sign",
-                        "toolVersion": "1.0"
-                      },
-                      {
-                        "keyCode": "CP-230012",
-                        "operationSetCode": "SigntoolVerify",
-                        "parameters": [],
-                        "toolName": "sign",
-                        "toolVersion": "1.0"
-                      }
-                    ]
-                  SessionTimeout: '20'
-                  MaxConcurrency: '50'
-                  MaxRetryAttempts: '5'
-                  PendingAnalysisWaitTimeoutMinutes: '5'
-
-              - task: DotNetCoreCLI@2
-                displayName: 'Pack NuGet packages'
-                inputs:
-                  command: 'pack'
-                  packagesToPack: '$(mainProjectPath)'
-                  configuration: '$(BuildConfiguration)'
-                  nobuild: true
-                  packDirectory: '$(outputFolder)'
-                  versioningScheme: byEnvVar
-                  versionEnvVar: PackageVersion
-
-              - task: EsrpCodeSigning@5
-                displayName: 'ESRP sign NuGet packages'
-                inputs:
-                  ConnectedServiceName: 'api-management-policy-toolkit-code-sign'
-                  AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
-                  AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
-                  AuthAKVName: 'policytoolkitcodesign'
-                  AuthCertName: 'policy-toolkit-esrp-login'
-                  AuthSignCertName: 'policy-toolkit-code-sign-cert'
-                  FolderPath: '$(outputFolder)'
-                  Pattern: '*.nupkg'
-                  signConfigType: 'inlineSignParams'
-                  inlineOperation: |
-                    [
-                      {
-                        "keyCode": "CP-401405",
-                        "operationSetCode": "NuGetSign",
-                        "parameters": [],
-                        "toolName": "sign",
-                        "toolVersion": "1.0"
-                      },
-                      {
-                        "keyCode": "CP-401405",
-                        "operationSetCode": "NuGetVerify",
-                        "parameters": [],
-                        "toolName": "sign",
-                        "toolVersion": "1.0"
-                      }
-                    ]
-                  SessionTimeout: '60'
-                  MaxConcurrency: '50'
-                  MaxRetryAttempts: '5'
-                  PendingAnalysisWaitTimeoutMinutes: '5'
-
-              - task: DotNetCoreCLI@2
-                displayName: 'Verify signed NuGet packages'
-                inputs:
-                  command: 'custom'
-                  custom: 'nuget'
-                  arguments: 'verify --all --verbosity detailed $(outputFolder)\*.nupkg'
-
       - stage: publish
         displayName: 'Publish to NuGet.org'
-        dependsOn: build
-        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['resources.pipeline.signedPackages.sourceBranch'], 'refs/tags/v'))
         jobs:
           - deployment: publish_nuget
             displayName: 'Push signed NuGet packages'
@@ -208,16 +35,66 @@ extends:
               isProduction: true
               inputs:
                 - input: pipelineArtifact
+                  pipeline: signedPackages
                   artifactName: SignedPackages
-                  targetPath: '$(Pipeline.Workspace)/SignedPackages'
+                  targetPath: '$(Pipeline.Workspace)\SignedPackages'
             strategy:
               runOnce:
                 deploy:
                   steps:
+                    - task: PowerShell@2
+                      displayName: 'Validate selected build'
+                      inputs:
+                        targetType: inline
+                        script: |
+                          $sourceBranch = '$(resources.pipeline.signedPackages.sourceBranch)'
+                          $runName = '$(resources.pipeline.signedPackages.runName)'
+                          $runId = '$(resources.pipeline.signedPackages.runID)'
+
+                          if ($sourceBranch -notmatch '^refs/tags/v(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$')
+                          {
+                              throw "Selected build $runId was not produced from a valid release tag."
+                          }
+
+                          $packageVersion = $Matches.version
+                          if ($runName -ne $packageVersion)
+                          {
+                              throw "Selected build name '$runName' does not match tag version '$packageVersion'."
+                          }
+
+                          Write-Host "Publishing signed packages from build $runId for version $packageVersion."
+                          Write-Host "##vso[build.updatebuildnumber]$packageVersion"
+
+                    - task: UseDotNet@2
+                      displayName: 'Setup .NET 8 SDK'
+                      inputs:
+                        packageType: sdk
+                        version: '8.x'
+
+                    - task: PowerShell@2
+                      displayName: 'Verify signed NuGet packages'
+                      inputs:
+                        targetType: inline
+                        script: |
+                          $packages = @(Get-ChildItem -LiteralPath '$(Pipeline.Workspace)\SignedPackages' -Filter '*.nupkg')
+                          if ($packages.Count -eq 0)
+                          {
+                              throw "No NuGet packages were downloaded from the selected build."
+                          }
+
+                          foreach ($package in $packages)
+                          {
+                              & dotnet nuget verify --all --verbosity detailed $package.FullName
+                              if ($LASTEXITCODE -ne 0)
+                              {
+                                  throw "Signature verification failed for '$($package.Name)'."
+                              }
+                          }
+
                     - task: 1ES.PublishNuget@1
                       displayName: 'Push to NuGet.org'
                       inputs:
-                        packagesToPush: '$(Pipeline.Workspace)/SignedPackages/*.nupkg'
-                        packageParentPath: '$(Pipeline.Workspace)/SignedPackages'
+                        packagesToPush: '$(Pipeline.Workspace)\SignedPackages\*.nupkg'
+                        packageParentPath: '$(Pipeline.Workspace)\SignedPackages'
                         nuGetFeedType: external
                         publishFeedCredentials: 'api-management-policy-toolkit-nuget-connection'
