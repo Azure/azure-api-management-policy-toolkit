@@ -191,7 +191,6 @@ extends:
 
               - task: NuGetCommand@2
                 displayName: 'Verify signed NuGet packages'
-                condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
                 inputs:
                   command: 'custom'
                   arguments: 'verify -All -Verbosity detailed $(outputFolder)/*.nupkg'
