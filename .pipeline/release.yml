@@ -192,7 +192,7 @@ extends:
                 displayName: 'Verify signed NuGet packages'
                 inputs:
                   command: 'custom'
-                  arguments: 'verify -All -Verbosity detailed $(outputFolder)/*.nupkg'
+                  arguments: 'verify -All -Verbosity detailed $(outputFolder)\*.nupkg'
 
       - stage: publish
         displayName: 'Publish to NuGet.org'
