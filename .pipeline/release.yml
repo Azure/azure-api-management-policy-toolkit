@@ -13,7 +13,7 @@ resources:
 variables:
   BuildConfiguration: 'Release'
   mainProjectPath: '$(Build.SourcesDirectory)/apim-policy-toolkit.sln'
-  outputFolder: '$(Build.SourcesDirectory)/output/'
+  outputFolder: '$(Build.ArtifactStagingDirectory)'
 
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
@@ -36,10 +36,36 @@ extends:
             templateContext:
               outputs:
                 - output: pipelineArtifact
-                  displayName: 'Publish signed NuGet packages'
+                  displayName: 'Upload NuGet package artifact'
                   targetPath: '$(outputFolder)'
                   artifactName: SignedPackages
+                  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
             steps:
+              - task: PowerShell@2
+                displayName: 'Set package version'
+                inputs:
+                  targetType: inline
+                  script: |
+                    $sourceBranch = $env:BUILD_SOURCEBRANCH
+
+                    if ($sourceBranch.StartsWith('refs/tags/'))
+                    {
+                        if ($sourceBranch -notmatch '^refs/tags/v(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$')
+                        {
+                            throw "Release tags must use the format v<major>.<minor>.<patch>[-prerelease]."
+                        }
+
+                        $packageVersion = $Matches.version
+                    }
+                    else
+                    {
+                        $packageVersion = "0.0.0-ci.$env:BUILD_BUILDID"
+                    }
+
+                    Write-Host "Package version: $packageVersion"
+                    Write-Host "##vso[task.setvariable variable=PackageVersion]$packageVersion"
+                    Write-Host "##vso[build.updatebuildnumber]$packageVersion"
+
               - task: UseDotNet@2
                 displayName: 'Setup .NET 8 SDK'
                 inputs:
@@ -60,7 +86,7 @@ extends:
                 inputs:
                   command: 'build'
                   projects: '$(mainProjectPath)'
-                  arguments: '--configuration $(BuildConfiguration) --no-restore'
+                  arguments: '--configuration $(BuildConfiguration) --no-restore /p:Version=$(PackageVersion)'
 
               - task: DotNetCoreCLI@2
                 displayName: 'Test main solution'
@@ -71,7 +97,6 @@ extends:
 
               - task: EsrpCodeSigning@5
                 displayName: 'ESRP sign produced assemblies'
-                condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
                 inputs:
                   ConnectedServiceName: 'api-management-policy-toolkit-code-sign'
                   AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
@@ -126,10 +151,12 @@ extends:
                   packagesToPack: '$(mainProjectPath)'
                   configuration: '$(BuildConfiguration)'
                   nobuild: true
+                  packDirectory: '$(outputFolder)'
+                  versioningScheme: byEnvVar
+                  versionEnvVar: PackageVersion
 
               - task: EsrpCodeSigning@5
                 displayName: 'ESRP sign NuGet packages'
-                condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
                 inputs:
                   ConnectedServiceName: 'api-management-policy-toolkit-code-sign'
                   AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
@@ -167,7 +194,7 @@ extends:
                 condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
                 inputs:
                   command: 'custom'
-                  arguments: 'verify -All -Verbosity detailed $(outputFolder)*.nupkg'
+                  arguments: 'verify -All -Verbosity detailed $(outputFolder)/*.nupkg'
 
       - stage: publish
         displayName: 'Publish to NuGet.org'
