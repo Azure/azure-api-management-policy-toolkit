@@ -99,10 +99,11 @@ extends:
                 displayName: 'ESRP sign produced assemblies'
                 inputs:
                   ConnectedServiceName: 'api-management-policy-toolkit-code-sign'
-                  AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
+                  UseMSIAuthentication: true
+                  AppRegistrationClientId: 'a26d2d91-59a8-4b8b-9ee9-d0757ee09440'
                   AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+                  EsrpClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
                   AuthAKVName: 'policytoolkitcodesign'
-                  AuthCertName: 'policy-toolkit-code-sign-cert'
                   AuthSignCertName: 'policy-toolkit-code-sign-cert'
                   FolderPath: '$(Build.SourcesDirectory)/src'
                   Pattern: |
@@ -159,10 +160,11 @@ extends:
                 displayName: 'ESRP sign NuGet packages'
                 inputs:
                   ConnectedServiceName: 'api-management-policy-toolkit-code-sign'
-                  AppRegistrationClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
+                  UseMSIAuthentication: true
+                  AppRegistrationClientId: 'a26d2d91-59a8-4b8b-9ee9-d0757ee09440'
                   AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d'
+                  EsrpClientId: 'e2f0c766-9799-4fd2-bf91-81ff1aef999d'
                   AuthAKVName: 'policytoolkitcodesign'
-                  AuthCertName: 'policy-toolkit-code-sign-cert'
                   AuthSignCertName: 'policy-toolkit-code-sign-cert'
                   FolderPath: '$(outputFolder)'
                   Pattern: '*.nupkg'
