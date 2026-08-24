@@ -24,7 +24,7 @@ policy, or migrating legacy XML policies into C#-based source control workflows.
 Install the Microsoft Azure API Management Policy Toolkit decompiler CLI tool with [NuGet][nuget]:
 
 ```shell
-dotnet tool install Azure.ApiManagement.PolicyToolkit.Decompiling
+dotnet tool install Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling
 ```
 
 ## Usage
@@ -123,7 +123,7 @@ the [Code of Conduct FAQ][coc_faq] or contact
 
 <!-- LINKS -->
 
-[nuget]: https://www.nuget.org/
+[nuget]: https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling
 
 [qs]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/QuickStart.md
 

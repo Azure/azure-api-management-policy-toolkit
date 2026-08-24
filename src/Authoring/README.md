@@ -11,7 +11,7 @@ Management.
 ### Install the package
 
 Install the Microsoft Azure Api Management Policy Toolkit policy authoring library for .NET
-with [NuGet](https://www.nuget.org/):
+with [NuGet][nuget]:
 
 ```dotnetcli
 dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
@@ -77,7 +77,7 @@ more information, see the [Code of Conduct FAQ][coc_faq] or contact
 
 <!-- LINKS -->
 
-[nuget]: https://www.nuget.org/
+[nuget]: https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
 
 [qs]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/QuickStart.md
 
