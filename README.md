@@ -10,7 +10,13 @@ The toolkit also includes a **decompiler** that converts existing APIM policy XM
 
 ## Documentation
 
-:exclamation: Packages are only avaliable for download from github release. We are working to bring them to public nuget.
+The toolkit is available from NuGet:
+
+* [Templates](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Templates)
+* [Testing](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Testing)
+* [Authoring](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring)
+* [Compiling](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling)
+* [Decompiling](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling)
 
 #### Azure API Management policy toolkit documentation for users.
 * [Quick start](docs/QuickStart.md)
