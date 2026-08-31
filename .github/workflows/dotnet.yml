@@ -17,9 +17,9 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@55ec9447dda3d1cf6bd587150f3262f30ee10815 # v3.4.2
         with:
           dotnet-version: 8.0.x
       - name: Restore dependencies
@@ -30,7 +30,7 @@ jobs:
         run: dotnet test --no-build --logger trx --results-directory "TestResults"
       - name: Upload dotnet test results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dotnet-test-results-${{ matrix.os }}
           path: TestResults
@@ -39,7 +39,7 @@ jobs:
         run: dotnet format style --verify-no-changes --report "FormatReport"
       - name: Upload format report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dotnet-format-report-${{ matrix.os }}
           path: FormatReport
@@ -51,9 +51,9 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@55ec9447dda3d1cf6bd587150f3262f30ee10815 # v3.4.2
         with:
           dotnet-version: 8.0.x
       - name: Create new packages
@@ -81,7 +81,7 @@ jobs:
         run: dotnet test --no-build --logger trx --results-directory "TestResults"
       - name: Upload dotnet test results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dotnet-test-results-example-${{ matrix.os }}
           path: ./example/TestResults
