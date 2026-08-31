@@ -1,0 +1,22 @@
+<policies>
+	<inbound>
+		<base />
+		<validate-graphql-request error-variable-name="graphql-error" max-depth="5" max-size="102400" max-total-depth="10" max-complexity="100">
+			<authorize>
+				<rule path="/Query/users" action="allow" />
+				<rule path="/Mutation/createUser" action="allow" />
+				<rule path="/Mutation/deleteUser" action="deny" />
+				<rule path="/Subscription/userUpdated" />
+			</authorize>
+		</validate-graphql-request>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
