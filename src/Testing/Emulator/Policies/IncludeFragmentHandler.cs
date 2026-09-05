@@ -17,7 +17,15 @@ internal class IncludeFragmentHandler : IPolicyHandler
 
     public object? Handle(GatewayContext context, object?[]? args)
     {
-        var fragmentId = args?.FirstOrDefault()?.ToString()
+        var firstArg = args?.FirstOrDefault();
+
+        if (firstArg is IFragment fragmentInstance)
+        {
+            ExecuteFragment(fragmentInstance, context);
+            return null;
+        }
+
+        var fragmentId = firstArg?.ToString()
             ?? throw new InvalidOperationException("Fragment ID is required for IncludeFragment.");
 
         // 1. Check pre-registered fragments first

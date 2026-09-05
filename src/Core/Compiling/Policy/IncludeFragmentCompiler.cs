@@ -26,7 +26,61 @@ public class IncludeFragmentCompiler : IMethodPolicyHandler
             return;
         }
 
-        var fragmentId = node.ArgumentList.Arguments[0].Expression.ProcessParameter(context);
+        var arg = node.ArgumentList.Arguments[0].Expression;
+
+        if (arg is ObjectCreationExpressionSyntax objectCreation)
+        {
+            HandleFragmentObject(context, objectCreation);
+        }
+        else
+        {
+            var fragmentId = arg.ProcessParameter(context);
+            context.AddPolicy(new XElement("include-fragment", new XAttribute("fragment-id", fragmentId)));
+        }
+    }
+
+    private static void HandleFragmentObject(
+        IDocumentCompilationContext context,
+        ObjectCreationExpressionSyntax objectCreation)
+    {
+        var className = (objectCreation.Type as IdentifierNameSyntax)?.Identifier.ValueText;
+        if (className is null)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.NotSupportedParameter,
+                objectCreation.GetLocation()
+            ));
+            return;
+        }
+
+        ClassDeclarationSyntax? fragmentClass = null;
+        foreach (var tree in context.Compilation.SyntaxTrees)
+        {
+            fragmentClass = tree.GetRoot()
+                .DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .FirstOrDefault(c => c.Identifier.ValueText == className);
+            if (fragmentClass is not null) break;
+        }
+
+        var fragmentId = CompilerUtils.ExtractFragmentId(fragmentClass ?? context.SyntaxRoot as ClassDeclarationSyntax);
+        if (fragmentClass is null)
+            fragmentId = CompilerUtils.ToKebabCase(className);
+
+        foreach (var expression in objectCreation.Initializer?.Expressions ?? [])
+        {
+            if (expression is not AssignmentExpressionSyntax assignment)
+                continue;
+
+            var propName = assignment.Left.ToString();
+            var varName = CompilerUtils.GetFragmentVariableName(fragmentClass, propName) ?? propName;
+            var value = assignment.Right.ProcessParameter(context);
+
+            context.AddPolicy(new XElement("set-variable",
+                new XAttribute("name", $"{fragmentId}-{varName}"),
+                new XAttribute("value", value)));
+        }
+
         context.AddPolicy(new XElement("include-fragment", new XAttribute("fragment-id", fragmentId)));
     }
 }
