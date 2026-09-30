@@ -21,8 +21,13 @@ internal abstract class SetHeaderHandler : PolicyHandler<string, string[]>
 {
     public override string PolicyName => nameof(IInboundContext.SetHeader);
 
-    protected override void Handle(GatewayContext context, string name, string[] values) =>
+    protected override void Handle(GatewayContext context, string name, string[] values)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(values);
+
         GetHeaders(context)[name] = values;
+    }
 
     protected abstract Dictionary<string, string[]> GetHeaders(GatewayContext context);
 }

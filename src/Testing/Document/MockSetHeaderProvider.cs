@@ -11,6 +11,9 @@ public static class MockSetHeaderProvider
     public static Setup SetHeader(this MockPoliciesProvider<IInboundContext> mock) =>
         SetHeader(mock, (_, _, _) => true);
 
+    public static Setup SetHeader(this MockPoliciesProvider<IBackendContext> mock) =>
+        SetHeader(mock, (_, _, _) => true);
+
     public static Setup SetHeader(this MockPoliciesProvider<IOutboundContext> mock) =>
         SetHeader(mock, (_, _, _) => true);
 
@@ -21,6 +24,11 @@ public static class MockSetHeaderProvider
         this MockPoliciesProvider<IInboundContext> mock,
         Func<GatewayContext, string, string[], bool> predicate
     ) => SetHeader<IInboundContext, SetHeaderRequestHandler>(mock, predicate);
+
+    public static Setup SetHeader(
+        this MockPoliciesProvider<IBackendContext> mock,
+        Func<GatewayContext, string, string[], bool> predicate
+    ) => SetHeader<IBackendContext, SetHeaderRequestHandler>(mock, predicate);
 
     public static Setup SetHeader(
         this MockPoliciesProvider<IOutboundContext> mock,

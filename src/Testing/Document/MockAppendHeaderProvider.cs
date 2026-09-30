@@ -11,6 +11,9 @@ public static class MockAppendHeaderProvider
     public static Setup AppendHeader(this MockPoliciesProvider<IInboundContext> mock) =>
         AppendHeader(mock, (_, _, _) => true);
 
+    public static Setup AppendHeader(this MockPoliciesProvider<IBackendContext> mock) =>
+        AppendHeader(mock, (_, _, _) => true);
+
     public static Setup AppendHeader(this MockPoliciesProvider<IOutboundContext> mock) =>
         AppendHeader(mock, (_, _, _) => true);
 
@@ -21,6 +24,11 @@ public static class MockAppendHeaderProvider
         this MockPoliciesProvider<IInboundContext> mock,
         Func<GatewayContext, string, string[], bool> predicate
     ) => AppendHeader<IInboundContext, AppendHeaderRequestHandler>(mock, predicate);
+
+    public static Setup AppendHeader(
+        this MockPoliciesProvider<IBackendContext> mock,
+        Func<GatewayContext, string, string[], bool> predicate
+    ) => AppendHeader<IBackendContext, AppendHeaderRequestHandler>(mock, predicate);
 
     public static Setup AppendHeader(
         this MockPoliciesProvider<IOutboundContext> mock,

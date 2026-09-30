@@ -11,10 +11,40 @@ public static class MockRemoveQueryParameterProvider
     public static Setup RemoveQueryParameter(this MockPoliciesProvider<IInboundContext> mock) =>
         RemoveQueryParameter(mock, (_, _) => true);
 
+    public static Setup RemoveQueryParameter(this MockPoliciesProvider<IBackendContext> mock) =>
+        RemoveQueryParameter(mock, (_, _) => true);
+
+    public static Setup RemoveQueryParameter(this MockPoliciesProvider<IOutboundContext> mock) =>
+        RemoveQueryParameter(mock, (_, _) => true);
+
+    public static Setup RemoveQueryParameter(this MockPoliciesProvider<IOnErrorContext> mock) =>
+        RemoveQueryParameter(mock, (_, _) => true);
+
     public static Setup RemoveQueryParameter(
         this MockPoliciesProvider<IInboundContext> mock,
         Func<GatewayContext, string, bool> predicate
+    ) => RemoveQueryParameter<IInboundContext>(mock, predicate);
+
+    public static Setup RemoveQueryParameter(
+        this MockPoliciesProvider<IBackendContext> mock,
+        Func<GatewayContext, string, bool> predicate
+    ) => RemoveQueryParameter<IBackendContext>(mock, predicate);
+
+    public static Setup RemoveQueryParameter(
+        this MockPoliciesProvider<IOutboundContext> mock,
+        Func<GatewayContext, string, bool> predicate
+    ) => RemoveQueryParameter<IOutboundContext>(mock, predicate);
+
+    public static Setup RemoveQueryParameter(
+        this MockPoliciesProvider<IOnErrorContext> mock,
+        Func<GatewayContext, string, bool> predicate
+    ) => RemoveQueryParameter<IOnErrorContext>(mock, predicate);
+
+    private static Setup RemoveQueryParameter<TContext>(
+        MockPoliciesProvider<TContext> mock,
+        Func<GatewayContext, string, bool> predicate
     )
+        where TContext : class
     {
         var handler = mock.SectionContextProxy.GetHandler<RemoveQueryParameterHandler>();
         return new Setup(predicate, handler);

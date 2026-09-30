@@ -17,6 +17,9 @@ internal class AppendQueryParameterHandler : PolicyHandler<string, string[]>
 
     protected override void Handle(GatewayContext context, string name, string[] values)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(values);
+
         var query = context.Request.Url.Query;
         if (query.TryGetValue(name, out var currentValues))
         {

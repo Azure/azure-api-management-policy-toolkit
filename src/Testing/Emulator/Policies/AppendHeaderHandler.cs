@@ -23,6 +23,9 @@ internal abstract class AppendHeaderHandler : PolicyHandler<string, string[]>
 
     protected override void Handle(GatewayContext context, string name, string[] values)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(values);
+
         var headers = GetHeaders(context);
         if (headers.TryGetValue(name, out var currentValues))
         {

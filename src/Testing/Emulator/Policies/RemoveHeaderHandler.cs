@@ -25,11 +25,15 @@ internal abstract class RemoveHeaderHandler : PolicyHandler<string>
 
     protected override void Handle(GatewayContext context, string name)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
         var headers = GetHeaders(context);
-        var existingKey = headers.Keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
-        if (existingKey is not null)
+        var matchingKeys = headers.Keys
+            .Where(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        foreach (var key in matchingKeys)
         {
-            headers.Remove(existingKey);
+            headers.Remove(key);
         }
     }
 

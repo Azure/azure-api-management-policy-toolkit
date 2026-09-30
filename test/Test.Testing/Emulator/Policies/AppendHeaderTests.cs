@@ -212,4 +212,170 @@ public class AppendHeaderTests
             .WhoseValue.Should().HaveCount(4).And.ContainInOrder("value-3", "value-2", "value-1", "value-0");
         test.Context.Request.Headers.Should().NotContainKeys("X-Inbound", "X-Outbound", "X-OnError");
     }
+
+    class ConfigurableAppendHeader(
+        string name,
+        string[] values,
+        bool useExpressions = false,
+        bool includeUnmatched = false) : IDocument
+    {
+        public void Inbound(IInboundContext context) =>
+            HeaderQueryTestHelpers.Apply(context, context.AppendHeader, name, values, useExpressions, includeUnmatched);
+
+        public void Backend(IBackendContext context) =>
+            HeaderQueryTestHelpers.Apply(context, context.AppendHeader, name, values, useExpressions, includeUnmatched);
+
+        public void Outbound(IOutboundContext context) =>
+            HeaderQueryTestHelpers.Apply(context, context.AppendHeader, name, values, useExpressions, includeUnmatched);
+
+        public void OnError(IOnErrorContext context) =>
+            HeaderQueryTestHelpers.Apply(context, context.AppendHeader, name, values, useExpressions, includeUnmatched);
+    }
+
+    [TestMethod]
+    [DataRow("Inbound", "missing")]
+    [DataRow("Inbound", "empty")]
+    [DataRow("Inbound", "repeated")]
+    [DataRow("Backend", "missing")]
+    [DataRow("Backend", "empty")]
+    [DataRow("Backend", "repeated")]
+    [DataRow("Outbound", "missing")]
+    [DataRow("Outbound", "empty")]
+    [DataRow("Outbound", "repeated")]
+    [DataRow("OnError", "missing")]
+    [DataRow("OnError", "empty")]
+    [DataRow("OnError", "repeated")]
+    public void AppendHeader_PreservesOrderedRepeatedAndEmptyValuesIgnoringCase(string section, string existing)
+    {
+        var test = new ConfigurableAppendHeader("x-test", ["", "new", "new"]).AsTestDocument();
+        string[]? previous = existing switch
+        {
+            "missing" => null,
+            "empty" => [],
+            "repeated" => ["old", "old"],
+            _ => throw new ArgumentOutOfRangeException(nameof(existing))
+        };
+        HeaderQueryTestHelpers.SeedHeaders(test, section, previous);
+
+        HeaderQueryTestHelpers.Run(test, section);
+
+        var headers = HeaderQueryTestHelpers.Message(test.Context, section).Headers;
+        var expected = (previous ?? []).Concat(["", "new", "new"]).ToArray();
+        headers["X-TEST"].Should().Equal(expected);
+        headers.Should().HaveCount(2);
+        HeaderQueryTestHelpers.AssertUnrelatedHeaders(test, section);
+    }
+
+    [TestMethod]
+    [DataRow("Inbound", false)]
+    [DataRow("Inbound", true)]
+    [DataRow("Backend", false)]
+    [DataRow("Backend", true)]
+    [DataRow("Outbound", false)]
+    [DataRow("Outbound", true)]
+    [DataRow("OnError", false)]
+    [DataRow("OnError", true)]
+    public void AppendHeader_HandlesEmptyIncomingValues(string section, bool exists)
+    {
+        var test = new ConfigurableAppendHeader("x-test", []).AsTestDocument();
+        HeaderQueryTestHelpers.SeedHeaders(test, section, exists ? ["old", "old"] : null);
+
+        HeaderQueryTestHelpers.Run(test, section);
+
+        var headers = HeaderQueryTestHelpers.Message(test.Context, section).Headers;
+        headers["X-Test"].Should().Equal(exists ? ["old", "old"] : Array.Empty<string>());
+        headers.Should().HaveCount(2);
+        HeaderQueryTestHelpers.AssertUnrelatedHeaders(test, section);
+    }
+
+    [TestMethod]
+    [DataRow("Inbound", false)]
+    [DataRow("Inbound", true)]
+    [DataRow("Backend", false)]
+    [DataRow("Backend", true)]
+    [DataRow("Outbound", false)]
+    [DataRow("Outbound", true)]
+    [DataRow("OnError", false)]
+    [DataRow("OnError", true)]
+    public void AppendHeader_CallbackOverridesDefaultInEverySection(string section, bool withPredicate)
+    {
+        var test = new ConfigurableAppendHeader("x-test", ["new"], includeUnmatched: withPredicate).AsTestDocument();
+        HeaderQueryTestHelpers.SeedHeaders(test, section, ["old"]);
+        var setup = withPredicate
+            ? HeaderQueryTestHelpers.Setup<MockAppendHeaderProvider.Setup>(
+                test, section, typeof(MockAppendHeaderProvider), nameof(MockAppendHeaderProvider.AppendHeader),
+                (_, name, _) => name == "x-test")
+            : HeaderQueryTestHelpers.Setup<MockAppendHeaderProvider.Setup>(
+                test, section, typeof(MockAppendHeaderProvider), nameof(MockAppendHeaderProvider.AppendHeader));
+        setup.WithCallback((context, name, values) =>
+            HeaderQueryTestHelpers.Message(context, section).Headers[name] = ["callback", .. values]);
+
+        HeaderQueryTestHelpers.Run(test, section);
+
+        var headers = HeaderQueryTestHelpers.Message(test.Context, section).Headers;
+        headers["X-Test"].Should().Equal("callback", "new");
+        headers.Should().HaveCount(withPredicate ? 3 : 2);
+        if (withPredicate)
+        {
+            headers["x-other"].Should().Equal("default");
+        }
+        HeaderQueryTestHelpers.AssertUnrelatedHeaders(test, section);
+    }
+
+    [TestMethod]
+    [DataRow("Inbound")]
+    [DataRow("Backend")]
+    [DataRow("Outbound")]
+    [DataRow("OnError")]
+    public void AppendHeader_UsesExpressionDrivenNameAndValues(string section)
+    {
+        var test = new ConfigurableAppendHeader("unused", [], useExpressions: true).AsTestDocument();
+        HeaderQueryTestHelpers.SeedHeaders(test, section, ["old"]);
+        test.Context.Request.Headers["X-Policy-Name"] = ["x-test"];
+        test.Context.Request.Headers["X-Policy-Values"] = ["", "expression", "expression"];
+
+        HeaderQueryTestHelpers.Run(test, section);
+
+        HeaderQueryTestHelpers.Message(test.Context, section).Headers["X-TEST"]
+            .Should().Equal("old", "", "expression", "expression");
+        HeaderQueryTestHelpers.AssertUnrelatedHeaders(test, section);
+    }
+
+    [TestMethod]
+    [DataRow("Inbound", null)]
+    [DataRow("Inbound", "")]
+    [DataRow("Inbound", " ")]
+    [DataRow("Backend", null)]
+    [DataRow("Backend", "")]
+    [DataRow("Backend", " ")]
+    [DataRow("Outbound", null)]
+    [DataRow("Outbound", "")]
+    [DataRow("Outbound", " ")]
+    [DataRow("OnError", null)]
+    [DataRow("OnError", "")]
+    [DataRow("OnError", " ")]
+    public void AppendHeader_RejectsInvalidNameWithoutMutation(string section, string? name)
+    {
+        var test = new ConfigurableAppendHeader(name!, ["new"]).AsTestDocument();
+        HeaderQueryTestHelpers.SeedHeaders(test, section, ["old"]);
+
+        HeaderQueryTestHelpers.AssertInvalid(test, section, nameof(IInboundContext.AppendHeader));
+    }
+
+    [TestMethod]
+    [DataRow("Inbound", false)]
+    [DataRow("Inbound", true)]
+    [DataRow("Backend", false)]
+    [DataRow("Backend", true)]
+    [DataRow("Outbound", false)]
+    [DataRow("Outbound", true)]
+    [DataRow("OnError", false)]
+    [DataRow("OnError", true)]
+    public void AppendHeader_RejectsNullValuesWithoutMutation(string section, bool exists)
+    {
+        var test = new ConfigurableAppendHeader("x-test", null!).AsTestDocument();
+        HeaderQueryTestHelpers.SeedHeaders(test, section, exists ? ["old"] : null);
+
+        HeaderQueryTestHelpers.AssertInvalid(test, section, nameof(IInboundContext.AppendHeader));
+    }
 }

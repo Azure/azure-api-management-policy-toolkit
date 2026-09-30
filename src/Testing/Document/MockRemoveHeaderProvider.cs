@@ -11,6 +11,9 @@ public static class MockRemoveHeaderProvider
     public static Setup RemoveHeader(this MockPoliciesProvider<IInboundContext> mock) =>
         RemoveHeader(mock, (_, _) => true);
 
+    public static Setup RemoveHeader(this MockPoliciesProvider<IBackendContext> mock) =>
+        RemoveHeader(mock, (_, _) => true);
+
     public static Setup RemoveHeader(this MockPoliciesProvider<IOutboundContext> mock) =>
         RemoveHeader(mock, (_, _) => true);
 
@@ -23,13 +26,18 @@ public static class MockRemoveHeaderProvider
     ) => RemoveHeader<IInboundContext, RemoveHeaderRequestHandler>(mock, predicate);
 
     public static Setup RemoveHeader(
+        this MockPoliciesProvider<IBackendContext> mock,
+        Func<GatewayContext, string, bool> predicate
+    ) => RemoveHeader<IBackendContext, RemoveHeaderRequestHandler>(mock, predicate);
+
+    public static Setup RemoveHeader(
         this MockPoliciesProvider<IOutboundContext> mock,
         Func<GatewayContext, string, bool> predicate
-    ) => RemoveHeader<IOutboundContext, RemoveHeaderRequestHandler>(mock, predicate);
+    ) => RemoveHeader<IOutboundContext, RemoveHeaderResponseHandler>(mock, predicate);
 
     public static Setup RemoveHeader(this MockPoliciesProvider<IOnErrorContext> mock,
         Func<GatewayContext, string, bool> predicate
-    ) => RemoveHeader<IOnErrorContext, RemoveHeaderRequestHandler>(mock, predicate);
+    ) => RemoveHeader<IOnErrorContext, RemoveHeaderResponseHandler>(mock, predicate);
 
     private static Setup RemoveHeader<TContext, THandler>(
         MockPoliciesProvider<TContext> mock,
