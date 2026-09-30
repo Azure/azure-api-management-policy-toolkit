@@ -1,6 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
+using System.Text;
+
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
@@ -9,13 +12,13 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 [Section(nameof(IInboundContext)), Section(nameof(IBackendContext))]
 internal class SetBodyRequestHandler : SetBodyHandler
 {
-    protected override MockBody GetBody(GatewayContext context) => context.Request.Body;
+    protected override MockMessage GetMessage(GatewayContext context) => context.Request;
 }
 
 [Section(nameof(IOutboundContext)), Section(nameof(IOnErrorContext))]
 internal class SetBodyResponseHandler : SetBodyHandler
 {
-    protected override MockBody GetBody(GatewayContext context) => context.Response.Body;
+    protected override MockMessage GetMessage(GatewayContext context) => context.Response;
 }
 
 internal abstract class SetBodyHandler : IPolicyHandler
@@ -29,28 +32,7 @@ internal abstract class SetBodyHandler : IPolicyHandler
 
     public object? Handle(GatewayContext context, object?[]? args)
     {
-        if (args is not { Length: 2 })
-        {
-            throw new ArgumentException("Expected 2 arguments", nameof(args));
-        }
-
-        if (args[0] is not string body)
-        {
-            throw new ArgumentException("SetBodyHandler requires a string argument.");
-        }
-
-        SetBodyConfig? config = null;
-
-        if (args[1] is not null)
-        {
-            if (args[1] is not SetBodyConfig c)
-            {
-                throw new ArgumentException("SetBodyHandler requires a string argument for the content type.");
-            }
-
-            config = c;
-        }
-
+        var (body, config) = args.ExtractArguments<string, SetBodyConfig>();
         var callbackHook = CallbackHooks.Find(hook => hook.Item1(context, body, config));
 
         if (callbackHook is not null)
@@ -59,11 +41,47 @@ internal abstract class SetBodyHandler : IPolicyHandler
             return null;
         }
 
-        var contextBody = GetBody(context);
-        contextBody.Content = body;
+        ValidateRenderingConfiguration(config);
+        var message = GetMessage(context);
+        var contentLengthHeaders = message.Headers.Keys
+            .Where(name => name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var contentLength = Encoding.UTF8.GetByteCount(body).ToString(CultureInfo.InvariantCulture);
+
+        message.Body.Content = body;
+        foreach (var header in contentLengthHeaders)
+        {
+            message.Headers[header] = [contentLength];
+        }
 
         return null;
     }
 
-    protected abstract MockBody GetBody(GatewayContext context);
+    private static void ValidateRenderingConfiguration(SetBodyConfig? config)
+    {
+        if (config is null)
+        {
+            return;
+        }
+
+        if (config.Template is not null && config.Template != "liquid")
+        {
+            throw new ArgumentException("Template must be 'liquid' when specified.", nameof(config.Template));
+        }
+
+        if (config.XsiNil is not null && config.XsiNil is not ("blank" or "null"))
+        {
+            throw new ArgumentException("XsiNil must be 'blank' or 'null' when specified.", nameof(config.XsiNil));
+        }
+
+        if (config.Template is not null || config.XsiNil is not null || config.ParseDate is not null)
+        {
+            throw new NotSupportedException(
+                "SetBody liquid rendering, including XsiNil and ParseDate settings, is not supported by the emulator. Use SetBody().WithCallback(...) to supply a rendered body.");
+        }
+
+        // UseValueElement controls compiled policy XML, not runtime body rendering.
+    }
+
+    protected abstract MockMessage GetMessage(GatewayContext context);
 }
