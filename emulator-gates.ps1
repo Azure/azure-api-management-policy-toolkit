@@ -108,6 +108,10 @@ try {
         }
     }
     else {
+        if (-not (Test-Path -LiteralPath 'test\Test.Testing\Emulator\EmulatorCoverageGateTests.cs')) {
+            throw 'The full emulator gate requires an audited policy coverage test.'
+        }
+
         & dotnet test test\Test.Testing\Test.Testing.csproj --no-logo --verbosity quiet
         if ($LASTEXITCODE -ne 0) {
             throw 'The full emulator test project failed.'
