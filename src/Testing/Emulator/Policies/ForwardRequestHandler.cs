@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -13,51 +13,25 @@ internal class ForwardRequestHandler : PolicyHandlerOptionalParam<ForwardRequest
 
     protected override void Handle(GatewayContext context, ForwardRequestConfig? config)
     {
-        var httpClient = context.Services.Resolve<IHttpClient>();
-        if (httpClient is null)
+        var client = HttpPolicyTransport.GetClient(context);
+        var options = HttpPolicyTransport.ForwardOptions(config);
+        var (version, versionPolicy) = config?.HttpVersion switch
         {
-            // No-op: in test mode without an HTTP client, leave response as-is
-            return;
-        }
-
-        var url = context.BackendUrl is not null
-            ? context.BackendUrl.TrimEnd('/') + context.Request.Url.Path + context.Request.Url.QueryString
-            : context.Request.Url.ToString();
-        var request = new HttpRequestMessage(new HttpMethod(context.Request.Method), url);
-
-        // Copy request headers
-        foreach (var header in context.Request.Headers)
+            null or "1" => (System.Net.HttpVersion.Version11, HttpVersionPolicy.RequestVersionExact),
+            "2" => (System.Net.HttpVersion.Version20, HttpVersionPolicy.RequestVersionExact),
+            "2or1" => (System.Net.HttpVersion.Version20, HttpVersionPolicy.RequestVersionOrLower),
+            _ => throw new ArgumentException($"Unsupported HTTP version '{config.HttpVersion}'.", nameof(config.HttpVersion))
+        };
+        var request = HttpTransportRequestBuilder.Create(context, BackendResolver.ForwardUri(context),
+            context.Request.Method, copyHeaders: true, copyBody: true, options: options);
+        request.Version = version;
+        request.VersionPolicy = versionPolicy;
+        var response = HttpPolicyTransport.Send(context, client, request);
+        ResponseUtilities.Copy(response, context.Response);
+        if (config?.FailOnErrorStatusCode == true && response.StatusCode is >= 400 and <= 599)
         {
-            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        }
-
-        // Copy body
-        var bodyContent = context.Request.Body?.As<string>(preserveContent: true);
-        if (!string.IsNullOrEmpty(bodyContent))
-        {
-            request.Content = new StringContent(bodyContent);
-        }
-
-        var response = httpClient.SendAsync(request).GetAwaiter().GetResult();
-
-        context.Response.StatusCode = (int)response.StatusCode;
-        context.Response.StatusReason = response.ReasonPhrase ?? "";
-
-        // Copy response headers
-        foreach (var header in response.Headers)
-        {
-            context.Response.Headers[header.Key] = header.Value.ToArray();
-        }
-
-        if (response.Content is not null)
-        {
-            foreach (var header in response.Content.Headers)
-            {
-                context.Response.Headers[header.Key] = header.Value.ToArray();
-            }
-
-            var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            context.Response.Body.Content = content;
+            throw new HttpRequestException($"ForwardRequest backend returned HTTP {response.StatusCode}.",
+                null, (System.Net.HttpStatusCode)response.StatusCode);
         }
     }
 }

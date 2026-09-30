@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -8,6 +8,9 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
 public static class MockSetBackendServiceProvider
 {
+    public static Setup SetBackendService<T>(this MockPoliciesProvider<T> mock) where T : class =>
+        SetBackendService(mock, (_, _) => true);
+
     public static Setup SetBackendService(this MockPoliciesProvider<IInboundContext> mock) =>
         SetBackendService(mock, (_, _) => true);
 
@@ -24,8 +27,8 @@ public static class MockSetBackendServiceProvider
         Func<GatewayContext, SetBackendServiceConfig, bool> predicate
     ) => SetBackendService<IBackendContext>(mock, predicate);
 
-    private static Setup SetBackendService<T>(
-        MockPoliciesProvider<T> mock,
+    public static Setup SetBackendService<T>(
+        this MockPoliciesProvider<T> mock,
         Func<GatewayContext, SetBackendServiceConfig, bool> predicate
     ) where T : class
     {
