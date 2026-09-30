@@ -2,71 +2,83 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
 
-var sourceOption = new Option<string?>(
-    aliases: ["--s", "--source"],
-    description: "Input policy XML file or directory (recursive scan)");
+var sourceOption = new Option<string?>("--s", "--source")
+{
+    Description = "Input policy XML file or directory (recursive scan)"
+};
 
-var inputOption = new Option<FileInfo[]?>(
-    aliases: ["-i", "--input"],
-    description: "Input policy XML file(s)")
-{ AllowMultipleArgumentsPerToken = true };
+var inputOption = new Option<FileInfo[]?>("--input", "-i")
+{
+    Description = "Input policy XML file(s)",
+    AllowMultipleArgumentsPerToken = true
+};
 
-var inputDirOption = new Option<DirectoryInfo?>(
-    aliases: ["-d", "--input-dir"],
-    description: "Input directory (recursive scan)");
+var inputDirOption = new Option<DirectoryInfo?>("--input-dir", "-d")
+{
+    Description = "Input directory (recursive scan)"
+};
 
-var patternOption = new Option<string>(
-    aliases: ["-p", "--pattern"],
-    getDefaultValue: () => "*.xml",
-    description: "File pattern for directory scans");
+var patternOption = new Option<string>("--pattern", "-p")
+{
+    DefaultValueFactory = _ => "*.xml",
+    Description = "File pattern for directory scans"
+};
 
-var outputOption = new Option<DirectoryInfo?>(
-    aliases: ["--o", "--out", "-o", "--output"],
-    description: "Output directory (also --o; default: same as input)");
+var outputOption = new Option<DirectoryInfo?>("--o", "--out", "-o", "--output")
+{
+    Description = "Output directory (also --o; default: same as input)"
+};
 
-var outputExtOption = new Option<string>(
-    aliases: ["--ext", "--output-extension"],
-    getDefaultValue: () => ".cs",
-    description: "Output file extension (e.g. '.cs', '.d.cs')");
+var outputExtOption = new Option<string>("--ext", "--output-extension")
+{
+    DefaultValueFactory = _ => ".cs",
+    Description = "Output file extension (e.g. '.cs', '.d.cs')"
+};
 
-var namespaceOption = new Option<string>(
-    aliases: ["-n", "--namespace"],
-    getDefaultValue: () => "Generated",
-    description: "Base namespace");
+var namespaceOption = new Option<string>("--namespace", "-n")
+{
+    DefaultValueFactory = _ => "Generated",
+    Description = "Base namespace"
+};
 
-var scopeOption = new Option<string>(
-    aliases: ["-s", "--scope"],
-    getDefaultValue: () => "Operation",
-    description: "Policy scope");
+var scopeOption = new Option<string>("--scope", "-s")
+{
+    DefaultValueFactory = _ => "Operation",
+    Description = "Policy scope"
+};
 
-var docIdRootOption = new Option<DirectoryInfo?>(
-    name: "--doc-id-root",
-    description: "Root path for computing relative DocumentId (for traceability)");
+var docIdRootOption = new Option<DirectoryInfo?>("--doc-id-root")
+{
+    Description = "Root path for computing relative DocumentId (for traceability)"
+};
 
-var documentSuffixOption = new Option<string>(
-    name: "--document-suffix",
-    getDefaultValue: () => "Policy",
-    description: "Suffix for document class names (e.g. 'Policy', 'Document')");
+var documentSuffixOption = new Option<string>("--document-suffix")
+{
+    DefaultValueFactory = _ => "Policy",
+    Description = "Suffix for document class names (e.g. 'Policy', 'Document')"
+};
 
-var fragmentSuffixOption = new Option<string>(
-    name: "--fragment-suffix",
-    getDefaultValue: () => "Policy",
-    description: "Suffix for fragment class names (e.g. 'Policy', 'Fragment')");
+var fragmentSuffixOption = new Option<string>("--fragment-suffix")
+{
+    DefaultValueFactory = _ => "Policy",
+    Description = "Suffix for fragment class names (e.g. 'Policy', 'Fragment')"
+};
 
-var noValidateOption = new Option<bool>(
-    name: "--no-validate",
-    description: "Skip validation");
+var noValidateOption = new Option<bool>("--no-validate")
+{
+    Description = "Skip validation"
+};
 
-var verboseOption = new Option<bool>(
-    aliases: ["-v", "--verbose"],
-    description: "Verbose output");
+var verboseOption = new Option<bool>("--verbose", "-v")
+{
+    Description = "Verbose output"
+};
 
 var generateCommand = new Command("generate", "Decompile policy XML file(s) to C# code");
 var rootCommand = new RootCommand("Azure API Management Policy Decompiler - XML to C#")
@@ -91,23 +103,24 @@ foreach (var option in new Option[]
              verboseOption,
          })
 {
-    rootCommand.AddGlobalOption(option);
+    option.Recursive = true;
+    rootCommand.Options.Add(option);
 }
 
-Func<InvocationContext, Task> handler = async context =>
+Func<ParseResult, Task<int>> handler = async parseResult =>
 {
-    var source = context.ParseResult.GetValueForOption(sourceOption);
-    var input = context.ParseResult.GetValueForOption(inputOption);
-    var inputDir = context.ParseResult.GetValueForOption(inputDirOption);
-    var pattern = context.ParseResult.GetValueForOption(patternOption)!;
-    var output = context.ParseResult.GetValueForOption(outputOption);
-    var outputExt = context.ParseResult.GetValueForOption(outputExtOption)!;
-    var baseNamespace = context.ParseResult.GetValueForOption(namespaceOption)!;
-    var scope = context.ParseResult.GetValueForOption(scopeOption)!;
-    var docIdRoot = context.ParseResult.GetValueForOption(docIdRootOption);
-    var documentSuffix = context.ParseResult.GetValueForOption(documentSuffixOption)!;
-    var fragmentSuffix = context.ParseResult.GetValueForOption(fragmentSuffixOption)!;
-    var verbose = context.ParseResult.GetValueForOption(verboseOption);
+    var source = parseResult.GetValue(sourceOption);
+    var input = parseResult.GetValue(inputOption);
+    var inputDir = parseResult.GetValue(inputDirOption);
+    var pattern = parseResult.GetValue(patternOption)!;
+    var output = parseResult.GetValue(outputOption);
+    var outputExt = parseResult.GetValue(outputExtOption)!;
+    var baseNamespace = parseResult.GetValue(namespaceOption)!;
+    var scope = parseResult.GetValue(scopeOption)!;
+    var docIdRoot = parseResult.GetValue(docIdRootOption);
+    var documentSuffix = parseResult.GetValue(documentSuffixOption)!;
+    var fragmentSuffix = parseResult.GetValue(fragmentSuffixOption)!;
+    var verbose = parseResult.GetValue(verboseOption);
 
     // Discover XML files
     var xmlFiles = new List<(string fullPath, string basePath)>();
@@ -129,8 +142,7 @@ Func<InvocationContext, Task> handler = async context =>
         else
         {
             await Console.Error.WriteLineAsync($"Error: Source file or directory not found: {sourcePath}");
-            context.ExitCode = 1;
-            return;
+            return 1;
         }
     }
 
@@ -141,8 +153,7 @@ Func<InvocationContext, Task> handler = async context =>
             if (!file.Exists)
             {
                 await Console.Error.WriteLineAsync($"Error: File not found: {file.FullName}");
-                context.ExitCode = 1;
-                return;
+                return 1;
             }
             xmlFiles.Add((file.FullName, file.Directory!.FullName));
         }
@@ -153,8 +164,7 @@ Func<InvocationContext, Task> handler = async context =>
         if (!inputDir.Exists)
         {
             await Console.Error.WriteLineAsync($"Error: Directory not found: {inputDir.FullName}");
-            context.ExitCode = 1;
-            return;
+            return 1;
         }
         var dirFiles = Directory.GetFiles(inputDir.FullName, pattern, SearchOption.AllDirectories);
         foreach (var file in dirFiles)
@@ -168,8 +178,7 @@ Func<InvocationContext, Task> handler = async context =>
         await Console.Error.WriteLineAsync(source is null && inputDir is null && input is not { Length: > 0 }
             ? "Error: No input files specified. Use --source, --input or --input-dir."
             : "Error: No input XML files found for the given source and pattern.");
-        context.ExitCode = 1;
-        return;
+        return 1;
     }
 
     var decompiler = new PolicyDecompiler();
@@ -273,16 +282,13 @@ Func<InvocationContext, Task> handler = async context =>
     await Console.Out.WriteLineAsync();
     await Console.Out.WriteLineAsync($"Decompilation complete: {succeeded + failed + skipped} file(s) found, {succeeded} succeeded, {skipped} skipped, {failed} failed.");
 
-    if (failed > 0)
-    {
-        context.ExitCode = 1;
-    }
+    return failed > 0 ? 1 : 0;
 };
 
-rootCommand.SetHandler(handler);
-generateCommand.SetHandler(handler);
+rootCommand.SetAction(handler);
+generateCommand.SetAction(handler);
 
-return await rootCommand.InvokeAsync(args);
+return await rootCommand.Parse(args).InvokeAsync();
 
 static string SanitizeIdentifier(string name)
 {

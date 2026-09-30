@@ -74,9 +74,11 @@ public class ToolCliTests
             Assert.AreEqual("policies", XDocument.Load(Path.Combine(shortOutput, "Sample.xml")).Root?.Name.LocalName);
 
             var longOutput = Path.Combine(temp, "long");
-            var longResult = await RunToolAsync("Compiling", "--source", source, "--out", longOutput);
+            var longResult = await RunToolAsync("Compiling", "--source", source, "--out", longOutput,
+                "--policy-format", "xml");
             Assert.AreEqual(0, longResult.ExitCode, longResult.Error);
-            Assert.IsTrue(File.Exists(Path.Combine(longOutput, "Sample.xml")));
+            Assert.IsTrue((await File.ReadAllTextAsync(Path.Combine(longOutput, "Sample.xml"))).Length >
+                          (await File.ReadAllTextAsync(Path.Combine(shortOutput, "Sample.xml"))).Length);
         }
         finally
         {
@@ -111,10 +113,11 @@ public class ToolCliTests
             Assert.IsTrue(File.Exists(Path.Combine(directoryOutput, "nested", "other.cs")));
 
             var legacyOutput = Path.Combine(temp, "legacy");
-            var legacy = await RunToolAsync("Decompiling", "generate", "-i", policy, "-s", "Api",
-                "--output", legacyOutput);
+            var legacy = await RunToolAsync("Decompiling", "generate", "-i", policy,
+                Path.Combine(nested, "other.xml"), "-s", "Api", "--output", legacyOutput);
             Assert.AreEqual(0, legacy.ExitCode, legacy.Error);
             Assert.IsTrue(File.Exists(Path.Combine(legacyOutput, "policy.cs")));
+            Assert.IsTrue(File.Exists(Path.Combine(legacyOutput, "other.cs")));
         }
         finally
         {
