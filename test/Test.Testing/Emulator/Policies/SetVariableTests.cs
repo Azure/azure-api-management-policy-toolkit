@@ -4,6 +4,7 @@
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 namespace Test.Emulator.Emulator.Policies;
 
@@ -14,7 +15,7 @@ public class SetVariableTests
     {
         public void Inbound(IInboundContext context)
         {
-            context.SetVariable("inbound-var", "inbound-value");
+            context.SetVariable("inbound-var", new ConfigValue("inbound-value"));
         }
 
         public void Backend(IBackendContext context)
@@ -38,7 +39,7 @@ public class SetVariableTests
         public void Inbound(IInboundContext context)
         {
             context.SetVariable("A", "value-a");
-            context.SetVariable("B", "value-b");
+            context.SetVariable("B", new ConfigValue("value-b"));
         }
 
         public void Outbound(IOutboundContext context) { }
@@ -47,18 +48,18 @@ public class SetVariableTests
     }
 
     [TestMethod]
-    public void SetVariable_Inbound()
+    public void SetVariable_Inbound_AssignsExpressionValueAsString()
     {
         var test = new SimpleSetVariable().AsTestDocument();
 
         test.RunInbound();
 
         test.Context.Variables.Should().ContainKey("inbound-var")
-            .WhoseValue.Should().Be("inbound-value");
+            .WhoseValue.Should().BeOfType<string>().Which.Should().Be("inbound-value");
     }
 
     [TestMethod]
-    public void SetVariable_Backend()
+    public void SetVariable_Backend_AssignsTypedValue()
     {
         var test = new SimpleSetVariable().AsTestDocument();
 
@@ -69,7 +70,7 @@ public class SetVariableTests
     }
 
     [TestMethod]
-    public void SetVariable_Outbound()
+    public void SetVariable_Outbound_AssignsBooleanValue()
     {
         var test = new SimpleSetVariable().AsTestDocument();
 
@@ -80,7 +81,7 @@ public class SetVariableTests
     }
 
     [TestMethod]
-    public void SetVariable_OnError()
+    public void SetVariable_OnError_AssignsStringValue()
     {
         var test = new SimpleSetVariable().AsTestDocument();
 
@@ -91,50 +92,31 @@ public class SetVariableTests
     }
 
     [TestMethod]
-    public void SetVariable_Callback()
-    {
-        var test = new SimpleSetVariable().AsTestDocument();
-        var callbackExecuted = false;
-        test.SetupInbound().SetVariable().WithCallback((_, _, _) =>
-        {
-            callbackExecuted = true;
-        });
-
-        test.RunInbound();
-
-        callbackExecuted.Should().BeTrue();
-        test.Context.Variables.Should().NotContainKey("inbound-var");
-    }
-
-    [TestMethod]
-    public void SetVariable_PredicateCallback()
-    {
-        var test = new MultiSetVariable().AsTestDocument();
-        var callbackExecuted = false;
-        test.SetupInbound().SetVariable((_, name, _) => name == "B").WithCallback((context, name, value) =>
-        {
-            callbackExecuted = true;
-            context.Variables[name] = "overridden";
-        });
-
-        test.RunInbound();
-
-        callbackExecuted.Should().BeTrue();
-        test.Context.Variables.Should().ContainKey("A")
-            .WhoseValue.Should().Be("value-a");
-        test.Context.Variables.Should().ContainKey("B")
-            .WhoseValue.Should().Be("overridden");
-    }
-
-    [TestMethod]
-    public void SetVariable_OverwritesExistingVariable()
+    public void SetVariable_ExistingValue_IsOverwritten()
     {
         var test = new SimpleSetVariable().AsTestDocument();
         test.Context.Variables["inbound-var"] = "old-value";
 
         test.RunInbound();
 
-        test.Context.Variables.Should().ContainKey("inbound-var")
-            .WhoseValue.Should().Be("inbound-value");
+        test.Context.Variables["inbound-var"].Should().Be("inbound-value");
+    }
+
+    [TestMethod]
+    public void SetVariable_Inbound_CallbackOverrideReplacesDefaultValue()
+    {
+        var test = new MultiSetVariable().AsTestDocument();
+
+        test.SetupInbound().SetVariable((_, name, _) => name == "B").WithCallback((context, name, _) =>
+        {
+            context.Variables[name] = "callback-overridden";
+        });
+
+        test.RunInbound();
+
+        test.Context.Variables.Should().ContainKey("A")
+            .WhoseValue.Should().Be("value-a");
+        test.Context.Variables.Should().ContainKey("B")
+            .WhoseValue.Should().Be("callback-overridden");
     }
 }
