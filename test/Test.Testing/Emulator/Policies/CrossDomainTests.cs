@@ -61,7 +61,7 @@ public class CrossDomainTests
         var originalStatusCode = test.Context.Response.StatusCode;
         var originalStatusReason = test.Context.Response.StatusReason;
         var originalHeaders = new Dictionary<string, string[]>(test.Context.Response.Headers);
-        var originalVariables = new Dictionary<string, object?>(test.Context.Variables);
+        var originalVariables = test.Context.Variables.ToDictionary(entry => entry.Key, entry => entry.Value);
 
         test.RunInbound();
 
