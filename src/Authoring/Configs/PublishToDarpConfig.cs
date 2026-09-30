@@ -38,7 +38,8 @@ public record PublishToDarpConfig
     public string? ResponseVariableName { get; init; }
 
     /// <summary>
-    /// Specifies the timeout in milliseconds for the publish operation.
+    /// Specifies the timeout in seconds for the publish operation.
+    /// Allowed values are 1 to 240. Defaults to 5 seconds.
     /// </summary>
     public int? Timeout { get; init; }
 
