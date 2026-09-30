@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -13,7 +13,7 @@ public static class MockCacheStoreProvider
 
     public static Setup CacheStore(
         this MockPoliciesProvider<IOutboundContext> mock,
-        Func<GatewayContext, uint, bool, bool> predicate
+        Func<GatewayContext, int, bool?, bool> predicate
     )
     {
         var handler = mock.SectionContextProxy.GetHandler<CacheStoreHandler>();
@@ -22,18 +22,18 @@ public static class MockCacheStoreProvider
 
     public class Setup
     {
-        private readonly Func<GatewayContext, uint, bool, bool> _predicate;
+        private readonly Func<GatewayContext, int, bool?, bool> _predicate;
         private readonly CacheStoreHandler _handler;
 
         internal Setup(
-            Func<GatewayContext, uint, bool, bool> predicate,
+            Func<GatewayContext, int, bool?, bool> predicate,
             CacheStoreHandler handler)
         {
             _predicate = predicate;
             _handler = handler;
         }
 
-        public void WithCallback(Action<GatewayContext, uint, bool> callback) =>
+        public void WithCallback(Action<GatewayContext, int, bool?> callback) =>
             _handler.CallbackHooks.Add((_predicate, callback).ToTuple());
     }
 }

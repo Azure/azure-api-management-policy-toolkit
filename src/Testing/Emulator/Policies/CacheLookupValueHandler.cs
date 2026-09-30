@@ -17,55 +17,31 @@ internal class CacheLookupValueHandler : PolicyHandler<CacheLookupValueConfig>
     public List<Tuple<
         Func<GatewayContext, CacheLookupValueConfig, bool>,
         object
-    >> ValueSetup { get; } = new();
+    >> ValueSetup
+    { get; } = new();
 
     public override string PolicyName => nameof(IInboundContext.CacheLookupValue);
 
     protected override void Handle(GatewayContext context, CacheLookupValueConfig config)
     {
-        var cache = context.Services.Resolve<ICache>();
-        if (cache is not null)
-        {
-            var cached = cache.GetAsync(config.Key).GetAwaiter().GetResult();
-            if (cached is not null)
-            {
-                context.Variables[config.VariableName] = cached;
-                return;
-            }
+        ArgumentException.ThrowIfNullOrWhiteSpace(config.Key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(config.VariableName);
 
-            if (config.DefaultValue is not null)
-            {
-                context.Variables[config.VariableName] = config.DefaultValue;
-            }
-
-            return;
-        }
-
-        var fromSetup = ValueSetup.Find(tuple => tuple.Item1(context, config))?.Item2;
+        var fromSetup = ValueSetup.Find(tuple => tuple.Item1(context, config));
         if (fromSetup is not null)
         {
-            context.Variables[config.VariableName] = fromSetup;
+            CachePolicyServices.SetVariable(context, config.VariableName, fromSetup.Item2);
             return;
         }
 
-        var cachingType = config.CachingType ?? "prefer-external";
-
-
-        var store = context.CacheStore.GetCache(cachingType);
-        if (store is null)
+        var cache = CachePolicyServices.Resolve(context, config.CachingType);
+        if (cache is null)
         {
+            CachePolicyServices.SetVariable(context, config.VariableName, config.DefaultValue);
             return;
         }
 
-        if (store.TryGetValue(config.Key, out var value))
-        {
-            context.Variables[config.VariableName] = value.Value;
-            return;
-        }
-
-        if (config.DefaultValue is not null)
-        {
-            context.Variables[config.VariableName] = config.DefaultValue;
-        }
+        var cached = cache.GetAsync(config.Key).GetAwaiter().GetResult();
+        CachePolicyServices.SetVariable(context, config.VariableName, cached ?? config.DefaultValue);
     }
 }
