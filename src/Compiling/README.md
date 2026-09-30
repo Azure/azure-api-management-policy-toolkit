@@ -16,6 +16,18 @@ By default the compiler emits documents in the `rawxml` policy format. Pass `--p
 standards-compliant `xml` content format instead. See the [Output format guide][of] for the trade-offs between the
 two formats and how they map to the API Management content format.
 
+## Usage
+
+```shell
+azure-apim-policy-compiler --s .\policies\src --o .\policies\output
+azure-apim-policy-compiler --help
+```
+
+`--s` / `--source` accepts a C# project file or source directory; `--o` / `--out` specifies the output
+directory. `--ext` selects the output extension (`xml` by default), `--format true|false` controls
+indentation (true by default), and `--pf` / `--policy-format` selects `rawxml` or `xml`. The
+`--output` alias is also supported for the output directory.
+
 ### Inspect generated policy
 
 ```cshtml

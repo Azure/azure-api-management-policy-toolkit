@@ -2,11 +2,16 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
+
+var sourceOption = new Option<string?>(
+    aliases: ["--s", "--source"],
+    description: "Input policy XML file or directory (recursive scan)");
 
 var inputOption = new Option<FileInfo[]?>(
     aliases: ["-i", "--input"],
@@ -20,11 +25,11 @@ var inputDirOption = new Option<DirectoryInfo?>(
 var patternOption = new Option<string>(
     aliases: ["-p", "--pattern"],
     getDefaultValue: () => "*.xml",
-    description: "File pattern for --input-dir");
+    description: "File pattern for directory scans");
 
 var outputOption = new Option<DirectoryInfo?>(
-    aliases: ["-o", "--output"],
-    description: "Output directory (default: same as input)");
+    aliases: ["--o", "--out", "-o", "--output"],
+    description: "Output directory (also --o; default: same as input)");
 
 var outputExtOption = new Option<string>(
     aliases: ["--ext", "--output-extension"],
@@ -63,24 +68,35 @@ var verboseOption = new Option<bool>(
     aliases: ["-v", "--verbose"],
     description: "Verbose output");
 
-var generateCommand = new Command("generate", "Decompile policy XML file(s) to C# code")
+var generateCommand = new Command("generate", "Decompile policy XML file(s) to C# code");
+var rootCommand = new RootCommand("Azure API Management Policy Decompiler - XML to C#")
 {
-    inputOption,
-    inputDirOption,
-    patternOption,
-    outputOption,
-    outputExtOption,
-    namespaceOption,
-    scopeOption,
-    docIdRootOption,
-    documentSuffixOption,
-    fragmentSuffixOption,
-    noValidateOption,
-    verboseOption,
+    generateCommand
 };
 
-generateCommand.SetHandler(async (context) =>
+foreach (var option in new Option[]
+         {
+             sourceOption,
+             inputOption,
+             inputDirOption,
+             patternOption,
+             outputOption,
+             outputExtOption,
+             namespaceOption,
+             scopeOption,
+             docIdRootOption,
+             documentSuffixOption,
+             fragmentSuffixOption,
+             noValidateOption,
+             verboseOption,
+         })
 {
+    rootCommand.AddGlobalOption(option);
+}
+
+Func<InvocationContext, Task> handler = async context =>
+{
+    var source = context.ParseResult.GetValueForOption(sourceOption);
     var input = context.ParseResult.GetValueForOption(inputOption);
     var inputDir = context.ParseResult.GetValueForOption(inputDirOption);
     var pattern = context.ParseResult.GetValueForOption(patternOption)!;
@@ -95,6 +111,28 @@ generateCommand.SetHandler(async (context) =>
 
     // Discover XML files
     var xmlFiles = new List<(string fullPath, string basePath)>();
+
+    if (source is not null)
+    {
+        var sourcePath = Path.GetFullPath(source);
+        if (File.Exists(sourcePath))
+        {
+            xmlFiles.Add((sourcePath, Path.GetDirectoryName(sourcePath)!));
+        }
+        else if (Directory.Exists(sourcePath))
+        {
+            foreach (var file in Directory.GetFiles(sourcePath, pattern, SearchOption.AllDirectories))
+            {
+                xmlFiles.Add((file, sourcePath));
+            }
+        }
+        else
+        {
+            await Console.Error.WriteLineAsync($"Error: Source file or directory not found: {sourcePath}");
+            context.ExitCode = 1;
+            return;
+        }
+    }
 
     if (input is { Length: > 0 })
     {
@@ -127,7 +165,9 @@ generateCommand.SetHandler(async (context) =>
 
     if (xmlFiles.Count == 0)
     {
-        await Console.Error.WriteLineAsync("Error: No input files specified. Use --input or --input-dir.");
+        await Console.Error.WriteLineAsync(source is null && inputDir is null && input is not { Length: > 0 }
+            ? "Error: No input files specified. Use --source, --input or --input-dir."
+            : "Error: No input XML files found for the given source and pattern.");
         context.ExitCode = 1;
         return;
     }
@@ -237,12 +277,10 @@ generateCommand.SetHandler(async (context) =>
     {
         context.ExitCode = 1;
     }
-});
-
-var rootCommand = new RootCommand("Azure API Management Policy Decompiler - XML to C#")
-{
-    generateCommand
 };
+
+rootCommand.SetHandler(handler);
+generateCommand.SetHandler(handler);
 
 return await rootCommand.InvokeAsync(args);
 

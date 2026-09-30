@@ -20,6 +20,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Authoring\Authoring.csproj"/>
+        <ProjectReference Include="..\..\src\Compiling\Compiling.csproj"/>
         <ProjectReference Include="..\..\src\Core\Core.csproj"/>
         <ProjectReference Include="..\..\src\Decompiling\Decompiling.csproj"/>
     </ItemGroup>
