@@ -45,24 +45,20 @@ internal class AuthenticationManagedIdentityHandler : PolicyHandler<ManagedIdent
     private string CreateTokenByHook(Func<string, string?, string> tokenProvider,
         ManagedIdentityAuthenticationConfig config)
     {
-        string token;
         try
         {
-            token = tokenProvider(config.Resource, config.ClientId);
-        }
-        catch
-        {
-            if (config.IgnoreError ?? false)
+            var token = tokenProvider(config.Resource, config.ClientId);
+            if (string.IsNullOrWhiteSpace(token))
             {
-                token = "";
+                throw new InvalidOperationException("The managed identity token provider returned an empty access token.");
             }
-            else
-            {
-                throw;
-            }
-        }
 
-        return token;
+            return token;
+        }
+        catch (Exception) when (config.IgnoreError == true)
+        {
+            return "";
+        }
     }
 
     private string DefaultTokenProvider(string resourceId, string? clientId)

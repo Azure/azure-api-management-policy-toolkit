@@ -88,6 +88,23 @@ public class AuthenticationManagedIdentityHandlerTests
         }
     }
 
+    class ConfiguredAmi(ManagedIdentityAuthenticationConfig config, bool outbound) : IDocument
+    {
+        public void Inbound(IInboundContext context)
+        {
+            if (outbound) { return; }
+            context.AuthenticationManagedIdentity(config);
+            context.SetVariable("continued", true);
+        }
+
+        public void Outbound(IOutboundContext context)
+        {
+            if (!outbound) { return; }
+            context.AuthenticationManagedIdentity(config);
+            context.SetVariable("continued", true);
+        }
+    }
+
     [TestMethod]
     public void AuthenticationManagedIdentity_HandleSimpleConfig()
     {
@@ -355,5 +372,237 @@ public class AuthenticationManagedIdentityHandlerTests
         test.Context.Variables.Should().ContainKey("testVariable")
             .WhoseValue.Should().BeOfType<string>()
             .Which.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public void AuthenticationManagedIdentity_OutboundUsesContextProvider()
+    {
+        var test = CreateConfiguredAmi(outbound: true);
+        test.Context.ManagedIdentityTokenProvider = (resource, clientId) =>
+        {
+            resource.Should().Be("https://management.azure.com/");
+            clientId.Should().Be("client-id");
+            return "outbound-token";
+        };
+
+        test.RunOutbound();
+
+        test.Context.Request.Headers["Authorization"].Should().Equal("Bearer outbound-token");
+        test.Context.Response.Headers.Should().NotContainKey("Authorization");
+        test.Context.Variables.Should().Contain("continued", true);
+    }
+
+    [TestMethod]
+    public void AuthenticationManagedIdentity_OutboundSupportsOutputVariableSetup()
+    {
+        var test = CreateConfiguredAmi(outbound: true, outputVariable: "token");
+        test.Context.Request.Headers["Authorization"] = ["existing-header"];
+        test.SetupOutbound().AuthenticationManagedIdentity().ReturnsToken("outbound-token");
+
+        test.RunOutbound();
+
+        test.Context.Variables.Should().Contain("token", "outbound-token").And.Contain("continued", true);
+        test.Context.Request.Headers["Authorization"].Should().Equal("existing-header");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AuthenticationManagedIdentity_CallbackOverridesAllProviders(bool outbound)
+    {
+        var test = CreateConfiguredAmi(outbound, outputVariable: "token");
+        test.Context.ManagedIdentityTokenProvider = (_, _) => throw new InvalidOperationException("must not run");
+        SetupAmi(test, outbound).WithTokenProviderHook((_, _) => throw new InvalidOperationException("must not run"));
+        SetupAmi(test, outbound).WithCallback((context, config) =>
+        {
+            config.ClientId.Should().Be("client-id");
+            context.Variables["token"] = "callback-token";
+        });
+
+        RunAmi(test, outbound);
+
+        test.Context.Variables.Should().Contain("token", "callback-token");
+        test.Context.Request.Headers.Should().NotContainKey("Authorization");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AuthenticationManagedIdentity_HookTakesPrecedenceOverContextProvider(bool outbound)
+    {
+        var test = CreateConfiguredAmi(outbound, outputVariable: "token");
+        var contextProviderCalls = 0;
+        test.Context.ManagedIdentityTokenProvider = (_, _) =>
+        {
+            contextProviderCalls++;
+            throw new InvalidOperationException("must not run");
+        };
+        SetupAmi(test, outbound).WithTokenProviderHook((resource, clientId) =>
+        {
+            resource.Should().Be("https://management.azure.com/");
+            clientId.Should().Be("client-id");
+            return "hook-token";
+        });
+
+        RunAmi(test, outbound);
+
+        contextProviderCalls.Should().Be(0);
+        test.Context.Variables.Should().Contain("token", "hook-token");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AuthenticationManagedIdentity_UnmatchedHookFallsBackToContextProvider(bool outbound)
+    {
+        var test = CreateConfiguredAmi(outbound, outputVariable: "token");
+        var calls = 0;
+        test.Context.ManagedIdentityTokenProvider = (_, _) =>
+        {
+            calls++;
+            return "context-token";
+        };
+        if (outbound)
+        {
+            test.SetupOutbound().AuthenticationManagedIdentity((_, config) => config.ClientId == "other-client")
+                .WithError("must not run");
+        }
+        else
+        {
+            test.SetupInbound().AuthenticationManagedIdentity((_, config) => config.ClientId == "other-client")
+                .WithError("must not run");
+        }
+
+        RunAmi(test, outbound);
+
+        calls.Should().Be(1);
+        test.Context.Variables.Should().Contain("token", "context-token");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AuthenticationManagedIdentity_FirstMatchingProviderWins(bool outbound)
+    {
+        var test = CreateConfiguredAmi(outbound, outputVariable: "token");
+        SetupAmi(test, outbound).ReturnsToken("first-token");
+        SetupAmi(test, outbound).WithError("later matching provider must not run");
+
+        RunAmi(test, outbound);
+
+        test.Context.Variables.Should().Contain("token", "first-token");
+    }
+
+    [TestMethod]
+    [DataRow(false, nameof(IInboundContext))]
+    [DataRow(true, nameof(IOutboundContext))]
+    public void AuthenticationManagedIdentity_ContextProviderFailureIsReported(bool outbound, string section)
+    {
+        var test = CreateConfiguredAmi(outbound, outputVariable: "token");
+        var failure = new HttpRequestException("identity provider unavailable");
+        test.Context.ManagedIdentityTokenProvider = (_, _) => throw failure;
+        test.Context.Request.Headers["Authorization"] = ["existing-header"];
+
+        var error = Assert.ThrowsExactly<PolicyException>(() => RunAmi(test, outbound));
+
+        error.Policy.Should().Be(nameof(IInboundContext.AuthenticationManagedIdentity));
+        error.Section.Should().Be(section);
+        error.InnerException.Should().BeSameAs(failure);
+        test.Context.Request.Headers["Authorization"].Should().Equal("existing-header");
+        test.Context.Variables.Should().NotContainKeys("token", "continued");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AuthenticationManagedIdentity_IgnoreContextProviderFailureContinues(bool outbound)
+    {
+        var test = CreateConfiguredAmi(outbound, ignoreError: true, outputVariable: "token");
+        test.Context.ManagedIdentityTokenProvider = (_, _) => throw new HttpRequestException("identity provider unavailable");
+        test.Context.Request.Headers["Authorization"] = ["existing-header"];
+
+        RunAmi(test, outbound);
+
+        test.Context.Variables.Should().Contain("token", "").And.Contain("continued", true);
+        test.Context.Request.Headers["Authorization"].Should().Equal("existing-header");
+    }
+
+    [TestMethod]
+    [DataRow(false, null)]
+    [DataRow(false, "")]
+    [DataRow(false, " ")]
+    [DataRow(true, null)]
+    [DataRow(true, "")]
+    [DataRow(true, " ")]
+    public void AuthenticationManagedIdentity_RejectsEmptyProviderToken(bool outbound, string? token)
+    {
+        var test = CreateConfiguredAmi(outbound, outputVariable: "token");
+        test.Context.ManagedIdentityTokenProvider = (_, _) => token!;
+
+        var error = Assert.ThrowsExactly<PolicyException>(() => RunAmi(test, outbound));
+
+        error.InnerException.Should().BeOfType<InvalidOperationException>();
+        test.Context.Request.Headers.Should().NotContainKey("Authorization");
+        test.Context.Variables.Should().NotContainKeys("token", "continued");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AuthenticationManagedIdentity_IgnoreEmptyProviderTokenContinues(bool outbound)
+    {
+        var test = CreateConfiguredAmi(outbound, ignoreError: true, outputVariable: "token");
+        SetupAmi(test, outbound).ReturnsToken(" ");
+
+        RunAmi(test, outbound);
+
+        test.Context.Variables.Should().Contain("token", "").And.Contain("continued", true);
+    }
+
+    [TestMethod]
+    public void AuthenticationManagedIdentity_OutboundSetupFailureIsReported()
+    {
+        var test = CreateConfiguredAmi(outbound: true, outputVariable: "token");
+        test.SetupOutbound().AuthenticationManagedIdentity().WithError("outbound identity failure");
+
+        var error = Assert.ThrowsExactly<PolicyException>(() => test.RunOutbound());
+
+        error.Section.Should().Be(nameof(IOutboundContext));
+        error.InnerException.Should().BeOfType<HttpRequestException>()
+            .Which.Message.Should().Be("outbound identity failure");
+        test.Context.Variables.Should().NotContainKeys("token", "continued");
+    }
+
+    [TestMethod]
+    public void AuthenticationManagedIdentity_OutboundPreservesDefaultLocalTokenBehavior()
+    {
+        var test = CreateConfiguredAmi(outbound: true, outputVariable: "token");
+
+        test.RunOutbound();
+
+        var token = new JwtSecurityTokenHandler().ReadJwtToken((string)test.Context.Variables["token"]);
+        token.Issuer.Should().Be("client-id");
+        token.Audiences.Should().ContainSingle().Which.Should().Be("https://management.azure.com/");
+    }
+
+    private static TestDocument CreateConfiguredAmi(
+        bool outbound, bool ignoreError = false, string? outputVariable = null) =>
+        new ConfiguredAmi(new ManagedIdentityAuthenticationConfig
+        {
+            Resource = "https://management.azure.com/",
+            ClientId = "client-id",
+            OutputTokenVariableName = outputVariable,
+            IgnoreError = ignoreError
+        }, outbound).AsTestDocument();
+
+    private static MockAuthenticationManagedIdentityProvider.Setup SetupAmi(TestDocument test, bool outbound) =>
+        outbound
+            ? test.SetupOutbound().AuthenticationManagedIdentity()
+            : test.SetupInbound().AuthenticationManagedIdentity();
+
+    private static void RunAmi(TestDocument test, bool outbound)
+    {
+        if (outbound) { test.RunOutbound(); }
+        else { test.RunInbound(); }
     }
 }
