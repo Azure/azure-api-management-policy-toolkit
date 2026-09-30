@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System.Text;
@@ -6,8 +6,13 @@ using System.Text;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 using Newtonsoft.Json.Linq;
+
+using Test.Emulator.Emulator.Policies;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 
@@ -113,6 +118,805 @@ public class TestDocumentTests
         ));
     }
 
+    [TestMethod]
+    public void RunAllSettlesDeferredRatesOnlyAfterOutbound()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var requestId = context.RequestId;
+        var sections = new List<string>();
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+                sections.Add("inbound");
+                store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+                section.ExpressionContext.RequestId.Should().Be(requestId);
+            },
+            BackendAction = section =>
+            {
+                sections.Add("backend");
+                store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+                section.ExpressionContext.RequestId.Should().Be(requestId);
+            },
+            OutboundAction = section =>
+            {
+                sections.Add("outbound");
+                store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+                section.ExpressionContext.RequestId.Should().Be(requestId);
+                section.SetBody("final");
+            }
+        })
+        { Context = context };
+
+        test.RunAll();
+
+        sections.Should().Equal("inbound", "backend", "outbound");
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        context.Variables["remaining"].Should().Be(8);
+        context.Response.Body.Content.Should().Be("final");
+        context.RequestId.Should().Be(requestId);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void RunAllAccountsFinalResponseBytesInsteadOfIntermediateBodies(bool keyed)
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var key = keyed ? "quota-by-key:volume" : $"quota:sub:{context.Subscription.Id}";
+        context.Request.Body.Content = new string('r', 128);
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                SettlementTest.ApplyQuota(section, keyed);
+                context.Response.Body.Content = new string('i', 4096);
+            },
+            BackendAction = _ => context.Response.Body.Content = new string('b', 8192),
+            OutboundAction = section =>
+            {
+                store.GetBandwidth(key).Should().Be(128);
+                section.SetBody(new string('\u00e9', 256));
+            }
+        })
+        { Context = context };
+
+        test.RunAll();
+
+        store.GetBandwidth(key).Should().Be(640);
+        context.Request.Body.Consumed.Should().BeFalse();
+        context.Response.Body.Consumed.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void RunAllSettlesEarlyReturnAndPreservesItsResponse()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter();
+        context.Services.Register<IRateLimiter>(limiter);
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+                SettlementTest.ApplyQuota(section);
+                section.ReturnResponse(new ReturnResponseConfig
+                {
+                    Status = new StatusConfig { Code = 202, Reason = "Accepted" },
+                    Headers = [new HeaderConfig { Name = "X-Final", Values = ["preserved"] }],
+                    Body = new BodyConfig { Content = "early response" }
+                });
+            },
+            BackendAction = _ => Assert.Fail("Backend must not execute."),
+            OutboundAction = _ => Assert.Fail("Outbound must not execute.")
+        })
+        { Context = context };
+
+        test.RunAll();
+        test.RunRequest(_ => { });
+        test.CompleteLimiterResponse();
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        store.GetBandwidth("quota-by-key:volume").Should().Be(14);
+        limiter.Calls.Where(call => call.Key == "settlement").Should().Equal(("settlement", 0), ("settlement", 2));
+        context.Response.StatusCode.Should().Be(202);
+        context.Response.StatusReason.Should().Be("Accepted");
+        context.Response.Headers["X-Final"].Should().Equal("preserved");
+        context.Response.Body.Content.Should().Be("early response");
+        context.ResponseTerminated.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public void RunAllKeepsInvokeRequestSectionOnlyUntilFinalOutbound()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var sections = new List<string>();
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+                section.InvokeRequest(new InvokeRequestConfig());
+                section.SetVariable("after-invoke", true);
+            },
+            BackendAction = _ =>
+            {
+                sections.Add("backend");
+                store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+            },
+            OutboundAction = section =>
+            {
+                sections.Add("outbound");
+                store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+                section.SetBody("outbound response");
+            }
+        })
+        { Context = context };
+        test.SetupInbound().InvokeRequest().WithCallback((gateway, _) => gateway.Response.StatusCode = 203);
+
+        test.RunAll();
+
+        sections.Should().Equal("backend", "outbound");
+        context.Variables.Should().NotContainKey("after-invoke");
+        context.ResponseTerminated.Should().BeFalse();
+        context.Response.StatusCode.Should().Be(203);
+        context.Response.Body.Content.Should().Be("outbound response");
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
+    public void OuterRunRequestDefersSettlementUntilOnErrorFinishes()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var expected = new InvalidOperationException("backend failed");
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+                SettlementTest.ApplyQuota(section);
+            },
+            BackendAction = _ => throw expected,
+            OutboundAction = _ => Assert.Fail("Outbound must not execute after an error."),
+            OnErrorAction = section =>
+            {
+                store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+                store.GetBandwidth("quota-by-key:volume").Should().Be(0);
+                section.SetStatus(new StatusConfig { Code = 500, Reason = "Handled" });
+                section.SetBody(new string('\u00e9', 100));
+            }
+        })
+        { Context = context };
+
+        test.RunRequest(request =>
+        {
+            Assert.ThrowsExactly<InvalidOperationException>(request.RunAll).Should().BeSameAs(expected);
+            store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+            request.RunRequest(inner => inner.RunOnError());
+            store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+        });
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        store.GetBandwidth("quota-by-key:volume").Should().Be(200);
+        context.Response.StatusCode.Should().Be(500);
+    }
+
+    [TestMethod]
+    public void UnhandledRunAllErrorLeavesPendingWorkAndRestoresOwnerDepth()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var expected = new InvalidOperationException("execution failed");
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.RateLimitByKey(SettlementTest.DeferredRate()),
+            BackendAction = _ => throw expected,
+            OnErrorAction = section => section.SetBody("handled")
+        })
+        { Context = context };
+
+        Assert.ThrowsExactly<InvalidOperationException>(test.RunAll).Should().BeSameAs(expected);
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+        test.RunRequest(request => request.RunOnError());
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        context.Response.Body.Content.Should().Be("handled");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void StandaloneSectionsStayIndependentUntilAnExplicitRequestBoundary(bool terminate)
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var sections = new List<string>();
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+                if (terminate)
+                {
+                    section.ReturnResponse(new ReturnResponseConfig());
+                }
+            },
+            BackendAction = _ => sections.Add("backend"),
+            OutboundAction = section =>
+            {
+                sections.Add("outbound");
+                section.SetBody("outbound");
+            },
+            OnErrorAction = section =>
+            {
+                sections.Add("on-error");
+                section.SetBody("last manual body");
+            }
+        })
+        { Context = context };
+
+        test.RunInbound();
+        test.RunBackend();
+        test.RunOutbound();
+        test.RunOnError();
+
+        sections.Should().Equal("backend", "outbound", "on-error");
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+        test.RunRequest(_ => { });
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        context.Response.Body.Content.Should().Be("last manual body");
+        context.ResponseTerminated.Should().Be(terminate);
+    }
+
+    [TestMethod]
+    public void DuplicateRequestCompletionDoesNotChargeCountersOrBandwidthAgain()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+                SettlementTest.ApplyQuota(section);
+            },
+            OutboundAction = section => section.SetBody("final")
+        })
+        { Context = context };
+
+        test.RunAll();
+        context.Response.Body.Content = "changed after completion";
+        test.RunRequest(_ => { });
+        test.RunRequest(_ => { });
+        test.CompleteLimiterResponse();
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        store.GetBandwidth("quota-by-key:volume").Should().Be(5);
+    }
+
+    [TestMethod]
+    public void LateSectionWorkOnACompletedLimiterRequestErrorsBeforeAdmission()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter();
+        context.Services.Register<IRateLimiter>(limiter);
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.RateLimitByKey(SettlementTest.DeferredRate())
+        })
+        { Context = context };
+        test.RunAll();
+
+        var error = Assert.ThrowsExactly<InvalidOperationException>(
+            () => test.RunRequest(request => request.RunInbound()));
+
+        error.Message.Should().Contain("completed").And.Contain("RequestId");
+        Assert.ThrowsExactly<InvalidOperationException>(test.RunInbound);
+        limiter.Calls.Should().Equal(("settlement", 0), ("settlement", 2));
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        test.RunRequest(_ => { });
+    }
+
+    [TestMethod]
+    public void ANewRequestIdReopensTheContextAfterSuccessfulSettlement()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.RateLimitByKey(SettlementTest.DeferredRate())
+        })
+        { Context = context };
+        test.RunAll();
+        var firstId = context.RequestId;
+        context.RequestId = Guid.NewGuid();
+
+        test.RunAll();
+
+        context.RequestId.Should().NotBe(firstId);
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(4);
+    }
+
+    [TestMethod]
+    [DataRow("direct")]
+    [DataRow("request")]
+    [DataRow("nested")]
+    public void LateDeferredWorkThroughARetainedProxyErrorsBeforeAdmission(string invocation)
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter();
+        context.Services.Register<IRateLimiter>(limiter);
+        IInboundContext? retained = null;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                retained = section;
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+            }
+        })
+        { Context = context };
+        test.RunAll();
+
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => InvokeRetainedPolicy(
+            test, () => retained!.RateLimitByKey(SettlementTest.DeferredRate()), invocation));
+
+        error.Message.Should().Contain("completed").And.Contain("RequestId");
+        limiter.Calls.Should().Equal(("settlement", 0), ("settlement", 2));
+        context.Variables["remaining"].Should().Be(8);
+        test.RunRequest(_ => { });
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
+    public void RejectedLateProxyWorkLeavesEmptyDuplicateCompletionSafe()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter();
+        context.Services.Register<IRateLimiter>(limiter);
+        IInboundContext? retained = null;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                retained = section;
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+            }
+        })
+        { Context = context };
+        test.RunAll();
+        var called = false;
+
+        var error = Assert.ThrowsExactly<InvalidOperationException>(
+            () => retained!.RateLimitByKey(SettlementTest.DeferredRate()));
+        test.RunRequest(_ => called = true);
+
+        error.Message.Should().Contain("completed").And.Contain("RequestId");
+        called.Should().BeTrue();
+        limiter.Calls.Should().Equal(("settlement", 0), ("settlement", 2));
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
+    [DataRow("RateLimitByKey", "direct")]
+    [DataRow("RateLimitByKey", "request")]
+    [DataRow("RateLimitByKey", "nested")]
+    [DataRow("RateLimit", "direct")]
+    [DataRow("RateLimit", "request")]
+    [DataRow("RateLimit", "nested")]
+    [DataRow("QuotaByKey", "direct")]
+    [DataRow("QuotaByKey", "request")]
+    [DataRow("QuotaByKey", "nested")]
+    [DataRow("Quota", "direct")]
+    [DataRow("Quota", "request")]
+    [DataRow("Quota", "nested")]
+    public void LateImmediateCountersThroughARetainedProxyAreRejectedBeforeAnyMutation(
+        string policy, string invocation)
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter();
+        context.Services.Register<IRateLimiter>(limiter);
+        IInboundContext? retained = null;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                retained = section;
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+            },
+            OutboundAction = section => section.SetBody("final")
+        })
+        { Context = context };
+        test.RunAll();
+        var requestId = context.RequestId;
+        var variables = context.Variables.ToArray();
+        var headers = context.Response.Headers.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
+
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => InvokeRetainedPolicy(
+            test, () => SettlementTest.ApplyImmediateCounter(retained!, policy), invocation));
+
+        error.Message.Should().Contain("completed").And.Contain("RequestId");
+        limiter.Calls.Should().Equal(("settlement", 0), ("settlement", 2));
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        store.GetCallCount($"sub:{context.Subscription.Id}").Should().Be(0);
+        store.GetCallCount("quota-by-key:volume").Should().Be(0);
+        store.GetCallCount($"quota:sub:{context.Subscription.Id}").Should().Be(0);
+        store.GetBandwidth("quota-by-key:volume").Should().Be(0);
+        store.GetBandwidth($"quota:sub:{context.Subscription.Id}").Should().Be(0);
+        context.Variables.Should().Equal(variables);
+        context.Response.Headers.Should().BeEquivalentTo(headers);
+        context.Response.StatusCode.Should().Be(200);
+        context.Response.Body.Content.Should().Be("final");
+        context.ResponseTerminated.Should().BeFalse();
+        context.RequestId.Should().Be(requestId);
+        test.RunRequest(_ => { });
+        limiter.Calls.Should().Equal(("settlement", 0), ("settlement", 2));
+    }
+
+    [TestMethod]
+    [DataRow("direct")]
+    [DataRow("request")]
+    [DataRow("nested")]
+    public void LateRetainedPoliciesCannotEvaluateMockPredicatesOrCallbacks(string invocation)
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var predicateCalls = 0;
+        var callbackCalls = 0;
+        IInboundContext? retained = null;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                retained = section;
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+            }
+        })
+        { Context = context };
+        test.SetupInbound().RateLimitByKey((_, config) =>
+        {
+            predicateCalls++;
+            return config.IncrementAfterResponse == false;
+        }).WithCallback((gateway, _) =>
+        {
+            callbackCalls++;
+            gateway.Variables["late"] = true;
+        });
+        test.RunAll();
+        predicateCalls.Should().Be(1);
+
+        Assert.ThrowsExactly<InvalidOperationException>(() => InvokeRetainedPolicy(
+            test, () => SettlementTest.ApplyImmediateCounter(retained!, "RateLimitByKey"), invocation));
+
+        predicateCalls.Should().Be(1);
+        callbackCalls.Should().Be(0);
+        context.Variables.Should().NotContainKey("late");
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
+    [DataRow("RateLimitByKey")]
+    [DataRow("RateLimit")]
+    [DataRow("QuotaByKey")]
+    [DataRow("Quota")]
+    public void FreshRequestIdAllowsImmediateCountersThroughTheRetainedProxy(string policy)
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter();
+        context.Services.Register<IRateLimiter>(limiter);
+        IInboundContext? retained = null;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                retained = section;
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+            }
+        })
+        { Context = context };
+        test.RunAll();
+        context.RequestId = Guid.NewGuid();
+
+        test.RunRequest(request => request.RunRequest(
+            _ => SettlementTest.ApplyImmediateCounter(retained!, policy)));
+        test.RunRequest(_ => { });
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(policy == "RateLimitByKey" ? 4 : 2);
+        store.GetCallCount($"sub:{context.Subscription.Id}").Should().Be(policy == "RateLimit" ? 1 : 0);
+        store.GetCallCount("quota-by-key:volume").Should().Be(policy == "QuotaByKey" ? 2 : 0);
+        store.GetCallCount($"quota:sub:{context.Subscription.Id}").Should().Be(policy == "Quota" ? 1 : 0);
+        limiter.Calls.Should().HaveCount(3);
+    }
+
+    [TestMethod]
+    public void StandaloneRetainedProxyCanAdmitBeforeExplicitRequestCompletion()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter();
+        context.Services.Register<IRateLimiter>(limiter);
+        IInboundContext? retained = null;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                retained = section;
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+            }
+        })
+        { Context = context };
+
+        test.RunInbound();
+        SettlementTest.ApplyImmediateCounter(retained!, "RateLimitByKey");
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        test.RunRequest(_ => { });
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(4);
+        limiter.Calls.Should().Equal(("settlement", 0), ("settlement", 2), ("settlement", 2));
+    }
+
+    [TestMethod]
+    [DataRow("inbound")]
+    [DataRow("backend")]
+    [DataRow("outbound")]
+    [DataRow("on-error")]
+    public void CompletedRequestProxiesAllowMetadataReadsButRejectPoliciesInEverySection(string sectionName)
+    {
+        var context = SettlementTest.CreateContext();
+        IHaveExpressionContext? retained = null;
+        Func<object>? withId = null;
+        Action? mutate = null;
+        void Retain(string section, IHaveExpressionContext proxy, Func<object> metadata, Action policy)
+        {
+            if (section == sectionName)
+            {
+                retained = proxy;
+                withId = metadata;
+                mutate = policy;
+            }
+        }
+
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                Retain("inbound", section, () => section.WithId("late"), () => section.SetVariable("late", true));
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+            },
+            BackendAction = section => Retain(
+                "backend", section, () => section.WithId("late"), () => section.SetVariable("late", true)),
+            OutboundAction = section => Retain(
+                "outbound", section, () => section.WithId("late"), () => section.SetVariable("late", true)),
+            OnErrorAction = section => Retain(
+                "on-error", section, () => section.WithId("late"), () => section.SetVariable("late", true))
+        })
+        { Context = context };
+        test.RunOnError();
+        test.RunAll();
+
+        retained!.ExpressionContext.Should().BeSameAs(context);
+        withId!().Should().BeSameAs(retained);
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => mutate!());
+
+        error.Message.Should().Contain("completed").And.Contain("RequestId");
+        context.Variables.Should().NotContainKey("late");
+        test.RunRequest(_ => { });
+    }
+
+    [TestMethod]
+    public void RetainedProxyCannotExecuteConcurrentlyWithARequestOwner()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter();
+        context.Services.Register<IRateLimiter>(limiter);
+        IInboundContext? retained = null;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                retained = section;
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+            }
+        })
+        { Context = context };
+        test.RunInbound();
+
+        test.RunRequest(_ =>
+        {
+            var attempt = Task.Run(() => Assert.ThrowsExactly<InvalidOperationException>(
+                () => SettlementTest.ApplyImmediateCounter(retained!, "RateLimitByKey")));
+            attempt.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
+            attempt.GetAwaiter().GetResult().Message.Should().Contain("Concurrent");
+            store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+        });
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        limiter.Calls.Should().Equal(("settlement", 0), ("settlement", 2));
+    }
+
+    [TestMethod]
+    public void RequestIdChangesInsideAnOwnerErrorBeforePendingSettlement()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var initialId = context.RequestId;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.RateLimitByKey(SettlementTest.DeferredRate())
+        })
+        { Context = context };
+
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => test.RunRequest(request =>
+        {
+            request.RunInbound();
+            context.RequestId = Guid.NewGuid();
+        }));
+
+        error.Message.Should().Contain("RequestId");
+        context.RequestId.Should().NotBe(initialId);
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+        context.RequestId = initialId;
+        test.RunRequest(_ => { });
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
+    public void NestedOwnerValidatesRequestIdEvenWhenItsErrorIsHandledOutside()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var initialId = context.RequestId;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.RateLimitByKey(SettlementTest.DeferredRate())
+        })
+        { Context = context };
+
+        test.RunRequest(request =>
+        {
+            request.RunInbound();
+            Assert.ThrowsExactly<InvalidOperationException>(() => request.RunRequest(_ =>
+                context.RequestId = Guid.NewGuid()));
+            store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+            context.RequestId = initialId;
+        });
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
+    public void ProviderSettlementFailuresPropagateWithoutClosingTheRequest()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var fail = true;
+        var expected = new InvalidOperationException("provider failed");
+        context.Services.Register<IRateLimiter>(new RecordingRateLimiter((_, permits) =>
+        {
+            if (permits > 0 && fail)
+            {
+                throw expected;
+            }
+            return true;
+        }));
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.RateLimitByKey(SettlementTest.DeferredRate())
+        })
+        { Context = context };
+
+        Assert.ThrowsExactly<InvalidOperationException>(test.RunAll).Should().BeSameAs(expected);
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+        fail = false;
+        test.RunRequest(request => request.RunInbound());
+
+        store.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
+    public void PayloadSettlementFailuresPropagateWithoutClosingTheRequest()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var key = $"quota:sub:{context.Subscription.Id}";
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => SettlementTest.ApplyQuota(section, false),
+            OutboundAction = _ =>
+            {
+                context.Response.Body.Content = null;
+                context.Response.Headers["Content-Length"] = ["invalid"];
+            }
+        })
+        { Context = context };
+
+        Assert.ThrowsExactly<FormatException>(test.RunAll);
+        store.GetBandwidth(key).Should().Be(0);
+        context.Response.Headers["Content-Length"] = ["12"];
+        test.RunRequest(request => request.RunInbound());
+
+        store.GetBandwidth(key).Should().Be(12);
+    }
+
+    [TestMethod]
+    public void AllDeferredCountersSettleAfterAVetoBeforeFinalBandwidthIsMeasured()
+    {
+        var context = SettlementTest.CreateContext();
+        var store = context.Services.Resolve<RateLimitStore>()!;
+        var limiter = new RecordingRateLimiter((key, permits) => key != "deny" || permits == 0);
+        context.Services.Register<IRateLimiter>(limiter);
+        context.Request.Body.Content = new string('r', 32);
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.RateLimitByKey(SettlementTest.DeferredRate("deny"));
+                section.RateLimitByKey(SettlementTest.DeferredRate("allow"));
+                SettlementTest.ApplyQuota(section);
+            },
+            OutboundAction = section => section.SetBody(new string('x', 4096))
+        })
+        { Context = context };
+
+        test.RunAll();
+
+        context.Response.StatusCode.Should().Be(429);
+        context.ResponseTerminated.Should().BeTrue();
+        context.Response.Body.Content.Should().BeEmpty();
+        store.GetCallCount("rate-limit-by-key:deny").Should().Be(0);
+        store.GetCallCount("rate-limit-by-key:allow").Should().Be(2);
+        store.GetBandwidth("quota-by-key:volume").Should().Be(32);
+        limiter.Calls.Should().Contain([("deny", 2), ("allow", 2)]);
+    }
+
+    [TestMethod]
+    public void NonLimiterRunAllRemainsReusableWithTheSameRequestId()
+    {
+        var context = SettlementTest.CreateContext();
+        var requestId = context.RequestId;
+        var calls = new List<string>();
+        var test = new TestDocument(ExecutionTest.FlowDocument("document", calls)) { Context = context };
+
+        test.RunAll();
+        test.RunAll();
+        test.RunOnError();
+
+        calls.Should().HaveCount(14);
+        context.RequestId.Should().Be(requestId);
+        context.Services.Resolve<PolicyCounterService>().Should().BeNull();
+    }
+
+    [TestMethod]
+    public void NullRequestCallbackIsRejectedWithoutExecutingOrCompleting()
+    {
+        var test = new ExecutionTestDocument().AsTestDocument();
+
+        Assert.ThrowsExactly<ArgumentNullException>(() => test.RunRequest(null!));
+    }
+
+    private static void InvokeRetainedPolicy(TestDocument test, Action policy, string invocation)
+    {
+        switch (invocation)
+        {
+            case "direct": policy(); break;
+            case "request": test.RunRequest(_ => policy()); break;
+            case "nested": test.RunRequest(request => request.RunRequest(_ => policy())); break;
+            default: throw new ArgumentOutOfRangeException(nameof(invocation), invocation, null);
+        }
+    }
+
     class OperationDocument : IDocument
     {
         public void Inbound(IInboundContext context)
@@ -134,7 +938,8 @@ public class TestDocumentTests
             {
                 context.AuthenticationManagedIdentity(new ManagedIdentityAuthenticationConfig()
                 {
-                    Resource = "https://management.azure.com/", OutputTokenVariableName = "testToken",
+                    Resource = "https://management.azure.com/",
+                    OutputTokenVariableName = "testToken",
                 });
                 context.SetHeader("Authorization", Bearer(context.ExpressionContext));
             }

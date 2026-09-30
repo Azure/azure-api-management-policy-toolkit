@@ -37,6 +37,18 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
             return Object;
         }
 
+        if (targetMethod.Name == $"get_{nameof(IHaveExpressionContext.ExpressionContext)}")
+        {
+            return _context;
+        }
+
+        object? result = null;
+        _context.ExecuteSection(() => result = InvokePolicy(targetMethod, args));
+        return result;
+    }
+
+    private object? InvokePolicy(MethodInfo targetMethod, object?[]? args)
+    {
         var previousHandlers = _context.CurrentSectionHandlers;
         var previousSectionName = _context.CurrentSectionName;
         _context.CurrentSectionHandlers = _handlers;

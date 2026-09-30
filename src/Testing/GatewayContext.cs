@@ -2,14 +2,21 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 
 public class GatewayContext : MockExpressionContext
 {
+    private readonly object _executionSync = new();
+    private int _requestExecutionDepth;
+    private Guid _requestExecutionId;
+    private Guid? _completedLimiterRequestId;
+
     internal readonly SectionContextProxy<IInboundContext> InboundProxy;
     internal readonly SectionContextProxy<IBackendContext> BackendProxy;
     internal readonly SectionContextProxy<IOutboundContext> OutboundProxy;
@@ -80,5 +87,110 @@ public class GatewayContext : MockExpressionContext
     {
         termination.TerminatesPipeline ??= policyName != nameof(IInboundContext.InvokeRequest);
         ResponseTerminated |= termination.TerminatesPipeline == true;
+    }
+
+    internal void ExecuteRequest(Action request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        EnterExecution();
+        try
+        {
+            if (_requestExecutionDepth == 0)
+            {
+                _requestExecutionId = RequestId;
+            }
+            EnsureRequestId();
+            EnsureNoLateLimiterWork();
+            _requestExecutionDepth++;
+            try
+            {
+                request();
+                EnsureRequestId();
+                EnsureNoLateLimiterWork();
+                if (_requestExecutionDepth != 1 || _completedLimiterRequestId == RequestId)
+                {
+                    return;
+                }
+
+                this.CompleteLimiterResponse();
+                EnsureRequestId();
+                if (Services.Resolve<PolicyCounterService>() is { } counters)
+                {
+                    if (counters.HasPendingResponse)
+                    {
+                        throw new InvalidOperationException(
+                            "Limiter response completion left pending work. Complete it before changing RequestId.");
+                    }
+
+                    _completedLimiterRequestId = RequestId;
+                }
+            }
+            finally
+            {
+                _requestExecutionDepth--;
+            }
+        }
+        finally
+        {
+            Monitor.Exit(_executionSync);
+        }
+    }
+
+    internal void ExecuteSection(Action section)
+    {
+        ArgumentNullException.ThrowIfNull(section);
+        EnterExecution();
+        try
+        {
+            if (_requestExecutionDepth != 0)
+            {
+                EnsureRequestId();
+            }
+            if (_completedLimiterRequestId == RequestId)
+            {
+                throw new InvalidOperationException(
+                    $"The limiter response for RequestId '{RequestId}' has completed. " +
+                    "Use a new RequestId before executing more sections.");
+            }
+
+            section();
+            if (_requestExecutionDepth != 0)
+            {
+                EnsureRequestId();
+            }
+        }
+        finally
+        {
+            Monitor.Exit(_executionSync);
+        }
+    }
+
+    private void EnterExecution()
+    {
+        if (!Monitor.TryEnter(_executionSync))
+        {
+            throw new InvalidOperationException(
+                "Concurrent section or request execution on the same GatewayContext is not supported.");
+        }
+    }
+
+    private void EnsureRequestId()
+    {
+        if (RequestId != _requestExecutionId)
+        {
+            throw new InvalidOperationException(
+                "RequestId must remain unchanged until the outer request boundary completes limiter settlement.");
+        }
+    }
+
+    private void EnsureNoLateLimiterWork()
+    {
+        if (_completedLimiterRequestId == RequestId
+            && Services.Resolve<PolicyCounterService>()?.HasPendingResponse == true)
+        {
+            throw new InvalidOperationException(
+                $"Deferred limiter work was added after RequestId '{RequestId}' completed. " +
+                "Use a new RequestId for a new request; late work cannot be settled onto a completed response.");
+        }
     }
 }

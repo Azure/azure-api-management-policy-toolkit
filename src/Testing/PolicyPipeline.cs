@@ -143,20 +143,43 @@ public class PolicyPipeline
         }
     }
 
-    /// <summary>Runs inbound, backend, and outbound sections in order.</summary>
-    public void RunAll()
+    /// <summary>
+    /// Runs inbound, backend, and outbound sections in order and settles deferred
+    /// limiter work after the final response. Execution errors propagate without settlement.
+    /// </summary>
+    public void RunAll() => RunRequest(request =>
     {
-        RunInbound();
-        if (!Context.ResponseTerminated) RunBackend();
-        if (!Context.ResponseTerminated) RunOutbound();
-    }
+        request.RunInbound();
+        if (!Context.ResponseTerminated) request.RunBackend();
+        if (!Context.ResponseTerminated) request.RunOutbound();
+    });
 
-    /// <summary>Runs inbound, backend, and outbound sections using nested Base() chaining.</summary>
-    public void RunAllNested()
+    /// <summary>
+    /// Runs inbound, backend, and outbound using nested Base() chaining and settles
+    /// deferred limiter work after all scope frames and hooks have been restored.
+    /// </summary>
+    public void RunAllNested() => RunRequest(request =>
     {
-        RunInboundNested();
-        if (!Context.ResponseTerminated) RunBackendNested();
-        if (!Context.ResponseTerminated) RunOutboundNested();
+        request.RunInboundNested();
+        if (!Context.ResponseTerminated) request.RunBackendNested();
+        if (!Context.ResponseTerminated) request.RunOutboundNested();
+    });
+
+    /// <summary>
+    /// Executes a synchronous logical request. Include any flat or nested on-error
+    /// processing, independent sections, and final response postprocessing in the
+    /// callback. Nested boundaries settle only after the successful outermost return.
+    /// Individual section methods do not perform automatic settlement.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The request callback is null.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// RequestId changes during execution, completed limiter work is extended,
+    /// or the same context is used concurrently.
+    /// </exception>
+    public void RunRequest(Action<PolicyPipeline> request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        Context.ExecuteRequest(() => request(this));
     }
 
     /// <summary>
@@ -201,6 +224,19 @@ public class PolicyPipeline
         SectionContextProxy<T> proxy,
         Action<IDocument, T> runSection) where T : class
     {
+        if (Context.ResponseTerminated)
+        {
+            return;
+        }
+
+        Context.ExecuteSection(() => RunNestedForSectionCore(scopes, proxy, runSection));
+    }
+
+    private void RunNestedForSectionCore<T>(
+        List<PolicyScope> scopes,
+        SectionContextProxy<T> proxy,
+        Action<IDocument, T> runSection) where T : class
+    {
         var baseHandler = proxy.GetHandler<BaseHandler>();
 
         void RunNested(int index)
@@ -240,6 +276,9 @@ public class PolicyPipeline
     }
 
     private void Handle<T>(T context, Action<T> section)
+        => Context.ExecuteSection(() => HandleSection(context, section));
+
+    private void HandleSection<T>(T context, Action<T> section)
     {
         try
         {
@@ -255,15 +294,15 @@ public class PolicyPipeline
     /// Handles an inbound section with legacy exception isolation. Failures are traced
     /// so that subsequent scopes can still run without silently discarding errors.
     /// </summary>
-    private void HandleIsolated<T>(PolicyScope scope, T context, Action<T> section)
+    private void HandleIsolated<T>(PolicyScope scope, T context, Action<T> section) => Context.ExecuteSection(() =>
     {
         try
         {
-            Handle(context, section);
+            HandleSection(context, section);
         }
         catch (Exception error)
         {
             Context.Trace($"Independent inbound execution failed at scope '{scope}': {error}");
         }
-    }
+    });
 }

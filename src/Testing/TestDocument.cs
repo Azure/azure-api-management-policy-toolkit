@@ -30,7 +30,36 @@ public class TestDocument(IDocument document)
     public void RunOutbound() => this.Handle(Context.OutboundProxy.Object, document.Outbound);
     public void RunOnError() => this.Handle(Context.OnErrorProxy.Object, document.OnError);
 
-    private void Handle<T>(T context, Action<T> section)
+    /// <summary>
+    /// Runs inbound, backend, and outbound as one coordinated request and settles
+    /// deferred limiter work after the final response, including early termination.
+    /// Execution errors propagate without settlement.
+    /// </summary>
+    public void RunAll() => RunRequest(request =>
+    {
+        request.RunInbound();
+        if (!Context.ResponseTerminated) request.RunBackend();
+        if (!Context.ResponseTerminated) request.RunOutbound();
+    });
+
+    /// <summary>
+    /// Executes a synchronous logical request. Include any on-error processing or
+    /// final response postprocessing in the callback. Nested boundaries share one
+    /// completion owner; only a successful outer return settles limiter work.
+    /// Existing individual section methods do not perform automatic settlement.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The request callback is null.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// RequestId changes during execution, completed limiter work is extended,
+    /// or the same context is used concurrently.
+    /// </exception>
+    public void RunRequest(Action<TestDocument> request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        Context.ExecuteRequest(() => request(this));
+    }
+
+    private void Handle<T>(T context, Action<T> section) => Context.ExecuteSection(() =>
     {
         try
         {
@@ -40,5 +69,5 @@ public class TestDocument(IDocument document)
         {
             Context.RecordTermination(termination);
         }
-    }
+    });
 }
