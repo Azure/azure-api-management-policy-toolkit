@@ -26,9 +26,11 @@ public class PolicyPipeline
     /// Registers a fragment instance so that IncludeFragment calls with the given ID
     /// resolve to this instance instead of scanning assemblies via reflection.
     /// </summary>
+    /// <exception cref="ArgumentException">The fragment ID is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">The fragment ID or instance is null.</exception>
     public PolicyPipeline RegisterFragment(string fragmentId, IFragment fragment)
     {
-        Context.FragmentRegistry[fragmentId] = fragment;
+        Context.RegisterFragment(fragmentId, fragment);
         return this;
     }
 
@@ -65,7 +67,7 @@ public class PolicyPipeline
     /// Runs inbound sections independently with scope-level isolation. Each scope runs
     /// regardless of whether a previous scope called ReturnResponse or threw an exception.
     /// Base() is a no-op. This matches legacy test harness behavior where scopes don't
-    /// affect each other.
+    /// affect each other. Isolated failures are reported through the context's Trace callback.
     /// </summary>
     public void RunInboundIndependent()
     {
@@ -73,7 +75,7 @@ public class PolicyPipeline
         {
             if (_policies.TryGetValue(scope, out var doc))
             {
-                HandleIsolated(Context.InboundProxy.Object, doc.Inbound);
+                HandleIsolated(scope, Context.InboundProxy.Object, doc.Inbound);
             }
         }
     }
@@ -133,6 +135,7 @@ public class PolicyPipeline
     {
         foreach (var scope in OutboundOrder)
         {
+            if (Context.ResponseTerminated) return;
             if (_policies.TryGetValue(scope, out var doc))
             {
                 Handle(Context.OnErrorProxy.Object, doc.OnError);
@@ -222,7 +225,10 @@ public class PolicyPipeline
             {
                 runSection(doc, proxy.Object);
             }
-            catch (FinishSectionProcessingException) { }
+            catch (FinishSectionProcessingException termination)
+            {
+                Context.RecordTermination(termination);
+            }
             finally
             {
                 baseHandler.CallbackHooks.Clear();
@@ -233,29 +239,31 @@ public class PolicyPipeline
         RunNested(0);
     }
 
-    private static void Handle<T>(T context, Action<T> section)
+    private void Handle<T>(T context, Action<T> section)
     {
         try
         {
             section(context);
         }
-        catch (FinishSectionProcessingException)
+        catch (FinishSectionProcessingException termination)
         {
+            Context.RecordTermination(termination);
         }
     }
 
     /// <summary>
-    /// Handles a section with full exception isolation — all exceptions are caught
-    /// and swallowed so that subsequent scopes can still run.
+    /// Handles an inbound section with legacy exception isolation. Failures are traced
+    /// so that subsequent scopes can still run without silently discarding errors.
     /// </summary>
-    private static void HandleIsolated<T>(T context, Action<T> section)
+    private void HandleIsolated<T>(PolicyScope scope, T context, Action<T> section)
     {
         try
         {
-            section(context);
+            Handle(context, section);
         }
-        catch
+        catch (Exception error)
         {
+            Context.Trace($"Independent inbound execution failed at scope '{scope}': {error}");
         }
     }
 }

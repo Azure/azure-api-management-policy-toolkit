@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -25,11 +25,15 @@ public class GatewayContext : MockExpressionContext
     /// </summary>
     internal Dictionary<string, IFragment> FragmentRegistry { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    internal HashSet<string> ActiveFragments { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// Tracks the handler map of the currently executing section proxy so that
     /// IncludeFragmentHandler can create a fragment context with the correct handlers.
     /// </summary>
     internal Dictionary<string, IPolicyHandler>? CurrentSectionHandlers { get; set; }
+
+    internal string? CurrentSectionName { get; set; }
 
     /// <summary>
     /// Service registry for injecting custom service implementations (e.g., IHttpClient, ICache).
@@ -37,8 +41,10 @@ public class GatewayContext : MockExpressionContext
     public ServiceRegistry Services { get; } = new();
 
     /// <summary>
-    /// Set to true when return-response is called, signaling that the pipeline should
-    /// stop processing subsequent sections (backend, outbound).
+    /// Set to true when a policy terminates pipeline execution, signaling that
+    /// coordinated execution should stop subsequent scopes and sections.
+    /// InvokeRequest stops only its current section and does not set this flag.
+    /// Standalone and independent section invocations do not consult this flag.
     /// </summary>
     public bool ResponseTerminated { get; set; }
 
@@ -61,5 +67,18 @@ public class GatewayContext : MockExpressionContext
         BackendProxy = SectionContextProxy<IBackendContext>.Create(this);
         OutboundProxy = SectionContextProxy<IOutboundContext>.Create(this);
         OnErrorProxy = SectionContextProxy<IOnErrorContext>.Create(this);
+    }
+
+    internal void RegisterFragment(string fragmentId, IFragment fragment)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fragmentId);
+        ArgumentNullException.ThrowIfNull(fragment);
+        FragmentRegistry[fragmentId] = fragment;
+    }
+
+    internal void RecordTermination(FinishSectionProcessingException termination, string? policyName = null)
+    {
+        termination.TerminatesPipeline ??= policyName != nameof(IInboundContext.InvokeRequest);
+        ResponseTerminated |= termination.TerminatesPipeline == true;
     }
 }

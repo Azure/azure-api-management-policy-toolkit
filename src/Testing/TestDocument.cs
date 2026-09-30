@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -17,9 +17,11 @@ public class TestDocument(IDocument document)
     /// Registers a fragment instance so that IncludeFragment calls with the given ID
     /// resolve to this instance instead of scanning assemblies via reflection.
     /// </summary>
+    /// <exception cref="ArgumentException">The fragment ID is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">The fragment ID or instance is null.</exception>
     public TestDocument RegisterFragment(string fragmentId, IFragment fragment)
     {
-        Context.FragmentRegistry[fragmentId] = fragment;
+        Context.RegisterFragment(fragmentId, fragment);
         return this;
     }
 
@@ -34,6 +36,9 @@ public class TestDocument(IDocument document)
         {
             section(context);
         }
-        catch (FinishSectionProcessingException) { }
+        catch (FinishSectionProcessingException termination)
+        {
+            Context.RecordTermination(termination);
+        }
     }
 }

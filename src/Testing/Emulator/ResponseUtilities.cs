@@ -3,6 +3,7 @@
 
 using System.Reflection;
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
@@ -18,17 +19,32 @@ internal static class ResponseUtilities
         target.Body.Content = string.Empty;
     }
 
-    public static void Copy(MockResponse source, MockResponse target)
+    public static void Copy(IResponse source, MockResponse target)
     {
-        target.StatusCode = source.StatusCode;
-        target.StatusReason = source.StatusReason;
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
+        if (ReferenceEquals(source, target))
+        {
+            return;
+        }
+
+        var statusCode = source.StatusCode;
+        var statusReason = source.StatusReason;
+        var headers = source.Headers.Select(header =>
+            new KeyValuePair<string, string[]>(header.Key, header.Value.ToArray())).ToArray();
+        var body = source is MockResponse response
+            ? response.Body.Content
+            : source.Body.As<string>(preserveContent: true);
+
+        target.StatusCode = statusCode;
+        target.StatusReason = statusReason;
         target.Headers.Clear();
-        foreach (var header in source.Headers)
+        foreach (var header in headers)
         {
             target.Headers[header.Key] = header.Value;
         }
 
-        target.Body.Content = source.Body.Content;
+        target.Body.Content = body;
     }
 
     public static bool TryCopyCachedResponse(object? cached, MockResponse target)
@@ -46,7 +62,7 @@ internal static class ResponseUtilities
                 target.Headers.Clear();
                 foreach (var header in response.Headers)
                 {
-                    target.Headers[header.Key] = header.Value;
+                    target.Headers[header.Key] = header.Value.ToArray();
                 }
 
                 target.Body.Content = response.Body;
@@ -72,7 +88,7 @@ internal static class ResponseUtilities
         target.Headers.Clear();
         foreach (var header in responseHeaders)
         {
-            target.Headers[header.Key] = header.Value;
+            target.Headers[header.Key] = header.Value.ToArray();
         }
 
         target.Body.Content = type.GetProperty("Body", BindingFlags.Instance | BindingFlags.Public)?.GetValue(cached) as string;
