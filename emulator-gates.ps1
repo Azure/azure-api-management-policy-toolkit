@@ -77,6 +77,23 @@ try {
             if ($null -eq $counters -or [int]$counters.GetAttribute('total') -eq 0) {
                 throw 'The admission test filter matched no tests.'
             }
+
+            $passedIds = @($results.SelectNodes('//*[local-name()="UnitTestResult"]') |
+                Where-Object { $_.GetAttribute('outcome') -eq 'Passed' } |
+                ForEach-Object { $_.GetAttribute('testId') })
+            $definitions = @($results.SelectNodes('//*[local-name()="UnitTest"]'))
+            foreach ($test in $changedTests) {
+                $testClass = [IO.Path]::GetFileNameWithoutExtension($test)
+                $passingTests = @($definitions | Where-Object {
+                    $method = $_.SelectSingleNode('*[local-name()="TestMethod"]')
+                    $null -ne $method -and
+                    $method.GetAttribute('className').EndsWith(".$testClass", [StringComparison]::Ordinal) -and
+                    $passedIds -ccontains $_.GetAttribute('id')
+                })
+                if ($passingTests.Count -eq 0) {
+                    throw "No tests in $testClass passed during admission."
+                }
+            }
         }
         finally {
             if (Test-Path -LiteralPath $resultPath) {
