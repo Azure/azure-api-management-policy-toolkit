@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
@@ -8,6 +9,19 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 public class LoggerStore
 {
     private readonly Dictionary<string, Logger> _loggers = new();
+
+    internal readonly IList<TraceEvent> TracesInternal = new List<TraceEvent>();
+    internal readonly IList<MetricEvent> MetricsInternal = new List<MetricEvent>();
+
+    /// <summary>
+    /// Gets an immutable snapshot of trace policy telemetry recorded in this gateway context.
+    /// </summary>
+    public ImmutableArray<TraceEvent> Traces => TracesInternal.ToImmutableArray();
+
+    /// <summary>
+    /// Gets an immutable snapshot of emit-metric policy telemetry recorded in this gateway context.
+    /// </summary>
+    public ImmutableArray<MetricEvent> Metrics => MetricsInternal.ToImmutableArray();
 
     public Logger Add(string loggerId)
     {
