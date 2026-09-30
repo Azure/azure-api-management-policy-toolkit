@@ -8,8 +8,10 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 namespace Test.Emulator.Emulator.Policies;
 
 [TestClass]
-public class AzureOpenAiEmitTokenMetricTests
+public class AzureOpenAiEmitTokenMetricTests : LlmEmitTokenMetricTests
 {
+    protected override bool UseAzureOpenAi => true;
+
     class SimpleAzureOpenAiEmitTokenMetric : IDocument
     {
         public void Inbound(IInboundContext context)
@@ -34,5 +36,6 @@ public class AzureOpenAiEmitTokenMetricTests
         test.RunInbound();
 
         executedCallback.Should().BeTrue();
+        test.SetupLoggerStore().Metrics.Should().BeEmpty();
     }
 }
