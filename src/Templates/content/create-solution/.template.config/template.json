@@ -60,23 +60,6 @@
       }
     },
     {
-      "actionId": "B17581D1-C5C9-4489-8F0A-004BE667B814",
-      "description": "Adding reference to Source project in Test project",
-      "continueOnError": false,
-      "manualInstructions": [
-        {
-          "text": "Manually add the reference to Source project in Test project"
-        }
-      ],
-      "args": {
-        "targetFiles": [
-          "test/Project.Test.csproj"
-        ],
-        "referenceType": "project",
-        "reference": "src/Project.Source.csproj"
-      }
-    },
-    {
       "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
       "description": "Restore NuGet packages required by this project.",
       "continueOnError": true,

@@ -23,31 +23,14 @@ We will cover the following topics:
     dotnet new classlib --output Contoso.Apis.Policies
     dotnet sln add ./Contoso.Apis.Policies
     ```
-4. :exclamation: Azure API Management Policy toolkit is not yet published to NuGet.
-    Because of that, we need to create a local nuget repository for the packages and put the libraries there.
-   1. Create a local nuget repository for the packages by executing
-       ```shell
-       mkdir packages
-       ```
-   2. Download the Azure API Management policy toolkit libraries from GitHub release and put them in the `packages` folder.
-   3. Create a file named `nuget.config` in the solution folder with the content:
-       ```xml
-       <configuration>
-         <packageSources>
-           <!-- local feed for the project -->
-           <add key="local" value="./packages" />
-           <!-- fallback to nuget.org -->
-           <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-         </packageSources>
-       </configuration>
-       ```
-5. Add Azure API Management policy authoring toolkit library by running
+4. Add the [Azure API Management policy authoring toolkit library](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring)
+   from NuGet by running
     ```shell
     cd ./Contoso.Apis.Policies
     dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
     ```
 
-6. Open the solution in your IDE of choice. We
+5. Open the solution in your IDE of choice. We
   tested [Visual Studio ](https://visualstudio.microsoft.com), [Rider](https://www.jetbrains.com/rider/), [Visual Studio Code](https://code.visualstudio.com/)
   with [C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit),
   but any IDE with C# support should work.
@@ -115,12 +98,13 @@ Azure API Management supports policy documents in Razor format. The Azure API Ma
 dotnet tool called a compiler which can generate
 Razor policy documents from C# classes.
 
-To use the compiler, we first need to add it to our solution folder. To do that execute the following command in the
-solution folder.
+To use the compiler, first install the
+[compiler tool from NuGet](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling).
+Execute the following command in the solution folder.
 
 ```shell
 cd .. # Go to solution folder if not already there
-dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
+dotnet tool install Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling
 ````
 
 After the installation, the compiler should be available in the project folder as the `azure-apim-policy-compiler` command.
@@ -272,9 +256,10 @@ Isn't it great, right? I hope it is. But we can now test the expressions in the 
 ## Testing expressions in policy document
 
 The Azure API Management policy toolkit provides a way to test expressions in policy documents. To do that we need to
-create a test project from a solution folder. Then we will need to add a reference to the policy project and the testing
-library. Last, we need to create a test class and write a test for the expression. All of that you can do by executing
-the following commands.
+create a test project from a solution folder. Then we will need to add a reference to the policy project and the
+[testing library from NuGet](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Testing).
+Last, we need to create a test class and write a test for the expression. All of that you can do by executing the
+following commands.
 
 ```shell
 dotnet new mstest --output Contoso.Apis.Policies.Tests

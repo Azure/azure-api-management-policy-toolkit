@@ -6,12 +6,14 @@ platform-as-a-service, API Management supports the complete API lifecycle.
 This library contains interfaces and classes required for creating policies in C# for API's in Microsoft Azure Api
 Management.
 
+The NuGet package includes assemblies for .NET 8, .NET 9, and .NET 10.
+
 ## Getting started
 
 ### Install the package
 
 Install the Microsoft Azure Api Management Policy Toolkit policy authoring library for .NET
-with [NuGet](https://www.nuget.org/):
+with [NuGet][nuget]:
 
 ```dotnetcli
 dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
@@ -77,7 +79,7 @@ more information, see the [Code of Conduct FAQ][coc_faq] or contact
 
 <!-- LINKS -->
 
-[nuget]: https://www.nuget.org/
+[nuget]: https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
 
 [qs]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/QuickStart.md
 

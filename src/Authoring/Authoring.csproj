@@ -29,7 +29,7 @@
     <PackageOutputPath>..\..\output</PackageOutputPath>
     <IncludeBuildOutput>true</IncludeBuildOutput>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
     <RootNamespace>Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring</RootNamespace>
     <TargetsForTfmSpecificContentInPackage>
             $(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput
@@ -40,7 +40,7 @@
     <!-- Disable warning CS1591: Missing XML comment for publicly visible type or member, should be removed in the future -->
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Analyzers\Analyzers.csproj" />
+    <ProjectReference Include="..\Analyzers\Analyzers.csproj" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\" />
@@ -48,7 +48,9 @@
   </ItemGroup>
   <Target Name="_AddAnalyzersToOutput">
     <ItemGroup>
-      <TfmSpecificPackageFile Include="$(OutputPath)\Analyzers.dll" PackagePath="analyzers/dotnet/cs" />
+      <TfmSpecificPackageFile Include="$(OutputPath)\Analyzers.dll"
+                              PackagePath="analyzers/dotnet/cs"
+                              Condition="'$(TargetFramework)' == 'net10.0'" />
       <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="" />
     </ItemGroup>
   </Target>

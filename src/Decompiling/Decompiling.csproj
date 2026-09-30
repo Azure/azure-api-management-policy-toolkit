@@ -39,6 +39,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\docs\images\pkgicon.png" Pack="true" PackagePath="\" />
-    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Update="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

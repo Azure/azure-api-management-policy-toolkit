@@ -4,10 +4,13 @@ This project builds a dotnet tool which can compile C# policy documents into Azu
 policy documents.
 
 ## Install
+
+The compiler requires the .NET 10 runtime.
+
 Install the Microsoft Azure Api Management Policy Toolkit compiler CLI tool with [NuGet][nuget]:
 
 ```shell
-dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
+dotnet tool install Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling
 ```
 
 ## Output format
@@ -68,7 +71,7 @@ more information, see the [Code of Conduct FAQ][coc_faq] or contact
 
 <!-- LINKS -->
 
-[nuget]: https://www.nuget.org/
+[nuget]: https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling
 
 [qs]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/QuickStart.md
 

@@ -10,10 +10,10 @@ in Microsoft Azure ApiManagement Policy Toolkit environment.
 
 ### Install the package templates packages
 
-Install the Microsoft Azure Api Management Policy Toolkit templates with [NuGet](https://www.nuget.org/):
+Install the Microsoft Azure Api Management Policy Toolkit templates with [NuGet][nuget]:
 
 ```dotnetcli
-dotnet new install Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
+dotnet new install Microsoft.Azure.ApiManagement.PolicyToolkit.Templates
 ```
 
 ### Create a new project
@@ -21,6 +21,9 @@ dotnet new install Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
 ```dotnetcli
 dotnet new policytoolkitsolution 
 ```
+
+The generated projects target .NET 10 by default. Pass `--Framework net9.0` or `--Framework net8.0` to
+generate projects for an earlier runtime. The template package itself is framework-independent.
 
 ### Create a new policy document
 
@@ -67,7 +70,7 @@ more information, see the [Code of Conduct FAQ][coc_faq] or contact
 
 <!-- LINKS -->
 
-[nuget]: https://www.nuget.org/
+[nuget]: https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Templates
 
 [qs]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/QuickStart.md
 

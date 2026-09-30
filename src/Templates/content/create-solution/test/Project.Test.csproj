@@ -10,4 +10,7 @@
     <PackageReference Include="MSTest" Version="3.11.1" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\Project.Source.csproj" />
+  </ItemGroup>
 </Project>
