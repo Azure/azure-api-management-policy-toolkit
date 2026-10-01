@@ -86,6 +86,29 @@ public class WaitBranchTests
     }
 
     [TestMethod]
+    public async Task AcceptsBranchExpressionContextAfterWithId()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun(branch.WithId("metadata").ExpressionContext))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "result" });
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+            }
+            """);
+    }
+
+    [TestMethod]
     public async Task RejectsMultipleTopLevelPoliciesInOneBranch()
     {
         await VerifyAsync(
@@ -224,6 +247,43 @@ public class WaitBranchTests
                 }
 
                 private static bool ShouldRun(IExpressionContext context) => true;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
+    }
+
+    [TestMethod]
+    public async Task RejectsCapturedExpressionContextAlias()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                private readonly IExpressionContext outer;
+
+                public Policy(IExpressionContext outer) => this.outer = outer;
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun(branch.ExpressionContext))
+                        {
+                            branch.CacheLookupValue(new CacheLookupValueConfig
+                            {
+                                Key = "cached", VariableName = "cached"
+                            });
+                            if (Missing({|#0:outer|}))
+                            {
+                                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "fallback" });
+                            }
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+                private static bool Missing(IExpressionContext context) =>
+                    !context.Variables.ContainsKey("cached");
             }
             """,
             DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
