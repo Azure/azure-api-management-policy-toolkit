@@ -106,7 +106,7 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                     !(symbol is IMethodSymbol &&
                       GetCalledInvocation(name, context.SemanticModel) is { } called &&
                       IsBranchLocalContextOrigin(called, context.SemanticModel, lambda, parameter,
-                          new Dictionary<IParameterSymbol, IOperation>(SymbolEqualityComparer.Default),
+                          new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default),
                           new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default))))
                 {
                     context.ReportDiagnostic(Diagnostic.Create(Rules.WaitBranch.CapturedContext,
@@ -127,7 +127,7 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                 if (context.SemanticModel.GetOperation(call) is not IInvocationOperation operation ||
                     operation.Type is not INamedTypeSymbol type || !IsWaitContextType(type) ||
                     IsBranchLocalContextOrigin(operation, context.SemanticModel, lambda, parameter,
-                        new Dictionary<IParameterSymbol, IOperation>(SymbolEqualityComparer.Default),
+                        new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default),
                         new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default)))
                 {
                     continue;
@@ -231,7 +231,7 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
         }
 
         return IsBranchLocalContextOrigin(projection, model, lambda, parameter,
-            new Dictionary<IParameterSymbol, IOperation>(SymbolEqualityComparer.Default),
+            new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default),
             new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default));
     }
 
@@ -249,15 +249,15 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
 
     private static bool IsBranchLocalContextOrigin(
         IOperation operation, SemanticModel model, LambdaExpressionSyntax lambda, IParameterSymbol parameter,
-        IReadOnlyDictionary<IParameterSymbol, IOperation> arguments, HashSet<IMethodSymbol> methods)
+        IReadOnlyDictionary<IParameterSymbol, bool> arguments, HashSet<IMethodSymbol> methods)
     {
         switch (operation)
         {
             case IConversionOperation conversion when conversion.OperatorMethod is null:
                 return IsBranchLocalContextOrigin(conversion.Operand, model, lambda, parameter, arguments, methods);
             case IParameterReferenceOperation reference:
-                return arguments.TryGetValue(reference.Parameter, out var argument)
-                    ? IsBranchLocalContextOrigin(argument, model, lambda, parameter, arguments, methods)
+                return arguments.TryGetValue(reference.Parameter, out var proven)
+                    ? proven
                     : IsBranchLocalSymbol(reference.Parameter, lambda, parameter);
             case ILocalReferenceOperation local:
                 return IsBranchLocalSymbol(local.Local, lambda, parameter);
@@ -278,7 +278,7 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
 
     private static bool IsBranchLocalContextHelper(
         IInvocationOperation invocation, SemanticModel model, LambdaExpressionSyntax lambda,
-        IParameterSymbol parameter, IReadOnlyDictionary<IParameterSymbol, IOperation> arguments,
+        IParameterSymbol parameter, IReadOnlyDictionary<IParameterSymbol, bool> arguments,
         HashSet<IMethodSymbol> methods)
     {
         var method = invocation.TargetMethod.OriginalDefinition;
@@ -304,7 +304,7 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
             return false;
         }
 
-        var boundArguments = new Dictionary<IParameterSymbol, IOperation>(SymbolEqualityComparer.Default);
+        var boundArguments = new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default);
         foreach (var argument in arguments)
         {
             boundArguments.Add(argument.Key, argument.Value);
@@ -317,7 +317,8 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                 return false;
             }
 
-            boundArguments[method.Parameters[argument.Parameter.Ordinal]] = argument.Value;
+            boundArguments[method.Parameters[argument.Parameter.Ordinal]] = IsBranchLocalContextOrigin(
+                argument.Value, model, lambda, parameter, arguments, methods);
         }
 
         var returnedModel = model;

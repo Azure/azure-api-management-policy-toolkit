@@ -451,6 +451,88 @@ public class WaitBranchTests
     }
 
     [TestMethod]
+    public async Task AcceptsBranchLocalSectionHelperProjection()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun(SectionIdentity(branch).ExpressionContext))
+                        {
+                            branch.CacheLookupValue(new CacheLookupValueConfig
+                            {
+                                Key = "key", VariableName = "cached"
+                            });
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+                private static IInboundContext SectionIdentity(IInboundContext context) => context;
+            }
+            """);
+    }
+
+    [TestMethod]
+    [DataRow("Identity(Identity(branch.ExpressionContext))")]
+    [DataRow("Forward(Identity(branch.ExpressionContext))")]
+    public async Task AcceptsFiniteNestedContextHelpers(string contextExpression)
+    {
+        await VerifyAsync(
+            $$"""
+              public class Policy : IDocument
+              {
+                  public void Inbound(IInboundContext context)
+                  {
+                      context.Wait("all", branch =>
+                      {
+                          if (ShouldRun({{contextExpression}}))
+                          {
+                              branch.CacheLookupValue(new CacheLookupValueConfig
+                              {
+                                  Key = "key", VariableName = "cached"
+                              });
+                          }
+                      });
+                  }
+
+                  private static bool ShouldRun(IExpressionContext context) => true;
+                  private static IExpressionContext Identity(IExpressionContext context) => context;
+                  private static IExpressionContext Forward(IExpressionContext context) => Identity(context);
+              }
+              """);
+    }
+
+    [TestMethod]
+    public async Task RejectsGenuinelyRecursiveContextHelper()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun({|#0:ContextLoop|}(branch.ExpressionContext)))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "wrong" });
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+                private static IExpressionContext ContextLoop(IExpressionContext context) => ContextLoop(context);
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
+    }
+
+    [TestMethod]
     public async Task RejectsCapturedContextDelegateInvocation()
     {
         await VerifyAsync(
