@@ -962,4 +962,632 @@ public class WaitTests
         result.Document.Should().NotBeNull();
         result.Document!.Descendants("wait").Should().BeEmpty();
     }
+
+    [TestMethod]
+    [DataRow(
+        """
+        context.Wait(null, branch => branch.WithId("id").SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = "request"
+        }))
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request id="id" response-variable-name="request" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Wait expression branch preserves WithId")]
+    [DataRow(
+        """
+        context.Wait(null, branch =>
+        {
+            branch.WithId("id").SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request id="id" response-variable-name="request" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Wait block branch preserves WithId")]
+    [DataRow(
+        """
+        context.Wait(null, branch => branch.WithId("id").CacheLookupValue(new CacheLookupValueConfig
+        {
+            Key = "key",
+            VariableName = "cache"
+        }))
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <cache-lookup-value id="id" key="key" variable-name="cache" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Wait cache expression branch preserves WithId")]
+    [DataRow(
+        """
+        context.Wait(null, branch =>
+        {
+            branch.WithId("id").CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cache" });
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <cache-lookup-value id="id" key="key" variable-name="cache" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Wait cache block branch preserves WithId")]
+    [DataRow(
+        """
+        context.Wait(null, branch => branch.WithId("first").WithId("second").WithId("last")
+            .SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request id="last" response-variable-name="request" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Wait WithId chain uses last ID")]
+    [DataRow(
+        """
+        context.Wait(null, branch => branch.WithId(id: "id")
+            .SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request id="id" response-variable-name="request" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Wait WithId accepts named ID")]
+    [DataRow(
+        """
+        context.Wait(null, branch => branch.WithId(nameof(context))
+            .SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request id="context" response-variable-name="request" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Wait WithId nameof does not capture outer state")]
+    [DataRow(
+        """
+        context.Wait(null, branch => branch.WithId("id").SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = ResponseVariableNameExp(branch.ExpressionContext),
+            Url = UrlExp(branch.ExpressionContext)
+        }))
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request id="id" response-variable-name="@(context.Request.Method)">
+                        <set-url>@(context.Request.Url.ToString())</set-url>
+                    </send-request>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Wait WithId preserves child policy expressions")]
+    public void ShouldCompileWaitBranchMetadata(string invocation, string expectedXml)
+    {
+        CompileBranchDocument(CreateInboundDocument(invocation)).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow("Inbound", "IInboundContext", "inbound", DisplayName = "Inbound Wait branch metadata")]
+    [DataRow("Outbound", "IOutboundContext", "outbound", DisplayName = "Outbound Wait branch metadata")]
+    [DataRow("Backend", "IBackendContext", "backend", DisplayName = "Backend Wait branch metadata")]
+    [DataRow("OnError", "IOnErrorContext", "on-error", DisplayName = "On-error Wait branch metadata")]
+    public void ShouldCompileWaitBranchMetadataInSections(string method, string contextType, string section)
+    {
+        var code = $$"""
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void {{method}}({{contextType}} context)
+                {
+                    context.Wait(null, branch => branch.WithId("id").SendRequest(new SendRequestConfig
+                    {
+                        ResponseVariableName = "request"
+                    }));
+                }
+            }
+            """;
+        var expectedXml = $$"""
+            <policies>
+                <{{section}}>
+                    <wait>
+                        <send-request id="id" response-variable-name="request" />
+                    </wait>
+                </{{section}}>
+            </policies>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldCompileWaitBranchMetadataInFragment()
+    {
+        var code = """
+            [Document(Type = DocumentType.Fragment)]
+            public class PolicyDocument : IFragment
+            {
+                public void Fragment(IFragmentContext context)
+                {
+                    context.Wait(null, branch => branch.WithId("id").SendRequest(new SendRequestConfig
+                    {
+                        ResponseVariableName = "request"
+                    }));
+                }
+            }
+            """;
+        var expectedXml = """
+            <fragment>
+                <wait>
+                    <send-request id="id" response-variable-name="request" />
+                </wait>
+            </fragment>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldCompileWaitBranchMetadataFromConstants()
+    {
+        var code = """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                private const string PolicyId = "constant-id";
+                private const string VariableName = "request";
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait(null, branch => branch.WithId(PolicyId).SendRequest(new SendRequestConfig
+                    {
+                        ResponseVariableName = PolicyDocument.VariableName
+                    }));
+                }
+            }
+            """;
+        var expectedXml = """
+            <policies>
+                <inbound>
+                    <wait>
+                        <send-request id="constant-id" response-variable-name="request" />
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldIsolateWaitAndBranchPolicyIds()
+    {
+        var code = CreateInboundDocument(
+            """
+            context.WithId("wait").Wait("any",
+                branch => branch.WithId("first").SendRequest(new SendRequestConfig { ResponseVariableName = "first" }),
+                branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" }),
+                branch => branch.WithId("last").CacheLookupValue(new CacheLookupValueConfig
+                {
+                    Key = "key",
+                    VariableName = "cache"
+                }))
+            """);
+        var expectedXml = """
+            <policies>
+                <inbound>
+                    <wait id="wait" for="any">
+                        <send-request id="first" response-variable-name="first" />
+                        <send-request response-variable-name="second" />
+                        <cache-lookup-value id="last" key="key" variable-name="cache" />
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldCompileWaitMetadataInsideChoose()
+    {
+        var code = CreateInboundDocument(
+            """
+            context.Wait(null, branch =>
+            {
+                if (ConditionExp(branch.ExpressionContext))
+                {
+                    branch.WithId("request").SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                    branch.WithId("header").SetHeader("X-Metadata", "value");
+                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" });
+                }
+            })
+            """);
+        var expectedXml = """
+            <policies>
+                <inbound>
+                    <wait>
+                        <choose>
+                            <when condition="@(context.Variables.ContainsKey("condition"))">
+                                <send-request id="request" response-variable-name="request" />
+                                <set-header id="header" name="X-Metadata">
+                                    <value>value</value>
+                                </set-header>
+                                <send-request response-variable-name="second" />
+                            </when>
+                        </choose>
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldPreserveLegacyWaitBranchMetadata()
+    {
+        var code = CreateInboundDocument(
+            """
+            context.Wait(() =>
+            {
+                context.WithId("legacy").SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            })
+            """);
+        var expectedXml = """
+            <policies>
+                <inbound>
+                    <wait>
+                        <send-request id="legacy" response-variable-name="request" />
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (ConditionExp(context.ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        DisplayName = "Reject outer context in Wait condition")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = ResponseVariableNameExp(context.ExpressionContext)
+        })
+        """,
+        DisplayName = "Reject outer context in Wait config expression")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = context.ExpressionContext.Request.Method
+        })
+        """,
+        DisplayName = "Reject outer context in direct Wait config")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (ConditionExp(branch.ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+            }
+            else if (ConditionExp(context.ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" });
+            }
+        }
+        """,
+        DisplayName = "Reject outer context in else-if condition")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (ConditionExp(branch.ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+            }
+            else
+            {
+                branch.SendRequest(new SendRequestConfig
+                {
+                    ResponseVariableName = ResponseVariableNameExp(context.ExpressionContext)
+                });
+            }
+        }
+        """,
+        DisplayName = "Reject outer context in otherwise config")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (ConditionExp(branch.ExpressionContext))
+            {
+                if (ConditionExp(context.ExpressionContext))
+                {
+                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                }
+            }
+        }
+        """,
+        DisplayName = "Reject outer context in nested choose condition")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (ConditionExp(other.ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        DisplayName = "Reject other context field in Wait condition")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (ConditionExp(branch.ExpressionContext))
+            {
+                branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
+                {
+                    ResponseVariableName = ResponseVariableNameExp(context.ExpressionContext)
+                }));
+            }
+        }
+        """,
+        DisplayName = "Reject outer context inside nested typed Wait branch")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (ConditionExp(branch.ExpressionContext))
+            {
+                branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
+                {
+                    ResponseVariableName = ResponseVariableNameExp(branch.ExpressionContext)
+                }));
+            }
+        }
+        """,
+        DisplayName = "Reject enclosing branch context inside nested Wait")]
+    public void ShouldRejectOuterContextReferencesInWaitBranch(string branch)
+    {
+        var code = CreateInboundDocument($"context.Wait(null, {branch})");
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+    }
+
+    [TestMethod]
+    [DataRow("Inbound", "IInboundContext", DisplayName = "Reject inbound Wait expression capture")]
+    [DataRow("Outbound", "IOutboundContext", DisplayName = "Reject outbound Wait expression capture")]
+    [DataRow("Backend", "IBackendContext", DisplayName = "Reject backend Wait expression capture")]
+    [DataRow("OnError", "IOnErrorContext", DisplayName = "Reject on-error Wait expression capture")]
+    public void ShouldRejectOuterContextReferencesInWaitSections(string method, string contextType)
+    {
+        var code = $$"""
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void {{method}}({{contextType}} context)
+                {
+                    context.Wait(null, branch =>
+                    {
+                        if (ConditionExp(context.ExpressionContext))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                        }
+                    });
+                }
+
+                bool ConditionExp(IExpressionContext context) => context.Variables.ContainsKey("condition");
+            }
+            """;
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+    }
+
+    [TestMethod]
+    public void ShouldRejectOuterContextReferenceInWaitFragment()
+    {
+        var code = """
+            [Document(Type = DocumentType.Fragment)]
+            public class PolicyDocument : IFragment
+            {
+                public void Fragment(IFragmentContext context)
+                {
+                    context.Wait(null, branch =>
+                    {
+                        if (ConditionExp(context.ExpressionContext))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                        }
+                    });
+                }
+
+                bool ConditionExp(IExpressionContext context) => context.Variables.ContainsKey("condition");
+            }
+            """;
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+    }
+
+    [TestMethod]
+    public void ShouldRejectCommonContextInterfaceCapture()
+    {
+        var code = """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                private IHaveExpressionContext other = null!;
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait(null, branch =>
+                    {
+                        if (ConditionExp(other.ExpressionContext))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                        }
+                    });
+                }
+
+                bool ConditionExp(IExpressionContext context) => context.Variables.ContainsKey("condition");
+            }
+            """;
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+    }
+
+    [TestMethod]
+    public void ShouldRejectOuterContextPassedToWaitExpressionHelper()
+    {
+        var code = """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait(null, branch =>
+                    {
+                        if (ConditionExp(context))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                        }
+                    });
+                }
+
+                bool ConditionExp(IInboundContext context) => context.ExpressionContext.Variables.ContainsKey("condition");
+            }
+            """;
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+    }
+
+    [TestMethod]
+    public void ShouldRejectUnrelatedReceiverWithId()
+    {
+        var code = """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                private IInboundContext other = null!;
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait(null, branch => GetOtherContext(branch).WithId("id")
+                        .SendRequest(new SendRequestConfig { ResponseVariableName = "request" }));
+                }
+
+                IInboundContext GetOtherContext(IInboundContext branch) => other;
+            }
+            """;
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "branch context parameter");
+    }
+
+    [TestMethod]
+    public void ShouldCompileNestedWaitWithItsOwnBranchContexts()
+    {
+        var code = CreateInboundDocument(
+            """
+            context.Wait(null, branch =>
+            {
+                if (ConditionExp(branch.ExpressionContext))
+                {
+                    branch.Wait(null, inner => inner.WithId("inner").SendRequest(new SendRequestConfig
+                    {
+                        ResponseVariableName = ResponseVariableNameExp(inner.ExpressionContext)
+                    }));
+                }
+            })
+            """);
+        var expectedXml = """
+            <policies>
+                <inbound>
+                    <wait>
+                        <choose>
+                            <when condition="@(context.Variables.ContainsKey("condition"))">
+                                <wait>
+                                    <send-request id="inner" response-variable-name="@(context.Request.Method)" />
+                                </wait>
+                            </when>
+                        </choose>
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow(
+        """
+        branch => context.WithId("id").SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        """,
+        "branch context parameter", DisplayName = "Reject captured outer WithId receiver")]
+    [DataRow(
+        """
+        branch => other.WithId("id").SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        """,
+        "branch context parameter", DisplayName = "Reject unrelated WithId receiver")]
+    [DataRow(
+        """
+        branch => branch.WithId(branch.ExpressionContext.Request.Method)
+            .SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        """,
+        "constant string", DisplayName = "Reject nonconstant Wait branch ID")]
+    public void ShouldRejectInvalidWaitBranchMetadata(string branch, string reason)
+    {
+        var code = CreateInboundDocument($"context.Wait(null, {branch})");
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", reason);
+    }
 }

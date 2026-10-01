@@ -9,6 +9,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
@@ -233,14 +234,17 @@ public class WaitCompiler : IMethodPolicyHandler
             return;
         }
 
-        if (!ValidateReceivers(context, lambda, parameter, semanticModel))
+        if (!ValidateReceivers(context, lambda, parameter, semanticModel, invocation, out var policyId))
         {
             return;
         }
 
         var diagnosticStart = context.Diagnostics.Count;
         var container = new XElement("branch");
-        var branchContext = new DocumentCompilationContext(context, container);
+        var branchContext = new DocumentCompilationContext(context, container)
+        {
+            PendingPolicyId = policyId
+        };
         if (child is IfStatementSyntax)
         {
             _blockCompiler.Value.Compile(branchContext, lambda.Block!);
@@ -280,9 +284,16 @@ public class WaitCompiler : IMethodPolicyHandler
     }
 
     private bool ValidateReceivers(IDocumentCompilationContext context, LambdaExpressionSyntax lambda,
-        ParameterSyntax parameter, SemanticModel semanticModel)
+        ParameterSyntax parameter, SemanticModel semanticModel, InvocationExpressionSyntax? immediateInvocation,
+        out string? policyId)
     {
+        policyId = null;
         var parameterSymbol = semanticModel.GetDeclaredSymbol(parameter);
+        if (!ValidateCapturedContexts(context, lambda, parameterSymbol, semanticModel))
+        {
+            return false;
+        }
+
         var invocations = lambda.Body.DescendantNodesAndSelf(node => node is not LambdaExpressionSyntax nested ||
                 nested is ParenthesizedLambdaExpressionSyntax { ParameterList.Parameters.Count: 0 })
             .OfType<InvocationExpressionSyntax>();
@@ -302,8 +313,13 @@ public class WaitCompiler : IMethodPolicyHandler
                 continue;
             }
 
-            var receiverSymbol = semanticModel.GetSymbolInfo(member.Expression).Symbol;
-            if (member.Expression is not IdentifierNameSyntax receiver ||
+            if (!TryUnwrapWithId(context, member.Expression, semanticModel, out var receiverExpression, out var id))
+            {
+                return false;
+            }
+
+            var receiverSymbol = semanticModel.GetSymbolInfo(receiverExpression).Symbol;
+            if (receiverExpression is not IdentifierNameSyntax receiver ||
                 (parameterSymbol is not null && receiverSymbol is not null
                     ? !SymbolEqualityComparer.Default.Equals(parameterSymbol, receiverSymbol)
                     : receiver.Identifier.ValueText != parameter.Identifier.ValueText))
@@ -318,10 +334,95 @@ public class WaitCompiler : IMethodPolicyHandler
                 ReportInvalidBranch(context, invocation, "Child invocations must be authoring context policy methods.");
                 return false;
             }
+
+            if (invocation == immediateInvocation)
+            {
+                policyId = id;
+            }
         }
 
         return true;
     }
+
+    private static bool TryUnwrapWithId(IDocumentCompilationContext context, ExpressionSyntax expression,
+        SemanticModel semanticModel, out ExpressionSyntax receiver, out string? policyId)
+    {
+        receiver = expression;
+        policyId = null;
+        while (receiver is InvocationExpressionSyntax
+               {
+                   Expression: MemberAccessExpressionSyntax { Name.Identifier.ValueText: nameof(IInboundContext.WithId) } member
+               } metadata)
+        {
+            var method = GetMethodSymbol(semanticModel, metadata);
+            if (method is not null && !IsAuthoringContext(method.ContainingType))
+            {
+                ReportInvalidBranch(context, metadata, "WithId chaining must remain on the branch context parameter.");
+                return false;
+            }
+
+            if (metadata.ArgumentList.Arguments.Count != 1)
+            {
+                ReportInvalidBranch(context, metadata, "WithId requires exactly one constant string ID.");
+                return false;
+            }
+
+            var constant = semanticModel.GetConstantValue(metadata.ArgumentList.Arguments[0].Expression);
+            if (!constant.HasValue || constant.Value is not string id)
+            {
+                ReportInvalidBranch(context, metadata, "WithId requires a constant string ID.");
+                return false;
+            }
+
+            // Match ExpressionStatementCompiler: the outermost (last) WithId wins.
+            policyId ??= id;
+            receiver = member.Expression;
+        }
+
+        return true;
+    }
+
+    private static bool ValidateCapturedContexts(IDocumentCompilationContext context, LambdaExpressionSyntax lambda,
+        ISymbol? parameterSymbol, SemanticModel semanticModel)
+    {
+        foreach (var identifier in lambda.Body.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>())
+        {
+            var symbol = semanticModel.GetSymbolInfo(identifier).Symbol;
+            if (symbol is null)
+            {
+                continue;
+            }
+
+            var type = symbol switch
+            {
+                IParameterSymbol parameter => parameter.Type,
+                ILocalSymbol local => local.Type,
+                IFieldSymbol field => field.Type,
+                IPropertySymbol property => property.Type,
+                _ => null
+            };
+            if (!IsSectionContextType(type) ||
+                SymbolEqualityComparer.Default.Equals(symbol, parameterSymbol) ||
+                symbol.DeclaringSyntaxReferences.Any(reference =>
+                    reference.SyntaxTree == lambda.SyntaxTree && lambda.Body.Span.Contains(reference.Span)) ||
+                identifier.Ancestors().OfType<InvocationExpressionSyntax>()
+                    .Any(invocation => semanticModel.GetOperation(invocation) is INameOfOperation))
+            {
+                continue;
+            }
+
+            ReportInvalidBranch(context, identifier,
+                "References to an outer section context are not allowed; child policies, conditions, and configuration must use the branch context parameter.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsSectionContextType(ITypeSymbol? type) =>
+        type is INamedTypeSymbol named &&
+        (IsAuthoringContext(named, includeBaseContext: true) ||
+         named.AllInterfaces.Any(context => IsAuthoringContext(context, includeBaseContext: true)));
 
     private static IMethodSymbol? GetMethodSymbol(SemanticModel semanticModel, InvocationExpressionSyntax invocation,
         bool branchScopedOnly = false)
@@ -377,11 +478,12 @@ public class WaitCompiler : IMethodPolicyHandler
         return null;
     }
 
-    private static bool IsAuthoringContext(INamedTypeSymbol type) =>
+    private static bool IsAuthoringContext(INamedTypeSymbol type, bool includeBaseContext = false) =>
         type.ContainingNamespace.ToDisplayString() == typeof(IInboundContext).Namespace &&
         type.ContainingAssembly.Identity.Name == typeof(IInboundContext).Assembly.GetName().Name &&
-        type.Name is nameof(IInboundContext) or nameof(IOutboundContext) or nameof(IBackendContext)
-            or nameof(IOnErrorContext) or nameof(IFragmentContext);
+        (type.Name is nameof(IInboundContext) or nameof(IOutboundContext) or nameof(IBackendContext)
+             or nameof(IOnErrorContext) or nameof(IFragmentContext) ||
+         includeBaseContext && type.Name == nameof(IHaveExpressionContext));
 
     private static bool HasErrorsSince(IDocumentCompilationContext context, int diagnosticStart) =>
         context.Diagnostics.Skip(diagnosticStart).Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
