@@ -49,16 +49,12 @@ internal class IncludeFragmentHandler : IPolicyHandler
                     if (!typeof(IFragment).IsAssignableFrom(type) || type.IsAbstract || type.IsInterface)
                         continue;
 
-                    var docAttr = type.GetCustomAttributes(typeof(DocumentAttribute), false)
-                        .OfType<DocumentAttribute>()
-                        .FirstOrDefault();
-                    if (docAttr is null)
-                        continue;
-
                     // The compiler names a document after the [Document] name, or after the class when the attribute
                     // doesn't give one, and takes the document type from the attribute or the implemented interface.
                     // Fragment ids are matched the way the fragment registry matches them.
-                    if (string.Equals(docAttr.Name ?? type.Name, fragmentId, StringComparison.OrdinalIgnoreCase))
+                    if (TryGetDocumentNameAndType(type, out var name, out var documentType) &&
+                        documentType == DocumentType.Fragment &&
+                        string.Equals(name, fragmentId, StringComparison.OrdinalIgnoreCase))
                         return type;
                 }
             }
@@ -69,6 +65,33 @@ internal class IncludeFragmentHandler : IPolicyHandler
         }
 
         return null;
+    }
+
+    private static bool TryGetDocumentNameAndType(Type type, out string name, out DocumentType documentType)
+    {
+        // Read the attribute as written: DocumentAttribute.Type defaults to Policy, so only the attribute data tells an
+        // explicit Type = DocumentType.Policy apart from an attribute without a Type argument.
+        var attribute = type.GetCustomAttributesData()
+            .FirstOrDefault(data => data.AttributeType == typeof(DocumentAttribute));
+        if (attribute is null)
+        {
+            name = type.Name;
+            documentType = default;
+            return false;
+        }
+
+        name = attribute.ConstructorArguments.FirstOrDefault().Value as string ?? type.Name;
+
+        var typeArgument = attribute.NamedArguments
+            .FirstOrDefault(argument => argument.MemberName == nameof(DocumentAttribute.Type));
+        // As in the compiler, a defined Type argument wins over the implemented interface (only IFragment
+        // implementations are looked up here).
+        documentType = typeArgument.MemberInfo is not null &&
+                       typeArgument.TypedValue.Value is int value &&
+                       Enum.IsDefined(typeof(DocumentType), value)
+            ? (DocumentType)value
+            : DocumentType.Fragment;
+        return true;
     }
 
     private static void ExecuteFragment(IFragment fragment, GatewayContext context)

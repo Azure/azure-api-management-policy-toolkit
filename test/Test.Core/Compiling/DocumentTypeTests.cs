@@ -137,6 +137,21 @@ public class DocumentTypeTests
         """,
         DisplayName = "Should resolve concatenated constant document name"
     )]
+    [DataRow(
+        """
+        [Document(nameof(shared) + "-fragment", Type = DocumentType.Fragment)]
+        public class NamedPolicyFragment : IFragment
+        {
+            private const string shared = "unused";
+
+            public void Fragment(IFragmentContext context)
+            {
+                context.Base();
+            }
+        }
+        """,
+        DisplayName = "Should resolve nameof document name"
+    )]
     public void ShouldResolveConstantDocumentName(string code)
     {
         var result = code.CompileDocument();
