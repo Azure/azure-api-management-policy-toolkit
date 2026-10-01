@@ -425,6 +425,7 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// Each lambda must contain one direct SendRequest or CacheLookupValue call, or one if/else-if/else chain.
     /// WithId metadata chaining is supported with constant string IDs.
     /// Conditions and configuration expressions must also use the branch context, not a captured outer section or expression context.
+    /// Context-producing helpers must have a provable branch-local origin; unproven factories are rejected by the compiler.
     /// Conditional bodies may contain multiple sequential policies. Arrays and delegate references are not supported by the compiler.
     /// </param>
     void Wait([ExpressionAllowed] string? waitFor, params Action<IOnErrorContext>[] branches);

@@ -388,6 +388,11 @@ public class WaitCompiler : IMethodPolicyHandler
     {
         foreach (var identifier in lambda.Body.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>())
         {
+            if (identifier.Parent is NameColonSyntax)
+            {
+                continue;
+            }
+
             var symbol = semanticModel.GetSymbolInfo(identifier).Symbol;
             if (symbol is null)
             {
@@ -418,7 +423,110 @@ public class WaitCompiler : IMethodPolicyHandler
             return false;
         }
 
+        foreach (var invocation in lambda.Body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
+        {
+            if (semanticModel.GetOperation(invocation) is not IInvocationOperation operation ||
+                (!IsSectionContextType(operation.Type) && !IsExpressionContextType(operation.Type)))
+            {
+                continue;
+            }
+
+            var arguments = new Dictionary<IParameterSymbol, Microsoft.CodeAnalysis.IOperation>(SymbolEqualityComparer.Default);
+            var methods = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
+            if (!IsBranchLocalContextOrigin(operation, context.Compilation, lambda, parameterSymbol, arguments, methods))
+            {
+                ReportInvalidBranch(context, invocation,
+                    "Context-producing invocations must have a proven origin in the supplied branch context parameter or its ExpressionContext.");
+                return false;
+            }
+        }
+
         return true;
+    }
+
+    private static bool IsBranchLocalContextOrigin(Microsoft.CodeAnalysis.IOperation operation, Compilation compilation,
+        LambdaExpressionSyntax lambda, ISymbol? parameterSymbol,
+        IReadOnlyDictionary<IParameterSymbol, Microsoft.CodeAnalysis.IOperation> arguments,
+        HashSet<IMethodSymbol> methods)
+    {
+        switch (operation)
+        {
+            case IConversionOperation conversion when conversion.OperatorMethod is null:
+                return IsBranchLocalContextOrigin(conversion.Operand, compilation, lambda, parameterSymbol, arguments, methods);
+            case IParameterReferenceOperation parameter:
+                return arguments.TryGetValue(parameter.Parameter, out var argument)
+                    ? IsBranchLocalContextOrigin(argument, compilation, lambda, parameterSymbol, arguments, methods)
+                    : IsBranchLocalSymbol(parameter.Parameter, lambda, parameterSymbol);
+            case ILocalReferenceOperation local:
+                return IsBranchLocalSymbol(local.Local, lambda, parameterSymbol);
+            case IPropertyReferenceOperation property when IsCanonicalExpressionContextProperty(property.Property) &&
+                                                            property.Instance is not null:
+                return IsBranchLocalContextOrigin(property.Instance, compilation, lambda, parameterSymbol, arguments, methods);
+            case IInvocationOperation invocation when invocation.TargetMethod.Name == nameof(IInboundContext.WithId) &&
+                                                     IsAuthoringContext(invocation.TargetMethod.ContainingType) &&
+                                                     invocation.Instance is not null:
+                return IsBranchLocalContextOrigin(invocation.Instance, compilation, lambda, parameterSymbol, arguments, methods);
+            case IInvocationOperation invocation:
+                return IsBranchLocalContextHelper(invocation, compilation, lambda, parameterSymbol, arguments, methods);
+            default:
+                return false;
+        }
+    }
+
+    private static bool IsBranchLocalContextHelper(IInvocationOperation invocation, Compilation compilation,
+        LambdaExpressionSyntax lambda, ISymbol? parameterSymbol,
+        IReadOnlyDictionary<IParameterSymbol, Microsoft.CodeAnalysis.IOperation> arguments,
+        HashSet<IMethodSymbol> methods)
+    {
+        var method = invocation.TargetMethod.OriginalDefinition;
+        if (method.MethodKind is not (MethodKind.Ordinary or MethodKind.LocalFunction) ||
+            method.IsVirtual || method.IsOverride || method.IsAbstract || method.IsExtern || method.IsAsync ||
+            method.IsGenericMethod || method.Parameters.Any(parameter => parameter.RefKind != RefKind.None) ||
+            method.DeclaringSyntaxReferences.Length != 1 || methods.Contains(method))
+        {
+            return false;
+        }
+
+        var declaration = method.DeclaringSyntaxReferences[0].GetSyntax();
+        ExpressionSyntax? returnedExpression = declaration switch
+        {
+            MethodDeclarationSyntax { ExpressionBody: { } body } => body.Expression,
+            MethodDeclarationSyntax { Body.Statements: [ReturnStatementSyntax { Expression: { } expression }] } => expression,
+            LocalFunctionStatementSyntax { ExpressionBody: { } body } => body.Expression,
+            LocalFunctionStatementSyntax { Body.Statements: [ReturnStatementSyntax { Expression: { } expression }] } => expression,
+            _ => null
+        };
+        if (returnedExpression is null || !compilation.SyntaxTrees.Contains(returnedExpression.SyntaxTree))
+        {
+            return false;
+        }
+
+        var boundArguments = new Dictionary<IParameterSymbol, Microsoft.CodeAnalysis.IOperation>(SymbolEqualityComparer.Default);
+        foreach (var argument in arguments)
+        {
+            boundArguments.Add(argument.Key, argument.Value);
+        }
+
+        foreach (var argument in invocation.Arguments)
+        {
+            if (argument.Parameter is null || argument.Parameter.Ordinal >= method.Parameters.Length)
+            {
+                return false;
+            }
+
+            boundArguments[method.Parameters[argument.Parameter.Ordinal]] = argument.Value;
+        }
+
+        var returnedOperation = compilation.GetSemanticModel(returnedExpression.SyntaxTree).GetOperation(returnedExpression);
+        if (returnedOperation is null)
+        {
+            return false;
+        }
+
+        methods.Add(method);
+        var proven = IsBranchLocalContextOrigin(returnedOperation, compilation, lambda, parameterSymbol, boundArguments, methods);
+        methods.Remove(method);
+        return proven;
     }
 
     private static bool IsBranchLocalSymbol(ISymbol symbol, LambdaExpressionSyntax lambda, ISymbol? parameterSymbol) =>
@@ -429,9 +537,7 @@ public class WaitCompiler : IMethodPolicyHandler
     private static bool IsBranchExpressionContextProjection(IdentifierNameSyntax identifier, ISymbol symbol,
         LambdaExpressionSyntax lambda, ISymbol? parameterSymbol, SemanticModel semanticModel)
     {
-        if (symbol is not IPropertySymbol { Name: nameof(IHaveExpressionContext.ExpressionContext) } property ||
-            property.ContainingType.Name != nameof(IHaveExpressionContext) ||
-            !IsAuthoringContext(property.ContainingType, includeBaseContext: true) ||
+        if (symbol is not IPropertySymbol property || !IsCanonicalExpressionContextProperty(property) ||
             identifier.Parent is not MemberAccessExpressionSyntax member || member.Name != identifier ||
             semanticModel.GetOperation(member) is not IPropertyReferenceOperation projection)
         {
@@ -462,6 +568,11 @@ public class WaitCompiler : IMethodPolicyHandler
 
         return false;
     }
+
+    private static bool IsCanonicalExpressionContextProperty(IPropertySymbol property) =>
+        property.Name == nameof(IHaveExpressionContext.ExpressionContext) &&
+        property.ContainingType.Name == nameof(IHaveExpressionContext) &&
+        IsAuthoringContext(property.ContainingType, includeBaseContext: true);
 
     private static bool IsSectionContextType(ITypeSymbol? type) =>
         type is INamedTypeSymbol named &&

@@ -1966,4 +1966,291 @@ public class WaitTests
             string NameExp(IExpressionContext context) => context.Request.Method;
         }
         """;
+
+    [TestMethod]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Always(branch.ExpressionContext))
+            {
+                branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cached" });
+                if (Missing(GetOuter()))
+                {
+                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "fallback" });
+                }
+            }
+        }
+        """,
+        DisplayName = "Reject captured-context factory after branch cache hit")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Missing(GetOuter()))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        DisplayName = "Reject context factory in Wait condition")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(GetOuter()) })
+        """,
+        DisplayName = "Reject context factory in Wait config expression")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = GetOuter().Request.Method })
+        """,
+        DisplayName = "Reject context factory in direct Wait config")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Always(branch.ExpressionContext))
+            {
+                branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
+                {
+                    ResponseVariableName = NameExp(GetOuter())
+                }));
+            }
+        }
+        """,
+        DisplayName = "Reject context factory in nested typed Wait")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(GetOuterIgnoring(branch.ExpressionContext))
+        })
+        """,
+        DisplayName = "Reject factory ignoring supplied branch context")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(Forward(GetOuter())) })
+        """,
+        DisplayName = "Reject factory wrapped in context identity helper")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(ChooseContext(branch.ExpressionContext))
+        })
+        """,
+        DisplayName = "Reject unproven conditional context factory")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(ContextLoop(branch.ExpressionContext))
+        })
+        """,
+        DisplayName = "Reject recursive context factory without overflow")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(_factory()) })
+        """,
+        DisplayName = "Reject captured context delegate factory")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(GetOtherSection().ExpressionContext)
+        })
+        """,
+        DisplayName = "Reject section-context factory projection")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(GetVirtualContext(branch.ExpressionContext))
+        })
+        """,
+        DisplayName = "Reject overridable context factory")]
+    public void ShouldRejectUnprovenWaitContextFactory(string branch)
+    {
+        AssertRejectedWait(CompileBranchDocument(CreateContextFactoryDocument(branch)),
+            "APIM2012", "branch context parameter");
+    }
+
+    [TestMethod]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Missing(Identity(branch.ExpressionContext)))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(!context.Variables.ContainsKey("cached"))">
+                            <send-request response-variable-name="request" />
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow source context identity helper in Wait condition")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(BlockIdentity(branch.ExpressionContext))
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow single-return context helper in Wait config")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Missing(FromSection(branch)))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(!context.Variables.ContainsKey("cached"))">
+                            <send-request response-variable-name="request" />
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow source helper projecting supplied branch context")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Missing(Forward(FromSection(branch.WithId("projection")))))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(!context.Variables.ContainsKey("cached"))">
+                            <send-request response-variable-name="request" />
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow chained branch-local context helpers and WithId")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Always(branch.ExpressionContext))
+            {
+                branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
+                {
+                    ResponseVariableName = NameExp(Forward(inner.ExpressionContext))
+                }));
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(true)">
+                            <wait>
+                                <send-request response-variable-name="@(context.Request.Method)" />
+                            </wait>
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow branch-local context helper in nested typed Wait")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(Identity(context: branch.WithId("projection").ExpressionContext))
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow context helper with named branch argument")]
+    public void ShouldAllowProvenBranchLocalWaitContextHelper(string branch, string expectedXml)
+    {
+        CompileBranchDocument(CreateContextFactoryDocument(branch)).Should().BeSuccessful()
+            .And.DocumentEquivalentTo(expectedXml);
+    }
+
+    private static string CreateContextFactoryDocument(string branch) => $$"""
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            private readonly IExpressionContext _outer;
+            private readonly Func<IExpressionContext> _factory;
+            private IInboundContext _other = null!;
+
+            public PolicyDocument(IExpressionContext outer)
+            {
+                _outer = outer;
+                _factory = () => outer;
+            }
+
+            public void Inbound(IInboundContext context)
+            {
+                context.Wait(null, {{branch}});
+            }
+
+            bool Always(IExpressionContext context) => true;
+            bool Missing(IExpressionContext context) => !context.Variables.ContainsKey("cached");
+            string NameExp(IExpressionContext context) => context.Request.Method;
+            IExpressionContext GetOuter() => _outer;
+            IExpressionContext GetOuterIgnoring(IExpressionContext context) => _outer;
+            IExpressionContext ChooseContext(IExpressionContext context) => context.Tracing ? context : _outer;
+            IExpressionContext ContextLoop(IExpressionContext context) => ContextLoop(context);
+            IInboundContext GetOtherSection() => _other;
+            protected virtual IExpressionContext GetVirtualContext(IExpressionContext context) => context;
+            static IExpressionContext Identity(IExpressionContext context) => context;
+            static IExpressionContext Forward(IExpressionContext context) => Identity(context);
+            static IExpressionContext FromSection(IInboundContext context) => context.ExpressionContext;
+            static IExpressionContext BlockIdentity(IExpressionContext context)
+            {
+                return context;
+            }
+        }
+        """;
 }
