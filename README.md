@@ -67,9 +67,11 @@ Each action must contain one direct `SendRequest` or `CacheLookupValue`, or one
 reports invalid branch shapes and captured outer contexts; the compiler
 enforces the same boundaries. A `choose` branch can run any policy the emulator
 already supports in that section. Configure injected services for external calls;
-those services and policy callbacks must be safe for concurrent use. The previous
-`Wait(Action, string?)` overload is obsolete but still compiles; its emulator
-behavior remains explicit-mock-only.
+those services and policy callbacks must be safe for concurrent use.
+Context-returning helpers must provably derive from the supplied branch context;
+captured or unproven factories are rejected. The previous `Wait(Action, string?)`
+overload is obsolete but still compiles; its emulator behavior remains
+explicit-mock-only.
 
 For emulator contributions, run the two gates in
 [`emulator-gates.ps1`](emulator-gates.ps1) from the admission worktree:

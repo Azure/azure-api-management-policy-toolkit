@@ -1,14 +1,14 @@
 # Gateway Emulator Policy Checklist
 
-**Verified reviewed-code snapshot:** `dd55fc537253b9fc3fada0407984e2c186037e70`
+**Verified reviewed-code snapshot:** `af635f08676ced1d811fb4584ce829071e8d34c7`
 on gatekeeper branch `emulator/admission-complete`.
 All code packets, fixes, and the structural audit are admitted. The final reviewed-code
-**Full** gate passed complete `Test.Testing` **5320/5320, with 0 skipped**, and the entire
-solution build with **0 errors / 8 pre-existing warnings**.
+**Full** gate passed complete `Test.Testing` **5570/5570, with 0 skipped**, and the entire
+solution build with **0 errors / 0 warnings**.
 
-All five required integrated review passes are complete: correctness, test quality,
-consistency/style, meaningful duplication, and integration safety. Every in-scope
-high-confidence actionable finding was fixed and re-reviewed; **zero remain open**.
+All five baseline integrated review passes are complete: correctness, test quality,
+consistency/style, meaningful duplication, and integration safety. Independent typed
+`Wait` reviews verified their actionable findings fixed; **zero remain open**.
 This identifies the verified code snapshot, not a documentation commit, and does not
 claim unrestricted APIM parity.
 
@@ -126,6 +126,7 @@ These are tested contracts, not claims of complete APIM or live-cloud fidelity.
 | Raw XML | `InlinePolicy(string policy)` cannot be interpreted by the strongly typed emulator. Default execution leaves state unchanged; explicit callbacks receive the raw string and can supply effects. `InlinePolicyTests` verifies unchanged state in all authored sections and inbound callback effects. |
 | Legacy cross-domain policy | `CrossDomain(string policy)` validates well-formed XML with an unqualified `cross-domain-policy` root, then offers callbacks only. The user selected this contract because public APIM documentation does not establish the Flash/Silverlight routing trigger, status, headers, or termination behavior. No route-serving behavior is assumed. `CrossDomainTests` verifies validation, unchanged default state, and callback effects. |
 | Parallel wait | New `Wait(string? waitFor, params Action<I{Section}Context>[] branches)` overloads give each action the corresponding inbound/backend/outbound/on-error or fragment context. Each action compiles to **one** direct `SendRequest`/`CacheLookupValue` or **one** `if`/`else if`/`else` chain (`choose`); inside a `choose`, all policies already supported by the emulator for that section can run sequentially. The compiler reports invalid shapes and captured outer expression/section contexts, the packaged analyzer reports APIM105/APIM106, and the decompiler emits typed branches. Branches execute concurrently with shallow-copied variable dictionaries and independent handler setups; registered stores and logical-request accounting remain shared. `all` waits for every branch and merges changed variable entries in authored order (not removals); `any` takes the **first completion, including errors**, cancels losers, and propagates its winner's variable entries. Already-published response/request and external side effects from a canceled branch are not undone. To avoid racing the public mock dictionaries, message changes are synchronized and published at policy boundaries rather than using the gateway's physically shared message references; callback object identity and intermediate visibility can therefore differ. Terminating policies end their child pipeline without terminating the parent; their response effects remain shared. Injected services, trace hooks, and callbacks must support concurrent calls; cancellation cannot forcefully stop arbitrary synchronous callback code, and mutable variable objects retain shared reference identity. `WaitBranches().WithCallback(...)` and `WaitFragmentBranches().WithCallback(...)` provide explicit overrides. The original `[Obsolete] Wait(Action section, string? waitFor = null)` remains available for compilation and explicit mocks, but still fails before child effects by default. `Wait` inside `Retry` is rejected. `WaitTests`, `WaitBranchTests`, and XML round-trip tests cover these boundaries. |
+| Parallel wait header callbacks | Header policy handlers publish explicit writes and removals even when the new value matches a branch's prior snapshot. A raw callback that assigns the exact same existing header-array object cannot be distinguished from a no-op; use a header policy or assign a new array to publish an explicit write. `WaitTests.ReviewCorrections` covers ordered sibling writes, case variants, and callback replacements. |
 | Body transformations | `MockBody` stores text; byte views are UTF-8, not an arbitrary encoded/binary stream. XSLT rejects non-UTF-8 output; `JsonToXml` rejects non-UTF-8 declarations. XSLT and XML/JSON conversions update existing `Content-Length` from UTF-8 byte counts without adding an absent length; converters also normalize `Content-Type`. XSLT disables DTDs, external resources, scripts, and `document()` (`XslTransformTests`). XML/JSON conversion uses the projections asserted by `XmlToJsonTests` and `JsonToXmlTests`: mixed-text values survive, but their interleaving is not a lossless XML round trip; JavaScript-friendly output drops declarations, flattens attributes/prefixes, and rejects name collisions. |
 | External services and telemetry | HTTP uses injected `IHttpClient` and evaluated `HttpTransportOptions`; the emulator does not create network clients or simulate wire-level streaming. Identity uses explicit offline token/key/trust or certificate evidence. Authorization, Dapr, Service Bus, schemas, and LLM embeddings/tokenization/evaluation/usage use registered test services or explicit callbacks, not live cloud calls. Telemetry records in `LoggerStore` or uses configured logger hooks; it is not automatically exported to Azure. The corresponding policy tests assert requests, outcomes, and failures. Default metric dimension `Backend ID` is unavailable: supply an explicit `Value` (`EmitMetricTests`, `LlmEmitTokenMetricTests`). |
 | Schema/API validation | Supply `ApiValidationMetadata` and/or named `ContentValidationSchema`; no OpenAPI inference/import. JSON uses a strict supported subset: local references, exact decimal numbers, and at most 64 evaluation levels; unsupported keywords/formats, external references, tuple items, and reference assertion siblings fail explicitly. XSD must be self-contained, with DTD/external resolution disabled and UTF-8 payload modeling. Parameter schemas support primitive scalars/arrays, not complex object/style/explode serialization. `ValidateContentTests`, `ValidateParametersTests`, `ValidateHeadersTests`, and `ValidateStatusCodeTests` exercise these contracts. |
@@ -149,7 +150,7 @@ that this compiler's XML conforms to the current APIM contract. No compiler fix 
 
 ## Structural audit and validation gates
 
-`test\Test.Testing\Emulator\EmulatorCoverageGateTests.cs` is admitted, and all **7/7**
+`test\Test.Testing\Emulator\EmulatorCoverageGateTests.cs` is admitted, and all **19/19**
 structural audit tests pass in the verified reviewed-code snapshot.
 All semantic-cache/token-limit rows have executable behavioral coverage, including
 the inherited Azure OpenAI token-limit suite.
@@ -162,8 +163,12 @@ worktree on the expected branch (default `emulator/admission-complete`).
 
 | Gate | Required checks | Snapshot state |
 |------|-----------------|----------------|
-| Admission | Latest policy-packet commit changes only the `-OwnedFiles` allowlist; `git diff --check HEAD^ HEAD`; `-TestFilter` selects every changed policy test class; targeted TRX has nonzero results and proves a passing test in each changed class; then the complete `Test.Testing` project runs. | **PASSED** for independently re-reviewed overlay `dd55fc5`: 1347 targeted / 5320 complete, 0 skipped. All policy packets and review fixes are admitted. |
-| Full | Requires the structural audit file above; runs the complete `Test.Testing` project, including that audit, then builds `apim-policy-toolkit.sln`. | **PASSED** on the verified reviewed-code snapshot after all five integrated reviews; complete test/build results are recorded above. |
+| Admission | Latest policy-packet commit changes only the `-OwnedFiles` allowlist; `git diff --check HEAD^ HEAD`; `-TestFilter` selects every changed policy test class, including partial `WaitTests.*.cs` files; targeted TRX has nonzero results and proves a passing test in each changed class; then the complete `Test.Testing` project runs. | **PASSED** on every typed `Wait` policy commit: 123 targeted / 5393 complete, 166 / 5448, 219 / 5501, 1 / 5502, and 287 / 5570 on the last runtime correction `b72392a`; 0 skipped throughout. |
+| Full | Requires the structural audit file above; runs the complete `Test.Testing` project, including that audit, then builds `apim-policy-toolkit.sln`. | **PASSED** on verified reviewed-code snapshot `af635f0`: 5570/5570 emulator tests, 0 skipped, 19/19 structural audit cases included, solution build 0 warnings / 0 errors. |
+
+The compiler's typed `Wait` cases passed **152/152**, the packaged analyzer suite
+**32/32**, and typed `Wait` plus real-policy XML round trips **63/63** on the
+admitted code snapshot, with 0 skipped.
 
 Run gates from the admission worktree, not an implementation/documentation branch.
 Set `$ownedFiles` to every allowed changed path and `$testFilter` to the changed policy
@@ -177,9 +182,9 @@ dotnet test test\Test.Testing\Test.Testing.csproj --filter "FullyQualifiedName~E
 .\emulator-gates.ps1 -Gate Full
 ```
 
-The coordinator reruns Full after this documentation-only correction is admitted.
-That follow-up confirms the documentation-only change; it does not change the verified
-code snapshot above or reopen the completed code reviews.
+Rerun Full after the documentation-only commits are admitted. That final check
+confirms the documentation change without altering the verified code snapshot
+or reopening the completed code reviews.
 
 Use Windows paths and positional test-project syntax:
 `dotnet test test\Test.Testing\Test.Testing.csproj` (local SDK 10 does not support
