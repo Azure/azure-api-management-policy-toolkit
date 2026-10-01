@@ -62,9 +62,15 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
+            var capturedContext = false;
             foreach (var name in lambda.Body.DescendantNodesAndSelf(
                          node => node is not LambdaExpressionSyntax).OfType<IdentifierNameSyntax>())
             {
+                if (name.Parent is NameColonSyntax)
+                {
+                    continue;
+                }
+
                 var symbol = context.SemanticModel.GetSymbolInfo(name).Symbol;
                 if (symbol is null || SymbolEqualityComparer.Default.Equals(symbol, parameter))
                 {
@@ -96,12 +102,40 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                     !IsBranchLocalSymbol(symbol, lambda, parameter) &&
                     !(IsExpressionContextType(section) &&
                       IsBranchExpressionContextProjection(name, symbol, lambda, parameter,
-                          context.SemanticModel)))
+                          context.SemanticModel)) &&
+                    !(symbol is IMethodSymbol &&
+                      GetCalledInvocation(name, context.SemanticModel) is { } called &&
+                      IsBranchLocalContextOrigin(called, context.SemanticModel, lambda, parameter,
+                          new Dictionary<IParameterSymbol, IOperation>(SymbolEqualityComparer.Default),
+                          new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default))))
                 {
                     context.ReportDiagnostic(Diagnostic.Create(Rules.WaitBranch.CapturedContext,
                         name.GetLocation()));
+                    capturedContext = true;
                     break;
                 }
+            }
+
+            if (capturedContext)
+            {
+                continue;
+            }
+
+            foreach (var call in lambda.Body.DescendantNodesAndSelf(
+                         node => node is not LambdaExpressionSyntax).OfType<InvocationExpressionSyntax>())
+            {
+                if (context.SemanticModel.GetOperation(call) is not IInvocationOperation operation ||
+                    operation.Type is not INamedTypeSymbol type || !IsWaitContextType(type) ||
+                    IsBranchLocalContextOrigin(operation, context.SemanticModel, lambda, parameter,
+                        new Dictionary<IParameterSymbol, IOperation>(SymbolEqualityComparer.Default),
+                        new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default)))
+                {
+                    continue;
+                }
+
+                context.ReportDiagnostic(Diagnostic.Create(Rules.WaitBranch.CapturedContext,
+                    call.GetLocation()));
+                break;
             }
         }
     }
@@ -196,29 +230,114 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
             return false;
         }
 
-        var receiver = projection.Instance;
-        while (receiver is not null)
+        return IsBranchLocalContextOrigin(projection, model, lambda, parameter,
+            new Dictionary<IParameterSymbol, IOperation>(SymbolEqualityComparer.Default),
+            new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default));
+    }
+
+    private static IInvocationOperation? GetCalledInvocation(IdentifierNameSyntax name, SemanticModel model)
+    {
+        var invocation = name.Parent switch
         {
-            switch (receiver)
-            {
-                case IConversionOperation conversion:
-                    receiver = conversion.Operand;
-                    break;
-                case IInvocationOperation invocation
-                    when invocation.TargetMethod.Name == "WithId" &&
-                         IsSectionContext(invocation.TargetMethod.ContainingType):
-                    receiver = invocation.Instance;
-                    break;
-                case IParameterReferenceOperation referencedParameter:
-                    return IsBranchLocalSymbol(referencedParameter.Parameter, lambda, parameter);
-                case ILocalReferenceOperation local:
-                    return IsBranchLocalSymbol(local.Local, lambda, parameter);
-                default:
-                    return false;
-            }
+            InvocationExpressionSyntax direct when direct.Expression == name => direct,
+            MemberAccessExpressionSyntax member when member.Name == name &&
+                member.Parent is InvocationExpressionSyntax call && call.Expression == member => call,
+            _ => null
+        };
+        return invocation is null ? null : model.GetOperation(invocation) as IInvocationOperation;
+    }
+
+    private static bool IsBranchLocalContextOrigin(
+        IOperation operation, SemanticModel model, LambdaExpressionSyntax lambda, IParameterSymbol parameter,
+        IReadOnlyDictionary<IParameterSymbol, IOperation> arguments, HashSet<IMethodSymbol> methods)
+    {
+        switch (operation)
+        {
+            case IConversionOperation conversion when conversion.OperatorMethod is null:
+                return IsBranchLocalContextOrigin(conversion.Operand, model, lambda, parameter, arguments, methods);
+            case IParameterReferenceOperation reference:
+                return arguments.TryGetValue(reference.Parameter, out var argument)
+                    ? IsBranchLocalContextOrigin(argument, model, lambda, parameter, arguments, methods)
+                    : IsBranchLocalSymbol(reference.Parameter, lambda, parameter);
+            case ILocalReferenceOperation local:
+                return IsBranchLocalSymbol(local.Local, lambda, parameter);
+            case IPropertyReferenceOperation property when property.Property.Name == "ExpressionContext" &&
+                                                            IsBaseContext(property.Property.ContainingType) &&
+                                                            property.Instance is not null:
+                return IsBranchLocalContextOrigin(property.Instance, model, lambda, parameter, arguments, methods);
+            case IInvocationOperation call when call.TargetMethod.Name == "WithId" &&
+                                               IsSectionContext(call.TargetMethod.ContainingType) &&
+                                               call.Instance is not null:
+                return IsBranchLocalContextOrigin(call.Instance, model, lambda, parameter, arguments, methods);
+            case IInvocationOperation call:
+                return IsBranchLocalContextHelper(call, model, lambda, parameter, arguments, methods);
+            default:
+                return false;
+        }
+    }
+
+    private static bool IsBranchLocalContextHelper(
+        IInvocationOperation invocation, SemanticModel model, LambdaExpressionSyntax lambda,
+        IParameterSymbol parameter, IReadOnlyDictionary<IParameterSymbol, IOperation> arguments,
+        HashSet<IMethodSymbol> methods)
+    {
+        var method = invocation.TargetMethod.OriginalDefinition;
+        if (method.MethodKind is not (MethodKind.Ordinary or MethodKind.LocalFunction) ||
+            method.IsVirtual || method.IsOverride || method.IsAbstract || method.IsExtern || method.IsAsync ||
+            method.IsGenericMethod || method.Parameters.Any(argument => argument.RefKind != RefKind.None) ||
+            method.DeclaringSyntaxReferences.Length != 1 || methods.Contains(method))
+        {
+            return false;
         }
 
-        return false;
+        var declaration = method.DeclaringSyntaxReferences[0].GetSyntax();
+        ExpressionSyntax? returnedExpression = declaration switch
+        {
+            MethodDeclarationSyntax { ExpressionBody: { } body } => body.Expression,
+            MethodDeclarationSyntax { Body.Statements: [ReturnStatementSyntax { Expression: { } expression }] } => expression,
+            LocalFunctionStatementSyntax { ExpressionBody: { } body } => body.Expression,
+            LocalFunctionStatementSyntax { Body.Statements: [ReturnStatementSyntax { Expression: { } expression }] } => expression,
+            _ => null
+        };
+        if (returnedExpression is null || !model.Compilation.SyntaxTrees.Contains(returnedExpression.SyntaxTree))
+        {
+            return false;
+        }
+
+        var boundArguments = new Dictionary<IParameterSymbol, IOperation>(SymbolEqualityComparer.Default);
+        foreach (var argument in arguments)
+        {
+            boundArguments.Add(argument.Key, argument.Value);
+        }
+
+        foreach (var argument in invocation.Arguments)
+        {
+            if (argument.Parameter is null || argument.Parameter.Ordinal >= method.Parameters.Length)
+            {
+                return false;
+            }
+
+            boundArguments[method.Parameters[argument.Parameter.Ordinal]] = argument.Value;
+        }
+
+        var returnedModel = model;
+        if (returnedExpression.SyntaxTree != model.SyntaxTree)
+        {
+#pragma warning disable RS1030 // Cross-file source helpers require their own semantic model.
+            returnedModel = model.Compilation.GetSemanticModel(returnedExpression.SyntaxTree);
+#pragma warning restore RS1030
+        }
+        var returnedOperation = returnedModel.GetOperation(returnedExpression);
+        if (returnedOperation is null)
+        {
+            return false;
+        }
+
+        methods.Add(method);
+        var proven = IsBranchLocalContextOrigin(
+            returnedOperation, returnedModel, lambda, parameter, boundArguments, methods);
+        methods.Remove(method);
+        return proven;
     }
 
     private static bool IsBaseContext(INamedTypeSymbol type) =>

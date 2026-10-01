@@ -355,4 +355,156 @@ public class WaitBranchTests
             """,
             DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
     }
+
+    [TestMethod]
+    public async Task AcceptsProvenBranchContextFactories()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun(Forward(FromSection(branch.WithId("metadata")))))
+                        {
+                            branch.SendRequest(new SendRequestConfig
+                            {
+                                ResponseVariableName = NameExp(Identity(context: branch.ExpressionContext))
+                            });
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+                private static string NameExp(IExpressionContext context) => context.Request.Method;
+                private static IExpressionContext Identity(IExpressionContext context) => context;
+                private static IExpressionContext Forward(IExpressionContext context) => Identity(context);
+                private static IExpressionContext FromSection(IInboundContext context) => context.ExpressionContext;
+            }
+            """);
+    }
+
+    [TestMethod]
+    public async Task AcceptsProvenNestedWaitContextFactory()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun(branch.ExpressionContext))
+                        {
+                            branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
+                            {
+                                ResponseVariableName = NameExp(Identity(inner.ExpressionContext))
+                            }));
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+                private static string NameExp(IExpressionContext context) => context.Request.Method;
+                private static IExpressionContext Identity(IExpressionContext context) => context;
+            }
+            """);
+    }
+
+    [TestMethod]
+    public async Task AcceptsProvenContextHelperDeclaredInAnotherFile()
+    {
+        var test = new BaseAnalyzerTest<WaitBranchAnalyzer>(
+            """
+            public partial class Policy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun(Identity(branch.ExpressionContext)))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "result" });
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+            }
+            """);
+        test.TestState.Sources.Add(
+            """
+            using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+
+            namespace Mielek.Test;
+
+            public partial class Policy
+            {
+                private static IExpressionContext Identity(IExpressionContext context) => context;
+            }
+            """);
+
+        await test.RunAsync();
+    }
+
+    [TestMethod]
+    public async Task RejectsCapturedContextDelegateInvocation()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                private readonly System.Func<IExpressionContext> _factory;
+
+                public Policy(IExpressionContext outer) => _factory = () => outer;
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun({|#0:_factory()|}))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "wrong" });
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
+    }
+
+    [TestMethod]
+    public async Task RejectsUnprovenConditionalContextFactory()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                private readonly IExpressionContext _outer;
+
+                public Policy(IExpressionContext outer) => _outer = outer;
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun({|#0:ChooseContext|}(branch.ExpressionContext)))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "wrong" });
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+                private IExpressionContext ChooseContext(IExpressionContext context) =>
+                    context.Tracing ? context : _outer;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
+    }
 }
