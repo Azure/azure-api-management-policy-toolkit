@@ -44,14 +44,14 @@ try {
         }
 
         $changedTests = @($changed | Where-Object {
-            $_ -match '^test/Test\.Testing/Emulator/Policies/[^/]+Tests\.cs$'
+            $_ -match '^test/Test\.Testing/Emulator/Policies/[^/.]+Tests(?:\.[^/.]+)*\.cs$'
         })
         if ($changedTests.Count -eq 0) {
             throw 'The admission commit must add or update emulator policy tests.'
         }
 
         foreach ($test in $changedTests) {
-            $testClass = [IO.Path]::GetFileNameWithoutExtension($test)
+            $testClass = [IO.Path]::GetFileNameWithoutExtension($test).Split('.')[0]
             if ($TestFilter -notmatch [regex]::Escape($testClass)) {
                 throw "The test filter does not select $testClass."
             }
@@ -83,7 +83,7 @@ try {
                 ForEach-Object { $_.GetAttribute('testId') })
             $definitions = @($results.SelectNodes('//*[local-name()="UnitTest"]'))
             foreach ($test in $changedTests) {
-                $testClass = [IO.Path]::GetFileNameWithoutExtension($test)
+                $testClass = [IO.Path]::GetFileNameWithoutExtension($test).Split('.')[0]
                 $passingTests = @($definitions | Where-Object {
                     $method = $_.SelectSingleNode('*[local-name()="TestMethod"]')
                     $null -ne $method -and
