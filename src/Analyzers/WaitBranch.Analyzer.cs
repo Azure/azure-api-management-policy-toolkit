@@ -77,12 +77,19 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                     continue;
                 }
 
+                if (symbol is IMethodSymbol { Name: "WithId" } withId &&
+                    IsSectionContext(withId.ContainingType))
+                {
+                    continue;
+                }
+
                 var type = symbol switch
                 {
                     IParameterSymbol p => p.Type,
                     ILocalSymbol local => local.Type,
                     IFieldSymbol field => field.Type,
                     IPropertySymbol property => property.Type,
+                    IMethodSymbol contextMethod => contextMethod.ReturnType,
                     _ => null
                 };
                 if (type is INamedTypeSymbol section && IsWaitContextType(section) &&

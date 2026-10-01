@@ -304,7 +304,7 @@ public class WaitBranchTests
                 {
                     context.Wait("all", branch =>
                     {
-                        if (ShouldRun(GetOuter().{|#0:ExpressionContext|}))
+                        if (ShouldRun({|#0:GetOuter|}().ExpressionContext))
                         {
                             branch.SendRequest(new SendRequestConfig { ResponseVariableName = "wrong" });
                         }
@@ -313,6 +313,44 @@ public class WaitBranchTests
 
                 private IInboundContext GetOuter() => outer;
                 private static bool ShouldRun(IExpressionContext context) => true;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
+    }
+
+    [TestMethod]
+    public async Task RejectsCapturedExpressionContextFactoryResult()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                private readonly IExpressionContext outer;
+
+                public Policy(IExpressionContext outer) => this.outer = outer;
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun(branch.ExpressionContext))
+                        {
+                            branch.CacheLookupValue(new CacheLookupValueConfig
+                            {
+                                Key = "cached", VariableName = "cached"
+                            });
+                            if (Missing({|#0:GetOuter|}()))
+                            {
+                                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "fallback" });
+                            }
+                        }
+                    });
+                }
+
+                private IExpressionContext GetOuter() => outer;
+                private static bool ShouldRun(IExpressionContext context) => true;
+                private static bool Missing(IExpressionContext context) =>
+                    !context.Variables.ContainsKey("cached");
             }
             """,
             DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
