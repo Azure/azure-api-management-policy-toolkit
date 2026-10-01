@@ -431,7 +431,7 @@ public class WaitCompiler : IMethodPolicyHandler
                 continue;
             }
 
-            var arguments = new Dictionary<IParameterSymbol, Microsoft.CodeAnalysis.IOperation>(SymbolEqualityComparer.Default);
+            var arguments = new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default);
             var methods = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
             if (!IsBranchLocalContextOrigin(operation, context.Compilation, lambda, parameterSymbol, arguments, methods))
             {
@@ -446,7 +446,7 @@ public class WaitCompiler : IMethodPolicyHandler
 
     private static bool IsBranchLocalContextOrigin(Microsoft.CodeAnalysis.IOperation operation, Compilation compilation,
         LambdaExpressionSyntax lambda, ISymbol? parameterSymbol,
-        IReadOnlyDictionary<IParameterSymbol, Microsoft.CodeAnalysis.IOperation> arguments,
+        IReadOnlyDictionary<IParameterSymbol, bool> arguments,
         HashSet<IMethodSymbol> methods)
     {
         switch (operation)
@@ -454,8 +454,8 @@ public class WaitCompiler : IMethodPolicyHandler
             case IConversionOperation conversion when conversion.OperatorMethod is null:
                 return IsBranchLocalContextOrigin(conversion.Operand, compilation, lambda, parameterSymbol, arguments, methods);
             case IParameterReferenceOperation parameter:
-                return arguments.TryGetValue(parameter.Parameter, out var argument)
-                    ? IsBranchLocalContextOrigin(argument, compilation, lambda, parameterSymbol, arguments, methods)
+                return arguments.TryGetValue(parameter.Parameter, out var provenArgument)
+                    ? provenArgument
                     : IsBranchLocalSymbol(parameter.Parameter, lambda, parameterSymbol);
             case ILocalReferenceOperation local:
                 return IsBranchLocalSymbol(local.Local, lambda, parameterSymbol);
@@ -475,7 +475,7 @@ public class WaitCompiler : IMethodPolicyHandler
 
     private static bool IsBranchLocalContextHelper(IInvocationOperation invocation, Compilation compilation,
         LambdaExpressionSyntax lambda, ISymbol? parameterSymbol,
-        IReadOnlyDictionary<IParameterSymbol, Microsoft.CodeAnalysis.IOperation> arguments,
+        IReadOnlyDictionary<IParameterSymbol, bool> arguments,
         HashSet<IMethodSymbol> methods)
     {
         var method = invocation.TargetMethod.OriginalDefinition;
@@ -501,7 +501,7 @@ public class WaitCompiler : IMethodPolicyHandler
             return false;
         }
 
-        var boundArguments = new Dictionary<IParameterSymbol, Microsoft.CodeAnalysis.IOperation>(SymbolEqualityComparer.Default);
+        var boundArguments = new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default);
         foreach (var argument in arguments)
         {
             boundArguments.Add(argument.Key, argument.Value);
@@ -514,7 +514,9 @@ public class WaitCompiler : IMethodPolicyHandler
                 return false;
             }
 
-            boundArguments[method.Parameters[argument.Parameter.Ordinal]] = argument.Value;
+            // Caller arguments are finite syntax, not recursion through this callee's body.
+            boundArguments[method.Parameters[argument.Parameter.Ordinal]] =
+                IsBranchLocalContextOrigin(argument.Value, compilation, lambda, parameterSymbol, arguments, methods);
         }
 
         var returnedOperation = compilation.GetSemanticModel(returnedExpression.SyntaxTree).GetOperation(returnedExpression);
@@ -544,29 +546,9 @@ public class WaitCompiler : IMethodPolicyHandler
             return false;
         }
 
-        var receiver = projection.Instance;
-        while (receiver is not null)
-        {
-            switch (receiver)
-            {
-                case IConversionOperation conversion:
-                    receiver = conversion.Operand;
-                    break;
-                case IInvocationOperation invocation
-                    when invocation.TargetMethod.Name == nameof(IInboundContext.WithId) &&
-                         IsAuthoringContext(invocation.TargetMethod.ContainingType):
-                    receiver = invocation.Instance;
-                    break;
-                case IParameterReferenceOperation parameter:
-                    return IsBranchLocalSymbol(parameter.Parameter, lambda, parameterSymbol);
-                case ILocalReferenceOperation local:
-                    return IsBranchLocalSymbol(local.Local, lambda, parameterSymbol);
-                default:
-                    return false;
-            }
-        }
-
-        return false;
+        var arguments = new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default);
+        var methods = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
+        return IsBranchLocalContextOrigin(projection, semanticModel.Compilation, lambda, parameterSymbol, arguments, methods);
     }
 
     private static bool IsCanonicalExpressionContextProperty(IPropertySymbol property) =>

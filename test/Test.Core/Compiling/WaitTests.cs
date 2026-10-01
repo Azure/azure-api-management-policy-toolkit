@@ -2253,4 +2253,232 @@ public class WaitTests
             }
         }
         """;
+
+    [TestMethod]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Check(SectionIdentity(branch).ExpressionContext))
+            {
+                branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cached" });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(context.Variables.ContainsKey("check"))">
+                            <cache-lookup-value key="key" variable-name="cached" />
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow section identity projection in Wait choose condition")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(SectionIdentity(branch).ExpressionContext)
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow section identity projection in Wait config")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(SectionIdentity(branch.WithId("projection")).ExpressionContext)
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow section identity projection through WithId")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Check(Identity(Identity(branch.ExpressionContext))))
+            {
+                branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cached" });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(context.Variables.ContainsKey("check"))">
+                            <cache-lookup-value key="key" variable-name="cached" />
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow finite nested identity helper in Wait condition")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(Forward(Identity(branch.ExpressionContext)))
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow forward of finite identity argument in Wait config")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(Identity(Forward(Identity(branch.ExpressionContext))))
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow repeated finite identity and forward composition")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Check(branch.ExpressionContext))
+            {
+                branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
+                {
+                    ResponseVariableName = NameExp(Identity(Identity(inner.ExpressionContext)))
+                }));
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(context.Variables.ContainsKey("check"))">
+                            <wait>
+                                <send-request response-variable-name="@(context.Request.Method)" />
+                            </wait>
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow finite helper composition in nested typed Wait")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(SectionIdentity(SectionIdentity(branch)).ExpressionContext)
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow finite section identity composition and projection")]
+    public void ShouldAllowFiniteWaitContextComposition(string branch, string expectedXml)
+    {
+        CompileBranchDocument(CreateComposedContextDocument(branch)).Should().BeSuccessful()
+            .And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(Identity(ContextLoop(branch.ExpressionContext)))
+        })
+        """,
+        DisplayName = "Reject true context recursion inside finite wrapper")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(Identity(Identity(GetOuter())))
+        })
+        """,
+        DisplayName = "Reject captured factory inside finite identity composition")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(SectionIdentity(GetOtherSection()).ExpressionContext)
+        })
+        """,
+        DisplayName = "Reject captured section factory inside helper projection")]
+    public void ShouldRejectUnsafeWaitContextComposition(string branch)
+    {
+        AssertRejectedWait(CompileBranchDocument(CreateComposedContextDocument(branch)),
+            "APIM2012", "branch context parameter");
+    }
+
+    private static string CreateComposedContextDocument(string branch) => $$"""
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            private readonly IExpressionContext _outer;
+            private IInboundContext _other = null!;
+
+            public PolicyDocument(IExpressionContext outer)
+            {
+                _outer = outer;
+            }
+
+            public void Inbound(IInboundContext context)
+            {
+                context.Wait(null, {{branch}});
+            }
+
+            bool Check(IExpressionContext context) => context.Variables.ContainsKey("check");
+            string NameExp(IExpressionContext context) => context.Request.Method;
+            IExpressionContext GetOuter() => _outer;
+            IInboundContext GetOtherSection() => _other;
+            static IExpressionContext Identity(IExpressionContext context) => context;
+            static IExpressionContext Forward(IExpressionContext context) => Identity(context);
+            static IInboundContext SectionIdentity(IInboundContext context) => context;
+            static IExpressionContext ContextLoop(IExpressionContext context) => ContextLoop(context);
+        }
+        """;
 }
