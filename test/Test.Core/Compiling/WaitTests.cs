@@ -1590,4 +1590,380 @@ public class WaitTests
 
         AssertRejectedWait(CompileBranchDocument(code), "APIM2012", reason);
     }
+
+    [TestMethod]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Always(branch.ExpressionContext))
+            {
+                branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cached" });
+                if (Missing(_outer))
+                {
+                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "fallback" });
+                }
+            }
+        }
+        """,
+        DisplayName = "Reject captured expression context after branch cache lookup")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Missing(_outer))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        DisplayName = "Reject expression-context field in Wait condition")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(_outer) })
+        """,
+        DisplayName = "Reject expression-context field in Wait config expression")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = _outer.Request.Method })
+        """,
+        DisplayName = "Reject expression-context field in direct Wait config")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Always(branch.ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+            }
+            else if (Missing(_outer))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" });
+            }
+        }
+        """,
+        DisplayName = "Reject expression-context field in else-if condition")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Always(branch.ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+            }
+            else
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(_outer) });
+            }
+        }
+        """,
+        DisplayName = "Reject expression-context field in otherwise config")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Always(branch.ExpressionContext))
+            {
+                branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
+                {
+                    ResponseVariableName = NameExp(_outer)
+                }));
+            }
+        }
+        """,
+        DisplayName = "Reject expression-context field in nested typed Wait")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Always(branch.ExpressionContext))
+            {
+                if (Missing(_outer))
+                {
+                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                }
+            }
+        }
+        """,
+        DisplayName = "Reject expression-context field in nested choose")]
+    public void ShouldRejectCapturedExpressionContextField(string branch)
+    {
+        AssertRejectedWait(CompileBranchDocument(CreateExpressionContextDocument(branch)),
+            "APIM2012", "outer expression context");
+    }
+
+    [TestMethod]
+    public void ShouldRejectCapturedPrimaryConstructorExpressionContext()
+    {
+        var code = """
+            [Document]
+            public class PolicyDocument(IExpressionContext outer) : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait(null, branch =>
+                    {
+                        if (Missing(outer))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                        }
+                    });
+                }
+
+                bool Missing(IExpressionContext context) => !context.Variables.ContainsKey("cached");
+            }
+            """;
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer expression context");
+    }
+
+    [TestMethod]
+    public void ShouldRejectCapturedExpressionContextProperty()
+    {
+        var code = """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                private IExpressionContext Outer { get; }
+
+                public PolicyDocument(IExpressionContext outer)
+                {
+                    Outer = outer;
+                }
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait(null, branch => branch.SendRequest(new SendRequestConfig
+                    {
+                        ResponseVariableName = NameExp(Outer)
+                    }));
+                }
+
+                string NameExp(IExpressionContext context) => context.Request.Method;
+            }
+            """;
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer expression context");
+    }
+
+    [TestMethod]
+    public void ShouldRejectOuterExpressionContextThroughBranchLocalAlias()
+    {
+        var code = CreateExpressionContextDocument(
+            """
+            branch =>
+            {
+                if (Always(branch.ExpressionContext))
+                {
+                    IExpressionContext alias = _outer;
+                    if (Missing(alias))
+                    {
+                        branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                    }
+                }
+            }
+            """);
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer expression context");
+    }
+
+    [TestMethod]
+    public void ShouldRejectCapturedDerivedExpressionContext()
+    {
+        var code = """
+            public interface ICapturedExpressionContext : IExpressionContext { }
+
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                private readonly ICapturedExpressionContext _outer;
+
+                public PolicyDocument(ICapturedExpressionContext outer)
+                {
+                    _outer = outer;
+                }
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait(null, branch =>
+                    {
+                        if (Missing(_outer))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                        }
+                    });
+                }
+
+                bool Missing(IExpressionContext context) => !context.Variables.ContainsKey("cached");
+            }
+            """;
+
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer expression context");
+    }
+
+    [TestMethod]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Missing(branch.ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(!context.Variables.ContainsKey("cached"))">
+                            <send-request response-variable-name="request" />
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow branch expression context in Wait condition")]
+    [DataRow(
+        """
+        branch =>
+        {
+            if (Missing(branch.WithId("projection").ExpressionContext))
+            {
+                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <choose>
+                        <when condition="@(!context.Variables.ContainsKey("cached"))">
+                            <send-request response-variable-name="request" />
+                        </when>
+                    </choose>
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow WithId branch expression context in Wait condition")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(branch.ExpressionContext) })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow branch expression context in Wait config")]
+    [DataRow(
+        """
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            ResponseVariableName = NameExp(branch.WithId("projection").ExpressionContext)
+        })
+        """,
+        """
+        <policies>
+            <inbound>
+                <wait>
+                    <send-request response-variable-name="@(context.Request.Method)" />
+                </wait>
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Allow WithId branch expression context in Wait config")]
+    public void ShouldAllowBranchExpressionContextProjection(string branch, string expectedXml)
+    {
+        CompileBranchDocument(CreateExpressionContextDocument(branch)).Should().BeSuccessful()
+            .And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldAllowNameofCapturedExpressionContext()
+    {
+        var code = CreateExpressionContextDocument(
+            """
+            branch => branch.WithId(nameof(_outer)).SendRequest(new SendRequestConfig
+            {
+                ResponseVariableName = "request"
+            })
+            """);
+        var expectedXml = """
+            <policies>
+                <inbound>
+                    <wait>
+                        <send-request id="_outer" response-variable-name="request" />
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldAllowExpressionContextProjectionInNestedTypedWait()
+    {
+        var code = CreateExpressionContextDocument(
+            """
+            branch =>
+            {
+                if (Always(branch.ExpressionContext))
+                {
+                    branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
+                    {
+                        ResponseVariableName = NameExp(inner.WithId("projection").ExpressionContext)
+                    }));
+                }
+            }
+            """);
+        var expectedXml = """
+            <policies>
+                <inbound>
+                    <wait>
+                        <choose>
+                            <when condition="@(true)">
+                                <wait>
+                                    <send-request response-variable-name="@(context.Request.Method)" />
+                                </wait>
+                            </when>
+                        </choose>
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        CompileBranchDocument(code).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    private static string CreateExpressionContextDocument(string branch) => $$"""
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            private readonly IExpressionContext _outer;
+
+            public PolicyDocument(IExpressionContext outer)
+            {
+                _outer = outer;
+            }
+
+            public void Inbound(IInboundContext context)
+            {
+                context.Wait(null, {{branch}});
+            }
+
+            bool Always(IExpressionContext context) => true;
+            bool Missing(IExpressionContext context) => !context.Variables.ContainsKey("cached");
+            string NameExp(IExpressionContext context) => context.Request.Method;
+        }
+        """;
 }

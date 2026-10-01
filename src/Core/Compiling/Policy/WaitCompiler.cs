@@ -4,6 +4,7 @@
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
 using Microsoft.CodeAnalysis;
@@ -401,28 +402,80 @@ public class WaitCompiler : IMethodPolicyHandler
                 IPropertySymbol property => property.Type,
                 _ => null
             };
-            if (!IsSectionContextType(type) ||
-                SymbolEqualityComparer.Default.Equals(symbol, parameterSymbol) ||
-                symbol.DeclaringSyntaxReferences.Any(reference =>
-                    reference.SyntaxTree == lambda.SyntaxTree && lambda.Body.Span.Contains(reference.Span)) ||
+            var expressionContext = IsExpressionContextType(type);
+            if ((!IsSectionContextType(type) && !expressionContext) ||
+                IsBranchLocalSymbol(symbol, lambda, parameterSymbol) ||
+                expressionContext && IsBranchExpressionContextProjection(identifier, symbol, lambda, parameterSymbol, semanticModel) ||
                 identifier.Ancestors().OfType<InvocationExpressionSyntax>()
                     .Any(invocation => semanticModel.GetOperation(invocation) is INameOfOperation))
             {
                 continue;
             }
 
+            var contextKind = expressionContext ? "expression" : "section";
             ReportInvalidBranch(context, identifier,
-                "References to an outer section context are not allowed; child policies, conditions, and configuration must use the branch context parameter.");
+                $"References to an outer {contextKind} context are not allowed; child policies, conditions, and configuration must use the branch context parameter.");
             return false;
         }
 
         return true;
     }
 
+    private static bool IsBranchLocalSymbol(ISymbol symbol, LambdaExpressionSyntax lambda, ISymbol? parameterSymbol) =>
+        SymbolEqualityComparer.Default.Equals(symbol, parameterSymbol) ||
+        symbol.DeclaringSyntaxReferences.Any(reference =>
+            reference.SyntaxTree == lambda.SyntaxTree && lambda.Body.Span.Contains(reference.Span));
+
+    private static bool IsBranchExpressionContextProjection(IdentifierNameSyntax identifier, ISymbol symbol,
+        LambdaExpressionSyntax lambda, ISymbol? parameterSymbol, SemanticModel semanticModel)
+    {
+        if (symbol is not IPropertySymbol { Name: nameof(IHaveExpressionContext.ExpressionContext) } property ||
+            property.ContainingType.Name != nameof(IHaveExpressionContext) ||
+            !IsAuthoringContext(property.ContainingType, includeBaseContext: true) ||
+            identifier.Parent is not MemberAccessExpressionSyntax member || member.Name != identifier ||
+            semanticModel.GetOperation(member) is not IPropertyReferenceOperation projection)
+        {
+            return false;
+        }
+
+        var receiver = projection.Instance;
+        while (receiver is not null)
+        {
+            switch (receiver)
+            {
+                case IConversionOperation conversion:
+                    receiver = conversion.Operand;
+                    break;
+                case IInvocationOperation invocation
+                    when invocation.TargetMethod.Name == nameof(IInboundContext.WithId) &&
+                         IsAuthoringContext(invocation.TargetMethod.ContainingType):
+                    receiver = invocation.Instance;
+                    break;
+                case IParameterReferenceOperation parameter:
+                    return IsBranchLocalSymbol(parameter.Parameter, lambda, parameterSymbol);
+                case ILocalReferenceOperation local:
+                    return IsBranchLocalSymbol(local.Local, lambda, parameterSymbol);
+                default:
+                    return false;
+            }
+        }
+
+        return false;
+    }
+
     private static bool IsSectionContextType(ITypeSymbol? type) =>
         type is INamedTypeSymbol named &&
         (IsAuthoringContext(named, includeBaseContext: true) ||
          named.AllInterfaces.Any(context => IsAuthoringContext(context, includeBaseContext: true)));
+
+    private static bool IsExpressionContextType(ITypeSymbol? type) =>
+        type is INamedTypeSymbol named &&
+        (IsExpressionContextInterface(named) || named.AllInterfaces.Any(IsExpressionContextInterface));
+
+    private static bool IsExpressionContextInterface(INamedTypeSymbol type) =>
+        type.Name == nameof(IExpressionContext) &&
+        type.ContainingNamespace.ToDisplayString() == typeof(IExpressionContext).Namespace &&
+        type.ContainingAssembly.Identity.Name == typeof(IExpressionContext).Assembly.GetName().Name;
 
     private static IMethodSymbol? GetMethodSymbol(SemanticModel semanticModel, InvocationExpressionSyntax invocation,
         bool branchScopedOnly = false)

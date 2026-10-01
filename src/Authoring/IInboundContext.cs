@@ -685,7 +685,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// One or more individual synchronous lambdas invoking child policies on their branch context parameter.
     /// Each lambda must contain one direct SendRequest or CacheLookupValue call, or one if/else-if/else chain.
     /// WithId metadata chaining is supported with constant string IDs.
-    /// Conditions and configuration expressions must also use the branch context, not a captured outer section context.
+    /// Conditions and configuration expressions must also use the branch context, not a captured outer section or expression context.
     /// Conditional bodies may contain multiple sequential policies. Arrays and delegate references are not supported by the compiler.
     /// </param>
     void Wait([ExpressionAllowed] string? waitFor, params Action<IInboundContext>[] branches);
