@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -17,6 +18,12 @@ internal class RemoveHeaderResponseHandler : RemoveHeaderHandler
 {
     protected override Dictionary<string, string[]> GetHeaders(GatewayContext context)
         => context.Response.Headers;
+
+    protected override void Handle(GatewayContext context, string name)
+    {
+        base.Handle(context, name);
+        PolicyResponseHeaderOverlay.ForgetHeader(context, name);
+    }
 }
 
 internal abstract class RemoveHeaderHandler : PolicyHandler<string>

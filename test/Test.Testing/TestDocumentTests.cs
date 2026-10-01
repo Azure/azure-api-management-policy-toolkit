@@ -9,6 +9,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 using Newtonsoft.Json.Linq;
@@ -17,9 +18,678 @@ using Test.Emulator.Emulator.Policies;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 
+internal static class FinalHeaderBoundaryTest
+{
+    internal const string ExposureHeader = "Access-Control-Expose-Headers";
+    internal const string Origin = "https://final-boundary.example.test";
+    internal const string Usage = """{"usage":{"prompt_tokens":2,"completion_tokens":1}}""";
+
+    internal static CorsConfig Cors() => new()
+    {
+        AllowedOrigins = [Origin],
+        AllowedHeaders = [],
+        AllowCredentials = true,
+        ExposeHeaders = ["*"]
+    };
+
+    internal static GatewayContext CreateContext(bool ignoreCase = true, string body = "payload")
+    {
+        var context = new GatewayContext();
+        ConfigureContext(context, ignoreCase, body);
+        return context;
+    }
+
+    internal static void ConfigureContext(GatewayContext context, bool ignoreCase = true, string body = "payload")
+    {
+        SettlementTest.ConfigureContext(context, new RateLimitStore());
+        context.Request.Headers["Origin"] = [Origin];
+        context.Response.Headers = new Dictionary<string, string[]>(
+            ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        context.Services.Register<IHttpClient>(new StubHttpClient(_ =>
+        {
+            var response = new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new System.Net.Http.StringContent(body, Encoding.UTF8, "application/json")
+            };
+            response.Headers.TryAddWithoutValidation("X-Actual", "backend");
+            response.Headers.TryAddWithoutValidation("Set-Cookie", "private=1");
+            return response;
+        }));
+    }
+
+    internal static void Admit(IInboundContext section, bool azure = false)
+    {
+        section.Cors(Cors());
+        var config = new TokenLimitConfig
+        {
+            CounterKey = "final-headers",
+            EstimatePromptToken = false,
+            TokensPerMinute = 100,
+            RemainingTokensHeaderName = "X-Token-Remaining",
+            TokensConsumedHeaderName = "X-Token-Consumed"
+        };
+        if (azure) section.AzureOpenAiTokenLimit(config);
+        else section.LlmTokenLimit(config);
+        section.RateLimitByKey(SettlementTest.DeferredRate("final-headers") with { RemainingCallsHeaderName = "X-Deferred" });
+    }
+
+    internal static string[] Exposure(GatewayContext context) => context.Response.Headers
+        .Single(header => header.Key.Equals(ExposureHeader, StringComparison.OrdinalIgnoreCase))
+        .Value.Single().Split(',');
+
+    internal static void AssertFinalExposure(GatewayContext context)
+    {
+        var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "Access-Control-Allow-Methods",
+            "Access-Control-Allow-Headers", "Access-Control-Expose-Headers", "Access-Control-Max-Age",
+            "Set-Cookie", "Set-Cookie2"
+        };
+        Exposure(context).Should().BeEquivalentTo(context.Response.Headers.Keys
+            .Where(name => !excluded.Contains(name)).Distinct(StringComparer.OrdinalIgnoreCase));
+    }
+
+    internal static object? Overlay(GatewayContext context) => typeof(GatewayContext).Assembly
+        .GetType("Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services.PolicyResponseHeaderOverlay", throwOnError: true)!
+        .GetMethod("Existing", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [context]);
+
+    internal static void SetCallbackOwnedResponse(GatewayContext context, bool replace, bool ignoreCase)
+    {
+        var response = replace ? new MockResponse
+        {
+            Headers = new Dictionary<string, string[]>(ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+        } : context.Response;
+        response.Headers.Clear();
+        response.Headers["Access-Control-Allow-Origin"] = [Origin];
+        response.Headers["Access-Control-Allow-Credentials"] = ["true"];
+        response.Headers["X-Owned"] = ["callback"];
+        response.StatusCode = 202;
+        response.StatusReason = "Accepted";
+        response.Body.Content = "callback-owned";
+        context.Response = response;
+    }
+
+    internal static void AssertCallbackOwnedResponse(GatewayContext context)
+    {
+        context.Response.StatusCode.Should().Be(202);
+        context.Response.StatusReason.Should().Be("Accepted");
+        context.Response.Body.Content.Should().Be("callback-owned");
+        context.Response.Headers.Keys.Should().BeEquivalentTo(
+            "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "X-Owned");
+        context.Response.Headers["Access-Control-Allow-Origin"].Should().Equal(Origin);
+        context.Response.Headers["Access-Control-Allow-Credentials"].Should().Equal("true");
+        context.Response.Headers["X-Owned"].Should().Equal("callback");
+    }
+}
+
 [TestClass]
 public class TestDocumentTests
 {
+    [TestMethod]
+    [DataRow(false, false, false)]
+    [DataRow(false, false, true)]
+    [DataRow(false, true, false)]
+    [DataRow(false, true, true)]
+    [DataRow(true, false, false)]
+    [DataRow(true, false, true)]
+    [DataRow(true, true, false)]
+    [DataRow(true, true, true)]
+    public void CallbackOwnership_CorsNamedHeadersNeverAuthorizeDeferredExposure(
+        bool replace, bool ignoreCase, bool enclosingOwner)
+    {
+        var context = new GatewayContext();
+        context.Request.Headers["Origin"] = [FinalHeaderBoundaryTest.Origin];
+        context.Response.Headers = new Dictionary<string, string[]>(
+            ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var original = context.Response;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = section => section.ForwardRequest()
+        })
+        { Context = context };
+        var callbacks = 0;
+        test.SetupBackend().ForwardRequest().WithCallback((gateway, _) =>
+        {
+            callbacks++;
+            FinalHeaderBoundaryTest.SetCallbackOwnedResponse(gateway, replace, ignoreCase);
+        });
+        MockResponse? callbackResponse = null;
+        Dictionary<string, string[]>? callbackHeaders = null;
+        if (enclosingOwner) test.RunRequest(request =>
+        {
+            request.RunRequest(inner => inner.RunAll());
+            callbackResponse = context.Response;
+            callbackHeaders = context.Response.Headers;
+            FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(context);
+        });
+        else test.RunAll();
+
+        FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(context);
+        callbacks.Should().Be(1);
+        context.Services.Resolve<IHttpClient>().Should().BeNull();
+        if (replace) context.Response.Should().NotBeSameAs(original);
+        else context.Response.Should().BeSameAs(original);
+        if (enclosingOwner)
+        {
+            context.Response.Should().BeSameAs(callbackResponse);
+            context.Response.Headers.Should().BeSameAs(callbackHeaders);
+        }
+        context.Response.Headers.Comparer.Should().BeSameAs(
+            ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        test.RunRequest(_ => { });
+        FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(context);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void CallbackOwnership_ResponseIdentityReplacementWithoutForwardingRetiresTheOldResolver(bool ignoreCase)
+    {
+        var context = new GatewayContext();
+        context.Request.Headers["Origin"] = [FinalHeaderBoundaryTest.Origin];
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = _ => FinalHeaderBoundaryTest.SetCallbackOwnedResponse(context, replace: true, ignoreCase)
+        })
+        { Context = context };
+
+        test.RunRequest(request =>
+        {
+            request.RunRequest(inner => inner.RunAll());
+            FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(context);
+        });
+
+        FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(context);
+        context.Services.Resolve<IHttpClient>().Should().BeNull();
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void CallbackOwnership_HandledForwardCallbackFailureCannotReactivateItsDeferredResolver(bool replace)
+    {
+        var context = new GatewayContext();
+        context.Request.Headers["Origin"] = [FinalHeaderBoundaryTest.Origin];
+        var expected = new InvalidOperationException("callback failed after replacing response");
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = section => section.ForwardRequest()
+        })
+        { Context = context };
+        test.SetupBackend().ForwardRequest().WithCallback((gateway, _) =>
+        {
+            FinalHeaderBoundaryTest.SetCallbackOwnedResponse(gateway, replace, ignoreCase: false);
+            throw expected;
+        });
+
+        test.RunRequest(request =>
+        {
+            Assert.ThrowsExactly<PolicyException>(() => request.RunRequest(inner => inner.RunAll()))
+                .InnerException.Should().BeSameAs(expected);
+            FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(context);
+        });
+
+        FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(context);
+        context.Services.Resolve<IHttpClient>().Should().BeNull();
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void CallbackOwnership_NativeCopyKeepsTheBoundResponseAndAllGeneratedPolicyOutputs(bool ignoreCase)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext(ignoreCase, FinalHeaderBoundaryTest.Usage);
+        context.Services.Register(new TokenLimitCounterStore());
+        var original = context.Response;
+        var headers = original.Headers;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => FinalHeaderBoundaryTest.Admit(section),
+            BackendAction = section => section.ForwardRequest(),
+            OutboundAction = section => section.SetHeader("X-Outbound", ["final"])
+        })
+        { Context = context };
+
+        test.RunRequest(request =>
+        {
+            request.RunRequest(inner => inner.RunAll());
+            context.Response.Should().BeSameAs(original);
+            context.Response.Headers.Should().BeSameAs(headers);
+            FinalHeaderBoundaryTest.Exposure(context).Should().NotContain("X-Outbound");
+        });
+
+        context.Response.Should().BeSameAs(original);
+        context.Response.Headers.Should().BeSameAs(headers);
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        context.Response.Headers["X-Deferred"].Should().Equal("8");
+        context.Response.Headers["X-Token-Consumed"].Should().Equal("3");
+        context.Response.Headers["Access-Control-Allow-Origin"].Should().Equal(FinalHeaderBoundaryTest.Origin);
+        ((StubHttpClient)context.Services.Resolve<IHttpClient>()!).LastRequest.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public void CallbackOwnership_AFreshRequestCanRegisterNativePolicyOwnershipAgain()
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext();
+        var mocked = true;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = section => section.ForwardRequest(mocked
+                ? new ForwardRequestConfig { HttpVersion = "mock-only" } : null),
+            OutboundAction = section => section.SetHeader("X-Outbound", ["final"])
+        })
+        { Context = context };
+        test.SetupBackend().ForwardRequest((_, config) => config?.HttpVersion == "mock-only")
+            .WithCallback((gateway, _) => FinalHeaderBoundaryTest.SetCallbackOwnedResponse(
+                gateway, replace: true, ignoreCase: false));
+        test.RunAll();
+        context.Response.Headers.Should().NotContainKey(FinalHeaderBoundaryTest.ExposureHeader);
+        ((StubHttpClient)context.Services.Resolve<IHttpClient>()!).LastRequest.Should().BeNull();
+        context.RequestId = Guid.NewGuid();
+        mocked = false;
+        var response = context.Response;
+
+        test.RunAll();
+
+        context.Response.Should().BeSameAs(response);
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Outbound");
+    }
+
+    [TestMethod]
+    [DataRow("all", false)]
+    [DataRow("all", true)]
+    [DataRow("nested", false)]
+    [DataRow("nested", true)]
+    [DataRow("sections", false)]
+    [DataRow("sections", true)]
+    public void FinalCorsExposure_ReflectsOutboundAdditionsAndRemovalsAtTheOuterBoundary(string runner, bool ignoreCase)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext(ignoreCase);
+        var headers = context.Response.Headers;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = section => section.ForwardRequest(),
+            OutboundAction = section =>
+            {
+                section.SetHeader("X-Outbound", ["final"]);
+                section.RemoveHeader("x-actual");
+                section.SetHeader("sEt-CoOkIe", ["private=2"]);
+            }
+        })
+        { Context = context };
+
+        if (runner == "all") test.RunAll();
+        else test.RunRequest(request =>
+        {
+            if (runner == "nested") request.RunRequest(inner => inner.RunAll());
+            else
+            {
+                request.RunInbound();
+                request.RunBackend();
+                request.RunOutbound();
+            }
+            FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Actual").And.NotContain("X-Outbound");
+        });
+
+        context.Response.Headers.Should().BeSameAs(headers);
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Outbound").And.NotContain("X-Actual");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void FinalCorsExposure_NestedOwnersWaitForFinalPostprocessingWithOrWithoutBackend(bool backend)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext();
+        context.Response.Headers["X-Initial"] = ["initial"];
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = section =>
+            {
+                if (backend) section.ForwardRequest();
+            }
+        })
+        { Context = context };
+
+        test.RunRequest(request =>
+        {
+            request.RunRequest(inner => inner.RunAll());
+            context.Response.Headers["X-Postprocessing"] = ["outer"];
+            FinalHeaderBoundaryTest.Exposure(context).Should().NotContain("X-Postprocessing");
+        });
+
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Postprocessing");
+    }
+
+    [TestMethod]
+    public void FinalCorsExposure_StandaloneSectionsStayIndependentUntilSuccessfulCompletion()
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext();
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = section => section.ForwardRequest(),
+            OutboundAction = section => section.SetHeader("X-Outbound", ["late"]),
+            OnErrorAction = section => section.RemoveHeader("X-Actual")
+        })
+        { Context = context };
+
+        test.RunInbound();
+        test.RunBackend();
+        test.RunOutbound();
+        test.RunOnError();
+
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Actual").And.NotContain("X-Outbound");
+        test.RunRequest(_ => { });
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void FinalCorsExposure_ExecutionFailureDoesNotRefreshUntilSuccessfulRecovery(bool nested)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext();
+        var expected = new InvalidOperationException("outbound failed");
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = section => section.ForwardRequest(),
+            OutboundAction = section =>
+            {
+                section.SetHeader("X-Outbound", ["before-failure"]);
+                section.RemoveHeader("X-Actual");
+                throw expected;
+            },
+            OnErrorAction = section => section.SetHeader("X-Recovered", ["final"])
+        })
+        { Context = context };
+
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+        {
+            if (nested) test.RunRequest(request => request.RunRequest(inner => inner.RunAll()));
+            else test.RunAll();
+        }).Should().BeSameAs(expected);
+
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Actual").And.NotContain("X-Outbound");
+        test.RunRequest(request => request.RunRequest(inner => inner.RunOnError()));
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Recovered", "X-Outbound").And.NotContain("X-Actual");
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public void FinalCorsExposure_CompletionOnlyTokenRecoveryRunsBeforeDeferredCounterRefresh(bool backend, bool azure)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext(body: "{}");
+        context.Response.Headers["X-Initial"] = ["initial"];
+        context.Response.Body.Content = "{}";
+        var tokens = new TokenLimitCounterStore();
+        context.Services.Register(tokens);
+        var requestId = context.RequestId;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => FinalHeaderBoundaryTest.Admit(section, azure),
+            BackendAction = section => section.ForwardRequest(),
+            OnErrorAction = section =>
+            {
+                section.SetBody(FinalHeaderBoundaryTest.Usage);
+                section.SetHeader("X-Recovered", ["final"]);
+                section.RemoveHeader("X-Actual");
+                section.RemoveHeader("X-Deferred");
+            }
+        })
+        { Context = context };
+
+        Assert.ThrowsExactly<PolicyException>(() => test.RunRequest(request =>
+        {
+            request.RunRequest(inner =>
+            {
+                inner.RunInbound();
+                if (backend) inner.RunBackend();
+            });
+        }));
+        var failedExposure = FinalHeaderBoundaryTest.Exposure(context);
+        context.Services.Resolve<TokenLimitService>()!.HasPendingResponse.Should().BeTrue();
+        Assert.ThrowsExactly<PolicyException>(() => test.RunRequest(_ => { }));
+        FinalHeaderBoundaryTest.Exposure(context).Should().Equal(failedExposure);
+        context.Services.Resolve<RateLimitStore>()!.GetCallCount("rate-limit-by-key:final-headers").Should().Be(0);
+
+        test.RunRequest(request => request.RunRequest(inner => inner.RunOnError()));
+
+        context.RequestId.Should().Be(requestId);
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Token-Consumed", "X-Deferred", "X-Recovered");
+        context.Response.Headers["X-Token-Consumed"].Should().Equal("3");
+        context.Response.Headers["X-Deferred"].Should().Equal("8");
+        tokens.GetRateTokens("final-headers", context.Services.Resolve<TimeProvider>()!.GetUtcNow()).Should().Be(3);
+        context.Services.Resolve<RateLimitStore>()!.GetCallCount("rate-limit-by-key:final-headers").Should().Be(2);
+        test.RunRequest(_ => { });
+        tokens.GetRateTokens("final-headers", context.Services.Resolve<TimeProvider>()!.GetUtcNow()).Should().Be(3);
+    }
+
+    [TestMethod]
+    [DataRow("provider")]
+    [DataRow("payload")]
+    public void FinalCorsExposure_GenericSettlementFailuresDoNotRefreshUntilCompletionOnlyRetry(string failure)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext(body: FinalHeaderBoundaryTest.Usage);
+        context.Services.Register(new TokenLimitCounterStore());
+        var fail = true;
+        var expected = new InvalidOperationException("generic settlement failed");
+        context.Services.Register<IRateLimiter>(new RecordingRateLimiter((key, permits) =>
+        {
+            if (failure == "provider" && key == "final-headers" && fail && permits > 0) throw expected;
+            return true;
+        }));
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                FinalHeaderBoundaryTest.Admit(section);
+                SettlementTest.ApplyQuota(section);
+            },
+            BackendAction = section => section.ForwardRequest(),
+            OutboundAction = section =>
+            {
+                section.SetHeader("X-Outbound", ["final"]);
+                section.RemoveHeader("X-Actual");
+                section.RemoveHeader("X-Deferred");
+                if (failure == "payload")
+                {
+                    context.Response.Body.Content = null;
+                    section.SetHeader("Content-Length", ["invalid"]);
+                }
+            }
+        })
+        { Context = context };
+
+        if (failure == "provider") Assert.ThrowsExactly<InvalidOperationException>(test.RunAll).Should().BeSameAs(expected);
+        else Assert.ThrowsExactly<FormatException>(test.RunAll);
+        var failedExposure = FinalHeaderBoundaryTest.Exposure(context);
+        failedExposure.Should().Contain("X-Actual").And.NotContain("X-Outbound");
+        context.Response.Headers["X-Recovered"] = ["completion-only"];
+        fail = false;
+        if (failure == "payload") context.Response.Headers["Content-Length"] = ["12"];
+
+        test.RunRequest(_ => { });
+
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Recovered", "X-Outbound", "X-Deferred");
+        context.Services.Resolve<RateLimitStore>()!.GetCallCount("rate-limit-by-key:final-headers").Should().Be(2);
+        test.RunRequest(_ => { });
+        context.Services.Resolve<RateLimitStore>()!.GetCallCount("rate-limit-by-key:final-headers").Should().Be(2);
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public void FinalCorsExposure_DoesNotTakeOwnershipOfCallbackReplacementResponses(bool terminal, bool seeded)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext();
+        if (seeded) context.Response.Headers["X-Initial"] = ["initial"];
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.Cors(FinalHeaderBoundaryTest.Cors());
+            },
+            BackendAction = section =>
+            {
+                if (terminal) section.ReturnResponse(new ReturnResponseConfig());
+                else section.ForwardRequest();
+            }
+        })
+        { Context = context };
+        static void Replace(GatewayContext gateway)
+        {
+            gateway.Response.Headers.Clear();
+            gateway.Response.Headers["X-Owned"] = ["callback"];
+            gateway.Response.StatusCode = 202;
+        }
+        if (terminal) test.SetupBackend().ReturnResponse().WithCallback((gateway, _) => Replace(gateway));
+        else test.SetupBackend().ForwardRequest().WithCallback((gateway, _) => Replace(gateway));
+
+        test.RunAll();
+
+        context.Response.Headers.Should().ContainSingle().Which.Key.Should().Be("X-Owned");
+        context.Response.StatusCode.Should().Be(202);
+    }
+
+    [TestMethod]
+    [DataRow(false, "remove")]
+    [DataRow(true, "remove")]
+    [DataRow(false, "set")]
+    [DataRow(true, "set")]
+    [DataRow(false, "remove-then-set")]
+    [DataRow(true, "remove-then-set")]
+    public void FinalCorsExposure_ExplicitExposureMutationWinsAtCompletionWithOrWithoutBackend(bool backend, string action)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext();
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+            BackendAction = section =>
+            {
+                if (backend) section.ForwardRequest();
+            },
+            OutboundAction = section =>
+            {
+                if (action is "remove" or "remove-then-set") section.RemoveHeader(FinalHeaderBoundaryTest.ExposureHeader);
+                if (action is "set" or "remove-then-set") section.SetHeader(FinalHeaderBoundaryTest.ExposureHeader, ["X-Manual"]);
+                section.SetHeader("X-Outbound", ["late"]);
+            }
+        })
+        { Context = context };
+
+        test.RunAll();
+
+        if (action == "remove") context.Response.Headers.Should().NotContainKey(FinalHeaderBoundaryTest.ExposureHeader);
+        else FinalHeaderBoundaryTest.Exposure(context).Should().Equal("X-Manual");
+    }
+
+    [TestMethod]
+    public async Task FinalCorsExposure_AsyncCacheFactoryAndOutboundHeadersFinalizeOnTheOwnerBoundary()
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext();
+        context.Services.Register<ICache>(CacheRefreshTestCache.Asynchronous(new CacheStore()));
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                section.Cors(FinalHeaderBoundaryTest.Cors());
+                section.CacheValue(new CacheValueConfig { Key = "final-headers", VariableName = "cached" }, () =>
+                {
+                    new TestDocument(new ExecutionTestDocument
+                    {
+                        OutboundAction = response => response.SetHeader("X-Cache-Factory", ["owner-thread"])
+                    })
+                    { Context = context }.RunOutbound();
+                    section.SetVariable("cached", "value");
+                });
+            },
+            OutboundAction = section => section.SetHeader("X-Outbound", ["final"])
+        })
+        { Context = context };
+
+        await CacheRefreshTestCache.OnOwnerThread(test.RunAll).WaitAsync(TimeSpan.FromSeconds(5));
+
+        context.Variables["cached"].Should().Be("value");
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain("X-Cache-Factory", "X-Outbound");
+    }
+
+    [TestMethod]
+    public void FinalCorsExposure_UnusedOptionalOverlayIsNotCreatedAtAnOuterBoundary()
+    {
+        var test = new ExecutionTestDocument().AsTestDocument();
+
+        test.RunAll();
+        test.RunRequest(request => request.RunRequest(_ => { }));
+
+        FinalHeaderBoundaryTest.Overlay(test.Context).Should().BeNull();
+        test.Context.Services.Resolve<TokenLimitService>().Should().BeNull();
+        test.Context.Services.Resolve<PolicyCounterService>().Should().BeNull();
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void FinalCorsExposure_FreshRequestCannotReusePriorDynamicRegistration(bool ignoreCase)
+    {
+        var context = FinalHeaderBoundaryTest.CreateContext(ignoreCase);
+        var enabled = true;
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                if (enabled) section.Cors(FinalHeaderBoundaryTest.Cors());
+            },
+            BackendAction = section => section.ForwardRequest(),
+            OutboundAction = section => section.SetHeader("X-Outbound", ["final"])
+        })
+        { Context = context };
+        test.RunAll();
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        enabled = false;
+        context.RequestId = Guid.NewGuid();
+
+        test.RunAll();
+
+        context.Response.Headers.Should().NotContainKey(FinalHeaderBoundaryTest.ExposureHeader);
+    }
+
+    [TestMethod]
+    public void FinalCorsExposure_ARequestBoundaryRejectsAnOverlayOwnedByAnotherContext()
+    {
+        var source = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors())
+        })
+        { Context = FinalHeaderBoundaryTest.CreateContext() };
+        source.RunInbound();
+        var target = new ExecutionTestDocument().AsTestDocument();
+        source.Context.Services.CopyTo(target.Context.Services);
+
+        Assert.ThrowsExactly<InvalidOperationException>(() => target.RunRequest(_ => { }))
+            .Message.Should().Contain("another gateway context");
+        target.Context.Response.Headers.Should().BeEmpty();
+    }
+
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]

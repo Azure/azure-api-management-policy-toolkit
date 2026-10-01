@@ -14,6 +14,305 @@ namespace Test.Emulator.Emulator.Policies;
 public class PolicyPipelineTests
 {
     [TestMethod]
+    [DataRow(false, false, false)]
+    [DataRow(false, false, true)]
+    [DataRow(false, true, false)]
+    [DataRow(false, true, true)]
+    [DataRow(true, false, false)]
+    [DataRow(true, false, true)]
+    [DataRow(true, true, false)]
+    [DataRow(true, true, true)]
+    public void CallbackOwnership_FlatAndNestedForwardReplacementsKeepExactlyTheCallbackHeaders(
+        bool nested, bool replace, bool ignoreCase)
+    {
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context =>
+            {
+                context.Request.Headers["Origin"] = [FinalHeaderBoundaryTest.Origin];
+                context.Response.Headers = new Dictionary<string, string[]>(
+                    ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            })
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.Cors(FinalHeaderBoundaryTest.Cors());
+                    section.Base();
+                },
+                BackendAction = section => section.Base(),
+                OutboundAction = section => section.Base()
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                BackendAction = section => section.ForwardRequest(),
+                OutboundAction = section => section.Base()
+            }).Build();
+        var setup = new TestDocument(new ExecutionTestDocument()) { Context = pipeline.Context };
+        var callbacks = 0;
+        setup.SetupBackend().ForwardRequest().WithCallback((context, _) =>
+        {
+            callbacks++;
+            FinalHeaderBoundaryTest.SetCallbackOwnedResponse(context, replace, ignoreCase);
+        });
+        pipeline.RunRequest(request =>
+        {
+            request.RunRequest(inner => SettlementTest.RunAll(inner, nested));
+            FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(request.Context);
+            request.Context.Services.Resolve<IHttpClient>().Should().BeNull();
+        });
+
+        callbacks.Should().Be(1);
+        FinalHeaderBoundaryTest.AssertCallbackOwnedResponse(pipeline.Context);
+        pipeline.Context.Services.Resolve<IHttpClient>().Should().BeNull();
+    }
+
+    [TestMethod]
+    [DataRow(false, false, false)]
+    [DataRow(false, false, true)]
+    [DataRow(false, true, false)]
+    [DataRow(false, true, true)]
+    [DataRow(true, false, false)]
+    [DataRow(true, false, true)]
+    [DataRow(true, true, false)]
+    [DataRow(true, true, true)]
+    public void FinalCorsExposure_AllScopeOutboundAndOuterChangesAppearOnlyAtSuccessfulCompletion(
+        bool nested, bool enclosingOwner, bool ignoreCase)
+    {
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context => FinalHeaderBoundaryTest.ConfigureContext(context, ignoreCase))
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.Cors(FinalHeaderBoundaryTest.Cors());
+                    section.Base();
+                },
+                BackendAction = section => section.Base(),
+                OutboundAction = section =>
+                {
+                    section.Base();
+                    section.SetHeader("X-Global", ["final"]);
+                    section.SetHeader("Set-Cookie2", ["private=2"]);
+                }
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section => section.Base(),
+                BackendAction = section => section.ForwardRequest(),
+                OutboundAction = section =>
+                {
+                    section.SetHeader("X-Outbound", ["final"]);
+                    section.RemoveHeader("X-Actual");
+                    section.Base();
+                }
+            }).Build();
+        var headers = pipeline.Context.Response.Headers;
+
+        if (enclosingOwner) pipeline.RunRequest(request =>
+        {
+            request.RunRequest(inner => SettlementTest.RunAll(inner, nested));
+            FinalHeaderBoundaryTest.Exposure(request.Context).Should().Contain("X-Actual")
+                .And.NotContain("X-Outbound", "X-Global");
+            request.Context.Response.Headers["X-Outer"] = ["last"];
+        });
+        else SettlementTest.RunAll(pipeline, nested);
+
+        pipeline.Context.Response.Headers.Should().BeSameAs(headers);
+        FinalHeaderBoundaryTest.AssertFinalExposure(pipeline.Context);
+        FinalHeaderBoundaryTest.Exposure(pipeline.Context).Should().Contain("X-Outbound", "X-Global").And.NotContain("X-Actual");
+        if (enclosingOwner) FinalHeaderBoundaryTest.Exposure(pipeline.Context).Should().Contain("X-Outer");
+    }
+
+    [TestMethod]
+    [DataRow(false, false, false)]
+    [DataRow(false, false, true)]
+    [DataRow(false, true, false)]
+    [DataRow(false, true, true)]
+    [DataRow(true, false, false)]
+    [DataRow(true, false, true)]
+    [DataRow(true, true, false)]
+    [DataRow(true, true, true)]
+    public void FinalCorsExposure_OnErrorCompletionOnlyRecoveryRefreshesAfterAllTokenAndLimiterOutputs(
+        bool nested, bool backend, bool azure)
+    {
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context =>
+            {
+                FinalHeaderBoundaryTest.ConfigureContext(context, ignoreCase: false, body: "{}");
+                context.Services.Register(new TokenLimitCounterStore());
+                context.Response.Headers["X-Initial"] = ["initial"];
+                context.Response.Body.Content = "{}";
+            })
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section => section.Base(),
+                BackendAction = section => section.Base(),
+                OnErrorAction = section =>
+                {
+                    section.Base();
+                    section.SetHeader("X-Global-Recovery", ["final"]);
+                }
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section => FinalHeaderBoundaryTest.Admit(section, azure),
+                BackendAction = section => section.ForwardRequest(),
+                OnErrorAction = section =>
+                {
+                    section.SetBody(FinalHeaderBoundaryTest.Usage);
+                    section.SetHeader("X-Recovered", ["final"]);
+                    section.RemoveHeader("X-Actual");
+                    section.RemoveHeader("X-Deferred");
+                    section.Base();
+                }
+            }).Build();
+        var context = pipeline.Context;
+        var requestId = context.RequestId;
+        var tokens = context.Services.Resolve<TokenLimitCounterStore>()!;
+
+        Assert.ThrowsExactly<PolicyException>(() => pipeline.RunRequest(request =>
+        {
+            request.RunRequest(inner =>
+            {
+                ExecutionTest.RunSection(inner, "inbound", nested);
+                if (backend) ExecutionTest.RunSection(inner, "backend", nested);
+            });
+        }));
+        var checkpoint = FinalHeaderBoundaryTest.Exposure(context);
+        Assert.ThrowsExactly<PolicyException>(() => pipeline.RunRequest(_ => { }));
+        FinalHeaderBoundaryTest.Exposure(context).Should().Equal(checkpoint);
+        tokens.GetRateTokens("final-headers", context.Services.Resolve<TimeProvider>()!.GetUtcNow()).Should().Be(0);
+        pipeline.RunRequest(request =>
+        {
+            request.RunRequest(inner => ExecutionTest.RunSection(inner, "on-error", nested));
+            FinalHeaderBoundaryTest.Exposure(context).Should().Equal(checkpoint);
+            context.Response.Headers.Should().NotContainKey("X-Token-Consumed");
+        });
+
+        context.RequestId.Should().Be(requestId);
+        context.Response.Headers["X-Token-Consumed"].Should().Equal("3");
+        context.Response.Headers["X-Deferred"].Should().Equal("8");
+        FinalHeaderBoundaryTest.AssertFinalExposure(context);
+        FinalHeaderBoundaryTest.Exposure(context).Should().Contain(
+            "X-Token-Consumed", "X-Deferred", "X-Recovered", "X-Global-Recovery");
+        tokens.GetRateTokens("final-headers", context.Services.Resolve<TimeProvider>()!.GetUtcNow()).Should().Be(3);
+        pipeline.RunRequest(_ => { });
+        tokens.GetRateTokens("final-headers", context.Services.Resolve<TimeProvider>()!.GetUtcNow()).Should().Be(3);
+    }
+
+    [TestMethod]
+    public void FinalCorsExposure_IndependentSectionsRefreshOnlyAtAnExplicitOuterBoundary()
+    {
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context => FinalHeaderBoundaryTest.ConfigureContext(context))
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section => section.Cors(FinalHeaderBoundaryTest.Cors()),
+                OutboundAction = section => section.SetHeader("X-Global", ["final"])
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                BackendAction = section => section.ForwardRequest(),
+                OutboundAction = section =>
+                {
+                    section.SetHeader("X-Outbound", ["final"]);
+                    section.RemoveHeader("X-Actual");
+                }
+            }).Build();
+
+        pipeline.RunInboundIndependent();
+        pipeline.RunBackendIndependent();
+        pipeline.RunOutboundIndependent();
+
+        FinalHeaderBoundaryTest.Exposure(pipeline.Context).Should().Contain("X-Actual").And.NotContain("X-Outbound");
+        pipeline.RunRequest(_ => { });
+        FinalHeaderBoundaryTest.AssertFinalExposure(pipeline.Context);
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public void FinalCorsExposure_TerminalCallbackResponseKeepsItsOwnHeadersAcrossAllFrames(bool nested, bool seeded)
+    {
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context =>
+            {
+                FinalHeaderBoundaryTest.ConfigureContext(context);
+                if (seeded) context.Response.Headers["X-Initial"] = ["initial"];
+            })
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.Cors(FinalHeaderBoundaryTest.Cors());
+                    section.Base();
+                },
+                BackendAction = section => section.Base()
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                BackendAction = section => section.ReturnResponse(new ReturnResponseConfig()),
+                OutboundAction = _ => Assert.Fail("Terminal callback must skip outbound.")
+            }).Build();
+        var setup = new TestDocument(new ExecutionTestDocument()) { Context = pipeline.Context };
+        setup.SetupBackend().ReturnResponse().WithCallback((context, _) =>
+        {
+            context.Response.Headers.Clear();
+            context.Response.Headers["X-Owned"] = ["terminal"];
+            context.Response.StatusCode = 202;
+        });
+
+        SettlementTest.RunAll(pipeline, nested);
+
+        pipeline.Context.Response.Headers.Should().ContainSingle().Which.Key.Should().Be("X-Owned");
+        pipeline.Context.Response.StatusCode.Should().Be(202);
+        pipeline.Context.ResponseTerminated.Should().BeTrue();
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void FinalCorsExposure_GenericSettlementFailureRefreshesOnlyAfterTheFinalCompletionRetry(bool nested)
+    {
+        var fail = true;
+        var expected = new InvalidOperationException("limiter completion failed");
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context =>
+            {
+                FinalHeaderBoundaryTest.ConfigureContext(context, body: FinalHeaderBoundaryTest.Usage);
+                context.Services.Register(new TokenLimitCounterStore());
+                context.Services.Register<IRateLimiter>(new RecordingRateLimiter((_, permits) =>
+                {
+                    if (fail && permits > 0) throw expected;
+                    return true;
+                }));
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section => FinalHeaderBoundaryTest.Admit(section),
+                BackendAction = section => section.ForwardRequest(),
+                OutboundAction = section =>
+                {
+                    section.SetHeader("X-Outbound", ["final"]);
+                    section.RemoveHeader("X-Actual");
+                    section.RemoveHeader("X-Deferred");
+                }
+            }).Build();
+
+        Assert.ThrowsExactly<InvalidOperationException>(() => SettlementTest.RunAll(pipeline, nested)).Should().BeSameAs(expected);
+        FinalHeaderBoundaryTest.Exposure(pipeline.Context).Should().Contain("X-Actual").And.NotContain("X-Outbound");
+        pipeline.Context.Response.Headers["X-Recovered"] = ["completion-only"];
+        fail = false;
+        pipeline.RunRequest(_ => { });
+
+        FinalHeaderBoundaryTest.AssertFinalExposure(pipeline.Context);
+        FinalHeaderBoundaryTest.Exposure(pipeline.Context).Should().Contain("X-Outbound", "X-Deferred", "X-Recovered");
+        pipeline.Context.Services.Resolve<RateLimitStore>()!.GetCallCount("rate-limit-by-key:final-headers").Should().Be(2);
+    }
+
+    [TestMethod]
     [DataRow(false, false)]
     [DataRow(false, true)]
     [DataRow(true, false)]
@@ -51,8 +350,11 @@ public class PolicyPipelineTests
                 {
                     section.LlmTokenLimit(new TokenLimitConfig
                     {
-                        CounterKey = "cache-pipeline", EstimatePromptToken = false, TokensPerMinute = 10,
-                        TokensConsumedVariableName = "consumed", TokensConsumedHeaderName = "X-Tokens"
+                        CounterKey = "cache-pipeline",
+                        EstimatePromptToken = false,
+                        TokensPerMinute = 10,
+                        TokensConsumedVariableName = "consumed",
+                        TokensConsumedHeaderName = "X-Tokens"
                     });
                     section.CacheValue(new CacheValueConfig { Key = "key", VariableName = "result" }, () =>
                     {
@@ -167,8 +469,11 @@ public class PolicyPipelineTests
         var tokens = new TokenLimitCounterStore();
         var config = new TokenLimitConfig
         {
-            CounterKey = "pipeline", EstimatePromptToken = false, TokensPerMinute = 10,
-            TokensConsumedVariableName = "consumed", TokensConsumedHeaderName = "X-Tokens"
+            CounterKey = "pipeline",
+            EstimatePromptToken = false,
+            TokensPerMinute = 10,
+            TokensConsumedVariableName = "consumed",
+            TokensConsumedHeaderName = "X-Tokens"
         };
         var final = "{\"answer\":\"caf\u00e9\"}";
         var pipeline = PolicyPipelineBuilder.Create()
@@ -253,8 +558,11 @@ public class PolicyPipelineTests
                 {
                     var config = new TokenLimitConfig
                     {
-                        CounterKey = "pipeline", EstimatePromptToken = false, TokensPerMinute = 10,
-                        TokensConsumedVariableName = "consumed", TokensConsumedHeaderName = "X-Tokens"
+                        CounterKey = "pipeline",
+                        EstimatePromptToken = false,
+                        TokensPerMinute = 10,
+                        TokensConsumedVariableName = "consumed",
+                        TokensConsumedHeaderName = "X-Tokens"
                     };
                     if (azure) section.AzureOpenAiTokenLimit(config);
                     else section.LlmTokenLimit(config);

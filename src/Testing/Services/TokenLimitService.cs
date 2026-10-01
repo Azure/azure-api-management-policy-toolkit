@@ -21,6 +21,8 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 /// Remaining/consumed variables are Int64; retry seconds are Int32. Actual consumed outputs
 /// are published at backend observation, before outbound. Counters settle only at completion.
 /// Provisional consumed variables are the prompt estimate, or zero.
+/// Generated headers survive backend forwarding and are restored before usage observation;
+/// subsequent explicit response-header overrides and removals are respected.
 /// JSON usage takes precedence over ILlmTokenUsageProvider. Both actual prompt and completion
 /// counts are required after backend participation, including explicit observed zero for failures.
 /// Body formatting alone does not replace observed usage. Manual backend fixtures may supply
@@ -551,7 +553,7 @@ public sealed class TokenLimitService
     };
 
     private void WriteHeader(string? name, long value) =>
-        ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, name, value);
+        PolicyResponseHeaderOverlay.SetNumericHeader(_context, name, value, typeof(TokenLimitService));
 
     private void WriteVariable(string? name, object value)
     {

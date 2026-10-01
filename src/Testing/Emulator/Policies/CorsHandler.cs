@@ -4,6 +4,7 @@
 using System.Globalization;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -25,6 +26,7 @@ internal class CorsHandler : PolicyHandler<CorsConfig>
     protected override void Handle(GatewayContext context, CorsConfig config)
     {
         var terminateUnmatched = ValidateConfig(config);
+        PolicyResponseHeaderOverlay.RemoveGeneratedHeaders(context, typeof(CorsHandler));
         if (!HasHeader(context.Request.Headers, "Origin"))
         {
             return;
@@ -42,16 +44,30 @@ internal class CorsHandler : PolicyHandler<CorsConfig>
         if (!preflight)
         {
             var exposedHeaders = ExposedHeaders(context, config);
-            foreach (var name in context.Response.Headers.Keys.Where(s_responseHeaders.Contains).ToArray())
+            foreach (var name in s_responseHeaders)
             {
-                context.Response.Headers.Remove(name);
+                ResponseHeaderUtilities.RemoveCaseVariants(context.Response.Headers, name);
             }
 
-            context.Response.Headers["Access-Control-Allow-Origin"] = [allowedOrigin];
+            PolicyResponseHeaderOverlay.SetHeader(context, "Access-Control-Allow-Origin", [allowedOrigin], typeof(CorsHandler));
             AddCredentials(context, config);
-            if (exposedHeaders.Length > 0)
+            if (config.AllowCredentials == true
+                && config.ExposeHeaders is { } configured
+                && configured.Contains("*", StringComparer.Ordinal))
             {
-                context.Response.Headers["Access-Control-Expose-Headers"] = [string.Join(",", exposedHeaders)];
+                var declared = configured.ToArray();
+                PolicyResponseHeaderOverlay.SetDeferredHeader(context, "Access-Control-Expose-Headers",
+                    exposedHeaders.Length == 0 ? [] : [string.Join(",", exposedHeaders)], typeof(CorsHandler),
+                    headers =>
+                    {
+                        var actual = ExpandExposedHeaders(headers.Keys, declared);
+                        return actual.Length == 0 ? [] : [string.Join(",", actual)];
+                    });
+            }
+            else if (exposedHeaders.Length > 0)
+            {
+                PolicyResponseHeaderOverlay.SetHeader(context, "Access-Control-Expose-Headers",
+                    [string.Join(",", exposedHeaders)], typeof(CorsHandler));
             }
             return;
         }
@@ -71,23 +87,24 @@ internal class CorsHandler : PolicyHandler<CorsConfig>
         }
 
         ResponseUtilities.Overwrite(context.Response, 200, "OK");
-        context.Response.Headers["Access-Control-Allow-Origin"] = [allowedOrigin];
+        PolicyResponseHeaderOverlay.SetHeader(context, "Access-Control-Allow-Origin", [allowedOrigin], typeof(CorsHandler));
         AddCredentials(context, config);
-        context.Response.Headers["Access-Control-Allow-Methods"] =
-            [methods.Contains("*", StringComparer.Ordinal) ? requestedMethods[0] : string.Join(",", methods)];
+        PolicyResponseHeaderOverlay.SetHeader(context, "Access-Control-Allow-Methods",
+            [methods.Contains("*", StringComparer.Ordinal) ? requestedMethods[0] : string.Join(",", methods)], typeof(CorsHandler));
 
         var allowedHeaders = config.AllowedHeaders.Contains("*", StringComparer.Ordinal)
             ? requestedHeaders
             : config.AllowedHeaders;
         if (allowedHeaders.Length > 0)
         {
-            context.Response.Headers["Access-Control-Allow-Headers"] = [string.Join(",", allowedHeaders)];
+            PolicyResponseHeaderOverlay.SetHeader(context, "Access-Control-Allow-Headers",
+                [string.Join(",", allowedHeaders)], typeof(CorsHandler));
         }
 
         if (config.PreflightResultMaxAge is not null)
         {
-            context.Response.Headers["Access-Control-Max-Age"] =
-                [config.PreflightResultMaxAge.Value.ToString(CultureInfo.InvariantCulture)];
+            PolicyResponseHeaderOverlay.SetHeader(context, "Access-Control-Max-Age",
+                [config.PreflightResultMaxAge.Value.ToString(CultureInfo.InvariantCulture)], typeof(CorsHandler));
         }
 
         throw new FinishSectionProcessingException();
@@ -258,18 +275,21 @@ internal class CorsHandler : PolicyHandler<CorsConfig>
             return exposed;
         }
 
-        return exposed.Where(name => name != "*")
-            .Concat(context.Response.Headers.Keys.Where(name => !s_responseHeaders.Contains(name)))
+        return ExpandExposedHeaders(context.Response.Headers.Keys, exposed);
+    }
+
+    private static string[] ExpandExposedHeaders(IEnumerable<string> names, string[] exposed) =>
+        exposed.Where(name => name != "*")
+            .Concat(names.Where(name => !s_responseHeaders.Contains(name)))
             .Where(name => !string.Equals(name, "Set-Cookie", StringComparison.OrdinalIgnoreCase)
                            && !string.Equals(name, "Set-Cookie2", StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-    }
 
     private static void AddCredentials(GatewayContext context, CorsConfig config)
     {
         if (config.AllowCredentials == true)
         {
-            context.Response.Headers["Access-Control-Allow-Credentials"] = ["true"];
+            PolicyResponseHeaderOverlay.SetHeader(context, "Access-Control-Allow-Credentials", ["true"], typeof(CorsHandler));
         }
     }
 

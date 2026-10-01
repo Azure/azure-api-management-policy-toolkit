@@ -27,6 +27,8 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 /// Multi-scope provider calls and a concurrent local admission cannot be rolled back remotely.
 /// Expression values are already materialized by the authored C# invocation;
 /// IncrementAfterResponse defers counting, not re-evaluation of those scalar values.
+/// Generated response headers survive backend forwarding, while subsequent explicit
+/// response-header overrides and removals remain authoritative.
 /// </remarks>
 public sealed class PolicyCounterService
 {
@@ -307,13 +309,14 @@ public sealed class PolicyCounterService
             }
 
             ResponseHeaderUtilities.RemoveCaseVariants(_context.Response.Headers, output.RetryAfterHeaderName ?? "Retry-After");
+            PolicyResponseHeaderOverlay.ForgetHeader(_context, output.RetryAfterHeaderName ?? "Retry-After");
             _context.ResponseTerminated = false;
         }
 
         var remaining = result.Allowed ? result.RemainingCalls : 0;
         if (writeHeaders && output.RemainingCallsHeaderName is not null)
         {
-            ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, output.RemainingCallsHeaderName, remaining);
+            WriteHeader(output.RemainingCallsHeaderName, remaining);
         }
 
         if (output.RemainingCallsVariableName is not null)
@@ -323,7 +326,7 @@ public sealed class PolicyCounterService
 
         if (writeHeaders && output.TotalCallsHeaderName is not null)
         {
-            ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, output.TotalCallsHeaderName, output.Calls);
+            WriteHeader(output.TotalCallsHeaderName, output.Calls);
         }
 
         if (output.RetryAfterVariableName is not null)
@@ -333,7 +336,7 @@ public sealed class PolicyCounterService
 
         if (!result.Allowed)
         {
-            ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, output.RetryAfterHeaderName ?? "Retry-After", result.RetryAfter);
+            WriteHeader(output.RetryAfterHeaderName ?? "Retry-After", result.RetryAfter);
             throw new FinishSectionProcessingException();
         }
     }
@@ -349,11 +352,14 @@ public sealed class PolicyCounterService
         _context.ResponseTerminated = true;
         if (result.RetryAfter > 0)
         {
-            ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, "Retry-After", result.RetryAfter);
+            WriteHeader("Retry-After", result.RetryAfter);
         }
 
         throw new FinishSectionProcessingException();
     }
+
+    private void WriteHeader(string? name, long value) =>
+        PolicyResponseHeaderOverlay.SetNumericHeader(_context, name, value, typeof(PolicyCounterService));
 
     internal static long GetMessageLength(MockMessage message)
     {

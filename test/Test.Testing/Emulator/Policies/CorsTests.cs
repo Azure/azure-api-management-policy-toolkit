@@ -5,6 +5,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Test.Emulator.Emulator.Policies;
 
@@ -802,6 +803,149 @@ public class CorsTests
         test.Context.ResponseTerminated.Should().BeFalse();
     }
 
+    [TestMethod]
+    [DataRow("no-origin", false)]
+    [DataRow("no-origin", true)]
+    [DataRow("unmatched-origin", false)]
+    [DataRow("unmatched-origin", true)]
+    [DataRow("unmatched-method", false)]
+    [DataRow("unmatched-method", true)]
+    [DataRow("unmatched-header", false)]
+    [DataRow("unmatched-header", true)]
+    public void Cors_LaterNoMatchRemovesOnlyItsEarlierGeneratedOutputs(string unmatched, bool ignoreCase)
+    {
+        var test = CreateTest(DefaultConfig() with { AllowCredentials = true, ExposeHeaders = ["X-Visible"] });
+        var headers = new Dictionary<string, string[]>(
+            ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        test.Context.Response.Headers = headers;
+        test.Context.Request.Headers["Origin"] = [Origin];
+        test.RunInbound();
+        headers["X-Unrelated"] = ["keep"];
+        switch (unmatched)
+        {
+            case "no-origin":
+                test.Context.Request.Headers.Remove("Origin");
+                break;
+            case "unmatched-origin":
+                test.Context.Request.Headers["Origin"] = ["https://denied.example"];
+                break;
+            case "unmatched-method":
+                SeedPreflight(test.Context, method: "DELETE");
+                break;
+            case "unmatched-header":
+                SeedPreflight(test.Context, headers: ["X-Not-Allowed"]);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(unmatched));
+        }
+        var reconfigured = new TestDocument(CreateDocument(DefaultConfig() with
+        {
+            TerminateUnmatchedRequest = "false"
+        }))
+        { Context = test.Context };
+
+        reconfigured.RunInbound();
+
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        AssertNoCorsHeaders(test.Context);
+        headers["X-Unrelated"].Should().Equal("keep");
+        test.Context.ResponseTerminated.Should().BeFalse();
+        test.Context.Services.Register<IHttpClient>(StubHttpClient.Ok("backend"));
+        new TestDocument(new ForwardRequestTests.HeaderFlowDocument()) { Context = test.Context }.RunBackend();
+        AssertNoCorsHeaders(test.Context);
+        headers.Should().NotContainKey("X-Unrelated");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void Cors_ReconfigurationDoesNotRestoreObsoleteCredentialsOrExposedHeaders(bool ignoreCase)
+    {
+        var test = CreateTest(DefaultConfig() with { AllowCredentials = true, ExposeHeaders = ["X-Old"] });
+        var headers = new Dictionary<string, string[]>(
+            ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        test.Context.Response.Headers = headers;
+        test.Context.Request.Headers["Origin"] = [Origin];
+        test.RunInbound();
+        new TestDocument(CreateDocument(DefaultConfig())) { Context = test.Context }.RunInbound();
+        test.Context.Services.Register<IHttpClient>(StubHttpClient.Ok("backend"));
+
+        new TestDocument(new ForwardRequestTests.HeaderFlowDocument()) { Context = test.Context }.RunBackend();
+
+        headers["Access-Control-Allow-Origin"].Should().Equal(Origin);
+        headers.Should().NotContainKeys("Access-Control-Allow-Credentials", "Access-Control-Expose-Headers");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void Cors_NoMatchDoesNotClaimUnregisteredMockedCorsHeaders(bool noOrigin)
+    {
+        var test = CreateTest(DefaultConfig() with { TerminateUnmatchedRequest = "false" });
+        test.Context.Response.Headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["access-control-allow-origin"] = ["unregistered"],
+            ["Access-Control-Allow-Credentials"] = ["unregistered"]
+        };
+        if (!noOrigin) test.Context.Request.Headers["Origin"] = ["https://denied.example"];
+
+        test.RunInbound();
+
+        test.Context.Response.Headers["access-control-allow-origin"].Should().Equal("unregistered");
+        test.Context.Response.Headers["Access-Control-Allow-Credentials"].Should().Equal("unregistered");
+        test.Context.Services.Register<IHttpClient>(StubHttpClient.Ok("backend"));
+        new TestDocument(new ForwardRequestTests.HeaderFlowDocument()) { Context = test.Context }.RunBackend();
+        AssertNoCorsHeaders(test.Context);
+    }
+
+    [TestMethod]
+    public void Cors_NoMatchDoesNotRemoveAnotherPolicyOutputThatReplacedItsHeader()
+    {
+        var test = new ForwardRequestTests.HeaderFlowDocument(context =>
+        {
+            context.Cors(DefaultConfig());
+            context.RateLimitByKey(new RateLimitByKeyConfig
+            {
+                CounterKey = "cors-name",
+                Calls = 10,
+                RenewalPeriod = 60,
+                RemainingCallsHeaderName = "Access-Control-Allow-Origin"
+            });
+        }).AsTestDocument();
+        test.Context.Request.Headers["Origin"] = [Origin];
+        test.RunInbound();
+        test.Context.Request.Headers.Remove("Origin");
+        new TestDocument(CreateDocument(DefaultConfig())) { Context = test.Context }.RunInbound();
+        test.Context.Services.Register<IHttpClient>(StubHttpClient.Ok());
+
+        test.RunBackend();
+
+        test.Context.Response.Headers["Access-Control-Allow-Origin"].Should().Equal("9");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void Cors_TerminalPreflightNeverInvokesTransportWithRegisteredHeaders(bool unmatched)
+    {
+        var forwarded = 0;
+        var test = new ForwardRequestTests.HeaderFlowDocument(context => context.Cors(DefaultConfig())).AsTestDocument();
+        SeedPreflight(test.Context, origin: unmatched ? "https://denied.example" : Origin);
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient((_, _) =>
+        {
+            forwarded++;
+            throw new InvalidOperationException("A terminal preflight must not forward.");
+        }));
+
+        test.RunAll();
+
+        forwarded.Should().Be(0);
+        test.Context.ResponseTerminated.Should().BeTrue();
+        test.Context.Response.StatusCode.Should().Be(200);
+        if (unmatched) AssertNoCorsHeaders(test.Context);
+        else test.Context.Response.Headers["Access-Control-Allow-Origin"].Should().Equal(Origin);
+    }
+
     private static CorsConfig DefaultConfig() => new()
     {
         AllowedOrigins = [Origin],
@@ -858,5 +1002,35 @@ public class CorsTests
     private sealed class CorsFragment : IFragment
     {
         public void Fragment(IFragmentContext context) => context.Cors(DefaultConfig());
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void Cors_StandaloneCredentialedWildcardPreservesImmediateExpansionAndEmptyAbsence(bool seeded)
+    {
+        var test = CreateTest(DefaultConfig() with { AllowCredentials = true, ExposeHeaders = ["*"] });
+        test.Context.Request.Headers["Origin"] = [Origin];
+        test.Context.Response.Headers = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        if (seeded)
+        {
+            test.Context.Response.Headers["X-Stale"] = ["old"];
+            test.Context.Response.Headers["x-stale"] = ["old-case"];
+            test.Context.Response.Headers["sEt-CoOkIe"] = ["private=1"];
+        }
+
+        test.RunInbound();
+
+        test.Context.Response.Headers["Access-Control-Allow-Origin"].Should().Equal(Origin);
+        test.Context.Response.Headers["Access-Control-Allow-Credentials"].Should().Equal("true");
+        if (seeded)
+        {
+            test.Context.Response.Headers["Access-Control-Expose-Headers"].Should().Equal("X-Stale");
+            test.Context.Response.Headers["sEt-CoOkIe"].Should().Equal("private=1");
+        }
+        else
+        {
+            test.Context.Response.Headers.Should().HaveCount(2).And.NotContainKey("Access-Control-Expose-Headers");
+        }
     }
 }

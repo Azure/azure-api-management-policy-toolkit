@@ -4,12 +4,116 @@
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Test.Emulator.Emulator.Policies;
 
 [TestClass]
 public class RemoveHeaderTests
 {
+    private static TestDocument CreateWildcardRemovalTest(bool ignoreCase, bool seeded)
+    {
+        var test = new ForwardRequestTests.HeaderFlowDocument(context => context.Cors(new CorsConfig
+        {
+            AllowedOrigins = ["https://remove.example.test"],
+            AllowedHeaders = [],
+            AllowCredentials = true,
+            ExposeHeaders = ["*"]
+        })).AsTestDocument();
+        test.Context.Request.Headers["Origin"] = ["https://remove.example.test"];
+        test.Context.Response.Headers = new Dictionary<string, string[]>(
+            ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        if (seeded) test.Context.Response.Headers["X-Stale"] = ["old"];
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient(_ =>
+        {
+            var response = new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK);
+            response.Headers.TryAddWithoutValidation("X-Actual", "backend");
+            response.Headers.TryAddWithoutValidation("Access-Control-Expose-Headers", "X-Backend-Claim");
+            return response;
+        }));
+        test.RunInbound();
+        return test;
+    }
+
+    [TestMethod]
+    [DataRow("Outbound", false, false)]
+    [DataRow("Outbound", false, true)]
+    [DataRow("Outbound", true, false)]
+    [DataRow("Outbound", true, true)]
+    [DataRow("OnError", false, false)]
+    [DataRow("OnError", false, true)]
+    [DataRow("OnError", true, false)]
+    [DataRow("OnError", true, true)]
+    public void RemoveHeader_ResponseCancelsDeferredWildcardEvenWhenExposureWasAbsent(
+        string section, bool ignoreCase, bool seeded)
+    {
+        var test = CreateWildcardRemovalTest(ignoreCase, seeded);
+        var headers = test.Context.Response.Headers;
+        var mutation = new TestDocument(new ConfigurableRemoveHeader("aCcEsS-cOnTrOl-ExPoSe-HeAdErS"))
+        { Context = test.Context };
+        HeaderQueryTestHelpers.Run(mutation, section);
+
+        test.RunBackend();
+        test.RunBackend();
+
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Keys.Should().NotContain(name => name.Equals("Access-Control-Expose-Headers", StringComparison.OrdinalIgnoreCase));
+        headers["X-Actual"].Should().Equal("backend");
+        headers["Access-Control-Allow-Origin"].Should().Equal("https://remove.example.test");
+    }
+
+    [TestMethod]
+    [DataRow("Outbound")]
+    [DataRow("OnError")]
+    public void RemoveHeader_ResponseCallbackDoesNotCancelDeferredWildcardByDefault(string section)
+    {
+        var test = CreateWildcardRemovalTest(ignoreCase: false, seeded: false);
+        var mutation = new TestDocument(new ConfigurableRemoveHeader("Access-Control-Expose-Headers"))
+        { Context = test.Context };
+        var callbacks = 0;
+        if (section == "Outbound") mutation.SetupOutbound().RemoveHeader().WithCallback((_, _) => callbacks++);
+        else mutation.SetupOnError().RemoveHeader().WithCallback((_, _) => callbacks++);
+        HeaderQueryTestHelpers.Run(mutation, section);
+
+        test.RunBackend();
+
+        callbacks.Should().Be(1);
+        test.Context.Response.Headers["Access-Control-Expose-Headers"].Single().Split(',').Should().Contain("X-Actual");
+    }
+
+    [TestMethod]
+    [DataRow("Outbound")]
+    [DataRow("OnError")]
+    public void RemoveHeader_ResponseValidationCannotCancelDeferredWildcard(string section)
+    {
+        var test = CreateWildcardRemovalTest(ignoreCase: false, seeded: false);
+        var mutation = new TestDocument(new ConfigurableRemoveHeader(" ")) { Context = test.Context };
+
+        Assert.ThrowsExactly<PolicyException>(() => HeaderQueryTestHelpers.Run(mutation, section))
+            .InnerException.Should().BeAssignableTo<ArgumentException>();
+        test.RunBackend();
+
+        test.Context.Response.Headers["Access-Control-Expose-Headers"].Single().Split(',').Should().Contain("X-Actual");
+    }
+
+    [TestMethod]
+    [DataRow("Inbound")]
+    [DataRow("Backend")]
+    [DataRow("Outbound")]
+    [DataRow("OnError")]
+    public void RemoveHeader_DoesNotCreateAnUnusedOverlayService(string section)
+    {
+        var test = new ConfigurableRemoveHeader("X-Absent").AsTestDocument();
+
+        HeaderQueryTestHelpers.Run(test, section);
+
+        var overlay = typeof(GatewayContext).Assembly.GetType(
+            "Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services.PolicyResponseHeaderOverlay", throwOnError: true)!;
+        overlay.GetMethod("Existing", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(null, [test.Context]).Should().BeNull();
+    }
+
     class SimpleRemoveHeader : IDocument
     {
         public void Inbound(IInboundContext context)

@@ -195,6 +195,8 @@ public class GatewayContext : MockExpressionContext
                 {
                     _completedLimiterRequestId = RequestId;
                 }
+
+                Services.Resolve<PolicyResponseHeaderOverlay>()?.FinalizeResponse(this);
             }
             finally
             {

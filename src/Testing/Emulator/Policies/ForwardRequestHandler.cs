@@ -14,18 +14,29 @@ internal class ForwardRequestHandler : PolicyHandlerOptionalParam<ForwardRequest
     object? IPolicyHandler.Handle(GatewayContext context, object?[]? args)
     {
         var responseVersion = context.BackendResponseVersion;
-        var result = base.Handle(context, args);
+        var config = args.ExtractOptionalArgument<ForwardRequestConfig>();
+        var callback = CallbackSetup.Find(hook => hook.Item1(context, config));
+        if (callback is not null)
+        {
+            PolicyResponseHeaderOverlay.Existing(context)?.RetireDeferredResponse();
+            callback.Item2(context, config);
+        }
+        else
+        {
+            Handle(context, config);
+        }
         if (context.BackendResponseVersion == responseVersion)
         {
             // The callback overrides transport, but its response has the same observation boundary.
             context.ObserveBackendResponse();
         }
 
-        return result;
+        return null;
     }
 
     protected override void Handle(GatewayContext context, ForwardRequestConfig? config)
     {
+        var overlay = PolicyResponseHeaderOverlay.Existing(context);
         var client = HttpPolicyTransport.GetClient(context);
         var options = HttpPolicyTransport.ForwardOptions(config);
         var (version, versionPolicy) = config?.HttpVersion switch
@@ -40,8 +51,15 @@ internal class ForwardRequestHandler : PolicyHandlerOptionalParam<ForwardRequest
         request.Version = version;
         request.VersionPolicy = versionPolicy;
         var response = HttpPolicyTransport.Send(context, client, request);
+        var policyHeaders = overlay?.Capture();
         ResponseUtilities.Copy(response, context.Response);
+        if (overlay is not null && policyHeaders is not null)
+        {
+            overlay.Apply(policyHeaders);
+        }
+
         context.ObserveBackendResponse();
+        overlay?.FinalizeDeferredHeaders();
         if (config?.FailOnErrorStatusCode == true && response.StatusCode is >= 400 and <= 599)
         {
             throw new HttpRequestException($"ForwardRequest backend returned HTTP {response.StatusCode}.",

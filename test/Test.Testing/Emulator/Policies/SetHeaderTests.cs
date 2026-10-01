@@ -13,6 +13,112 @@ namespace Test.Emulator.Emulator.Policies;
 [TestClass]
 public class SetHeaderTests
 {
+    private sealed class RepeatedResponseWrites : IDocument
+    {
+        public void Outbound(IOutboundContext context)
+        {
+            context.SetHeader("x-remaining", ["first"]);
+            context.SetHeader("X-Remaining", ["second"]);
+            context.SetHeader("x-ReMaInInG", ["last", "last"]);
+        }
+
+        public void OnError(IOnErrorContext context)
+        {
+            context.SetHeader("x-remaining", ["first"]);
+            context.SetHeader("X-Remaining", ["second"]);
+            context.SetHeader("x-ReMaInInG", ["last", "last"]);
+        }
+    }
+
+    [TestMethod]
+    [DataRow("Outbound", false)]
+    [DataRow("Outbound", true)]
+    [DataRow("OnError", false)]
+    [DataRow("OnError", true)]
+    public void SetHeader_ResponseMixedCaseWritesReplaceAllVariantsWithLastValue(string section, bool ignoreCase)
+    {
+        var comparer = ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var untouched = new[] { "keep", "keep" };
+        var headers = new Dictionary<string, string[]>(comparer)
+        {
+            ["X-Remaining"] = ["9"],
+            ["x-remaining"] = ["8"],
+            ["X-Unrelated"] = untouched
+        };
+        var test = new RepeatedResponseWrites().AsTestDocument();
+        test.Context.Response.Headers = headers;
+        test.Context.Response.Body.Content = "unchanged";
+        var body = test.Context.Response.Body;
+
+        HeaderQueryTestHelpers.Run(test, section);
+
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(comparer);
+        headers.Where(header => header.Key.Equals("X-Remaining", StringComparison.OrdinalIgnoreCase))
+            .Should().ContainSingle().Which.Value.Should().Equal("last", "last");
+        headers["X-Unrelated"].Should().BeSameAs(untouched);
+        test.Context.Response.Body.Should().BeSameAs(body);
+        body.Content.Should().Be("unchanged");
+        test.Context.Request.Headers.Should().NotContainKey("X-Remaining");
+    }
+
+    [TestMethod]
+    [DataRow("Outbound")]
+    [DataRow("OnError")]
+    public void SetHeader_ResponseCallbackStillOverridesCanonicalReplacement(string section)
+    {
+        var test = new RepeatedResponseWrites().AsTestDocument();
+        test.Context.Response.Headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["X-Remaining"] = ["9"],
+            ["x-remaining"] = ["8"]
+        };
+        Action<GatewayContext, string, string[]> callback = (context, _, _) =>
+            context.Variables["callback-count"] = context.Variables.GetValueOrDefault("callback-count", 0) is int count
+                ? count + 1 : throw new InvalidOperationException("Invalid callback count.");
+        if (section == "Outbound") test.SetupOutbound().SetHeader().WithCallback(callback);
+        else test.SetupOnError().SetHeader().WithCallback(callback);
+
+        HeaderQueryTestHelpers.Run(test, section);
+
+        test.Context.Variables["callback-count"].Should().Be(3);
+        test.Context.Response.Headers["X-Remaining"].Should().Equal("9");
+        test.Context.Response.Headers["x-remaining"].Should().Equal("8");
+    }
+
+    [TestMethod]
+    [DataRow("Outbound", false, false)]
+    [DataRow("Outbound", false, true)]
+    [DataRow("Outbound", true, false)]
+    [DataRow("Outbound", true, true)]
+    [DataRow("OnError", false, false)]
+    [DataRow("OnError", false, true)]
+    [DataRow("OnError", true, false)]
+    [DataRow("OnError", true, true)]
+    public void SetHeader_ResponseValidationPrecedesCaseVariantRemoval(
+        string section, bool ignoreCase, bool nullValues)
+    {
+        var test = new ConfigurableSetHeader(nullValues ? "x-test" : " ", nullValues ? null! : ["new"])
+            .AsTestDocument();
+        var headers = new Dictionary<string, string[]>(
+            ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+        {
+            ["X-Test"] = ["first"],
+            ["x-test"] = ["second"]
+        };
+        var previous = headers.ToArray();
+        test.Context.Response.Headers = headers;
+
+        var error = Assert.ThrowsExactly<PolicyException>(() => HeaderQueryTestHelpers.Run(test, section));
+
+        error.InnerException.Should().BeAssignableTo<ArgumentException>();
+        test.Context.Response.Headers.Should().BeSameAs(headers).And.HaveCount(previous.Length);
+        foreach (var (name, values) in previous)
+        {
+            headers[name].Should().BeSameAs(values);
+        }
+    }
+
     class SimpleSetHeader : IDocument
     {
         public void Inbound(IInboundContext context)
