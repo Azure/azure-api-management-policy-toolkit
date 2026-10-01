@@ -55,6 +55,8 @@ public class ServiceRegistry
     /// <summary>
     /// Copies all registered services to another ServiceRegistry.
     /// Existing registrations in the target are NOT overwritten.
+    /// The registry is independent, but service instances remain shared. Services used
+    /// by typed Wait branches must support concurrent calls.
     /// </summary>
     public void CopyTo(ServiceRegistry target)
     {

@@ -30,6 +30,7 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
         ArgumentNullException.ThrowIfNull(targetMethod.DeclaringType);
+        WaitBranchExecution.ValidateAccess(_context);
 
         // Policy IDs are compile-time metadata; chaining must retain this proxy.
         if (targetMethod.Name == nameof(IInboundContext.WithId))
@@ -51,17 +52,22 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
     {
         var previousHandlers = _context.CurrentSectionHandlers;
         var previousSectionName = _context.CurrentSectionName;
+        var previousMethod = _context.CurrentPolicyMethod;
         _context.CurrentSectionHandlers = _handlers;
         _context.CurrentSectionName = _sectionName;
+        _context.CurrentPolicyMethod = targetMethod;
 
         try
         {
+            WaitBranchExecution.ValidatePolicy(_context, targetMethod.Name);
             if (!_handlers.TryGetValue(targetMethod.Name, out var handler))
             {
                 throw new NotImplementedException(targetMethod.Name);
             }
 
-            return handler.Handle(_context, args);
+            var result = handler.Handle(_context, args);
+            WaitBranchExecution.ValidateAccess(_context);
+            return result;
         }
         catch (FinishSectionProcessingException termination)
         {
@@ -77,6 +83,7 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
         {
             _context.CurrentSectionHandlers = previousHandlers;
             _context.CurrentSectionName = previousSectionName;
+            _context.CurrentPolicyMethod = previousMethod;
         }
     }
 

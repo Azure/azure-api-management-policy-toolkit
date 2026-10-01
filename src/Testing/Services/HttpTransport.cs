@@ -47,14 +47,17 @@ public sealed record HttpTransportOptions
 }
 
 /// <summary>
-/// Per-context HTTP state. Register an instance to supply caller cancellation; handlers create one otherwise.
+/// Per-context transport state. Register an instance to supply caller cancellation to HTTP,
+/// cache-value lookup, and typed Wait policies; HTTP handlers create one otherwise.
 /// One-way requests are tracked rather than synchronously waiting for their responses.
 /// </summary>
 public sealed class HttpTransportState
 {
     private readonly ConcurrentQueue<Task> _pendingOneWayRequests = new();
+    private readonly object _cancellationSync = new();
+    private readonly HashSet<CancellationTokenSource> _requestCancellations = [];
 
-    /// <summary>Caller cancellation linked to every outgoing HTTP policy request.</summary>
+    /// <summary>Caller cancellation propagated to outgoing HTTP requests, cache-value lookups, and Wait branches.</summary>
     public CancellationToken CancellationToken { get; init; }
 
     /// <summary>The proxy configured by the inbound proxy policy.</summary>
@@ -65,6 +68,34 @@ public sealed class HttpTransportState
 
     /// <summary>Waits for currently tracked one-way operations and propagates their errors.</summary>
     public Task DrainAsync() => Task.WhenAll(PendingOneWayRequests);
+
+    internal HttpTransportCancellation CreateCancellation()
+    {
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
+        lock (_cancellationSync)
+        {
+            _requestCancellations.Add(cancellation);
+        }
+        return new HttpTransportCancellation(this, cancellation);
+    }
+
+    internal Task[] CancelPendingRequests()
+    {
+        lock (_cancellationSync)
+        {
+            return _requestCancellations.Select(cancellation => cancellation.CancelAsync()).ToArray();
+        }
+    }
+
+    internal void ReleaseCancellation(CancellationTokenSource cancellation)
+    {
+        // Coordinate removal with cancellation, but never block cancellation behind disposal of a linked registration.
+        lock (_cancellationSync)
+        {
+            _requestCancellations.Remove(cancellation);
+        }
+        cancellation.Dispose();
+    }
 
     internal void TrackOneWayRequest(Task operation, GatewayContext context)
     {
@@ -83,5 +114,25 @@ public sealed class HttpTransportState
         }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         _pendingOneWayRequests.Enqueue(observed);
         HttpPolicyTransport.ObserveFault(observed);
+    }
+}
+
+internal sealed class HttpTransportCancellation(
+    HttpTransportState owner, CancellationTokenSource cancellation) : IDisposable
+{
+    private int _disposed;
+
+    internal CancellationToken Token => cancellation.Token;
+
+    internal void Cancel() => cancellation.Cancel();
+
+    internal void CancelAfter(TimeSpan timeout) => cancellation.CancelAfter(timeout);
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
+        {
+            owner.ReleaseCancellation(cancellation);
+        }
     }
 }

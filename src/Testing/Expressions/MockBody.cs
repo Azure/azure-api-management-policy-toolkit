@@ -17,6 +17,8 @@ public class MockBody : IMessageBody
 
     public bool Consumed { get; private set; } = false;
 
+    internal MockBody CopyForWait() => new() { Content = Content, Consumed = Consumed };
+
     public T As<T>(bool preserveContent = false)
     {
         var content = Content ?? string.Empty;

@@ -14,6 +14,9 @@ internal static class HttpPolicyTransport
 {
     private static readonly TimeSpan s_maximumTimeout = TimeSpan.FromMilliseconds(uint.MaxValue - 1d);
 
+    public static CancellationToken GetCancellationToken(GatewayContext context) =>
+        context.Services.Resolve<HttpTransportState>()?.CancellationToken ?? CancellationToken.None;
+
     public static HttpTransportState GetState(GatewayContext context)
     {
         var state = context.Services.Resolve<HttpTransportState>();
@@ -90,7 +93,7 @@ internal static class HttpPolicyTransport
 
     private static async Task<MockResponse> SendAsync(GatewayContext context, IHttpClient client, HttpRequestMessage request)
     {
-        CancellationTokenSource? cancellation = null;
+        HttpTransportCancellation? cancellation = null;
         Task<HttpResponseMessage>? pending = null;
         HttpResponseMessage? response = null;
         try
@@ -121,7 +124,7 @@ internal static class HttpPolicyTransport
 
     private static async Task SendOneWayAsync(GatewayContext context, IHttpClient client, HttpRequestMessage request)
     {
-        CancellationTokenSource? cancellation = null;
+        HttpTransportCancellation? cancellation = null;
         Task<HttpResponseMessage>? pending = null;
         HttpResponseMessage? response = null;
         try
@@ -223,10 +226,10 @@ internal static class HttpPolicyTransport
         return options;
     }
 
-    private static CancellationTokenSource CreateCancellation(GatewayContext context, HttpTransportOptions options)
+    private static HttpTransportCancellation CreateCancellation(GatewayContext context, HttpTransportOptions options)
     {
         var timeout = ValidateTimeout(options.Timeout);
-        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(GetState(context).CancellationToken);
+        var cancellation = GetState(context).CreateCancellation();
         if (timeout == TimeSpan.Zero)
         {
             cancellation.Cancel();
@@ -255,7 +258,7 @@ internal static class HttpPolicyTransport
         Task<HttpResponseMessage>? pending,
         HttpResponseMessage? response,
         HttpRequestMessage request,
-        CancellationTokenSource? cancellation)
+        HttpTransportCancellation? cancellation)
     {
         if (pending is { IsCompleted: false })
         {
@@ -279,7 +282,7 @@ internal static class HttpPolicyTransport
         Task<HttpResponseMessage>? pending,
         HttpResponseMessage? response,
         HttpRequestMessage request,
-        CancellationTokenSource? cancellation)
+        HttpTransportCancellation? cancellation)
     {
         try
         {

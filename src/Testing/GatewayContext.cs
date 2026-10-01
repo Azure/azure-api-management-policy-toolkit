@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -48,6 +49,8 @@ public class GatewayContext : MockExpressionContext
 
     internal string? CurrentSectionName { get; set; }
 
+    internal MethodInfo? CurrentPolicyMethod { get; set; }
+
     internal bool BackendResponseReceived => _backendResponseRequestId == RequestId;
     internal bool BackendExecutionFailed => _backendFailureRequestId == RequestId;
     internal long BackendResponseVersion => _backendResponseVersion;
@@ -75,6 +78,7 @@ public class GatewayContext : MockExpressionContext
     /// When set, authentication-managed-identity handler uses this function
     /// to generate tokens instead of the default JWT generator.
     /// Parameters: (resourceId, clientId) → token string.
+    /// Typed Wait branches share this provider, so it must support concurrent calls.
     /// </summary>
     public Func<string, string?, string>? ManagedIdentityTokenProvider { get; set; }
 
@@ -276,6 +280,7 @@ public class GatewayContext : MockExpressionContext
 
     private void EnterExecution()
     {
+        WaitBranchExecution.ValidateAccess(this);
         if (!Monitor.TryEnter(_executionSync))
         {
             throw new InvalidOperationException(

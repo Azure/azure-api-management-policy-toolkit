@@ -26,6 +26,8 @@ internal class CacheLookupValueHandler : PolicyHandler<CacheLookupValueConfig>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(config.Key);
         ArgumentException.ThrowIfNullOrWhiteSpace(config.VariableName);
+        var cancellationToken = HttpPolicyTransport.GetCancellationToken(context);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var fromSetup = ValueSetup.Find(tuple => tuple.Item1(context, config));
         if (fromSetup is not null)
@@ -41,7 +43,11 @@ internal class CacheLookupValueHandler : PolicyHandler<CacheLookupValueConfig>
             return;
         }
 
-        var cached = cache.GetAsync(config.Key).GetAwaiter().GetResult();
+        var pending = cache.GetAsync(config.Key, cancellationToken)
+            ?? throw new InvalidOperationException("ICache returned a null lookup task.");
+        HttpPolicyTransport.ObserveFault(pending);
+        var cached = pending.WaitAsync(cancellationToken).GetAwaiter().GetResult();
+        cancellationToken.ThrowIfCancellationRequested();
         CachePolicyServices.SetVariable(context, config.VariableName, cached ?? config.DefaultValue);
     }
 }

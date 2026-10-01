@@ -1,0 +1,73 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
+
+namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+
+internal sealed class WaitBranchExecution : IDisposable
+{
+    private static readonly AsyncLocal<WaitBranchExecution?> s_current = new();
+    private readonly WaitBranchExecution? _previous;
+    private readonly GatewayContext _context;
+    private readonly CancellationToken _cancellationToken;
+    private readonly HttpTransportState _transport;
+    private int _completed;
+
+    public WaitBranchExecution(GatewayContext context, CancellationToken cancellationToken)
+    {
+        _context = context;
+        _cancellationToken = cancellationToken;
+        _transport = context.Services.Resolve<HttpTransportState>()
+            ?? throw new InvalidOperationException("Wait branch requires its own transport cancellation state.");
+        _previous = s_current.Value;
+        s_current.Value = this;
+    }
+
+    internal static bool IsExecuting(GatewayContext context) =>
+        s_current.Value is { } execution && ReferenceEquals(execution._context, context);
+
+    internal static void ValidateAccess(GatewayContext context)
+    {
+        if (s_current.Value is not { } execution)
+        {
+            return;
+        }
+        if (!ReferenceEquals(execution._context, context))
+        {
+            throw new InvalidOperationException(
+                "A wait branch must use its supplied section proxy, not a captured outer gateway context or proxy.");
+        }
+        if (Volatile.Read(ref execution._completed) != 0)
+        {
+            throw new InvalidOperationException("The wait branch has completed; its proxy can no longer execute.");
+        }
+        if (!ReferenceEquals(context.Services.Resolve<HttpTransportState>(), execution._transport))
+        {
+            throw new NotSupportedException(
+                "A Wait branch cannot replace its owned HttpTransportState or cancellation token. " +
+                "Configure caller cancellation before executing Wait.");
+        }
+        execution._cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    internal static void ValidatePolicy(GatewayContext context, string policy)
+    {
+        ValidateAccess(context);
+        if (IsExecuting(context) && policy is not
+            (nameof(IInboundContext.SendRequest) or nameof(IInboundContext.CacheLookupValue)))
+        {
+            throw new NotSupportedException(
+                $"Wait branch policy '{policy}' is not supported. Branch delegates may execute SendRequest and " +
+                "CacheLookupValue, including conditional choose logic. Other policies cannot be faithfully " +
+                "executed against an isolated parallel gateway context.");
+        }
+    }
+
+    public void Dispose()
+    {
+        Interlocked.Exchange(ref _completed, 1);
+        s_current.Value = _previous;
+    }
+}

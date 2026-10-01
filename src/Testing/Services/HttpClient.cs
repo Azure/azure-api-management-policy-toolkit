@@ -12,6 +12,7 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 /// String requests honor the effective Content-Type charset, while explicit byte arrays are not transcoded.
 /// Response payloads use the emulator's UTF-8 text representation with normalized Content-Length.
 /// HEAD and other bodyless responses preserve valid representation lengths rather than generating payload lengths.
+/// Typed Wait branches share the injected client; implementations and their callbacks must support concurrent calls.
 /// </summary>
 public interface IHttpClient
 {

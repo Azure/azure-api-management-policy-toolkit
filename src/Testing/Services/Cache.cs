@@ -58,6 +58,10 @@ public sealed class CacheValueFactoryResult
     public TimeSpan RefreshAfter { get; }
 }
 
+/// <summary>
+/// Injectable cache operations. Typed Wait branches share registered cache services;
+/// implementations must support concurrent lookups and honor the supplied cancellation token.
+/// </summary>
 public interface ICache
 {
     /// <summary>Returns null for a missing or expired entry.</summary>

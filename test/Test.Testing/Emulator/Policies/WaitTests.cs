@@ -11,7 +11,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 namespace Test.Emulator.Emulator.Policies;
 
 [TestClass]
-public class WaitTests
+public partial class WaitTests
 {
     [TestMethod]
     [DataRow(nameof(IInboundContext), null)]
@@ -401,6 +401,7 @@ public class WaitTests
         }
     }
 
+#pragma warning disable CS0618
     private class WaitDocument(string? waitFor) : IDocument
     {
         public int Executions { get; private set; }
@@ -498,4 +499,5 @@ public class WaitTests
         public void Outbound(IOutboundContext context) { }
         public void OnError(IOnErrorContext context) { }
     }
+#pragma warning restore CS0618
 }

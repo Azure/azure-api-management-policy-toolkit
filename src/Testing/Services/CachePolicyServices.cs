@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
@@ -94,7 +95,9 @@ internal static class CachePolicyServices
     {
         if (value is not null)
         {
-            context.Variables[variableName] = value;
+            context.Variables[variableName] = WaitBranchExecution.IsExecuting(context)
+                ? WaitContextSnapshot.CopyVariable(value)!
+                : value;
         }
         else
         {
