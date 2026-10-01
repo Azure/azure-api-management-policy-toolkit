@@ -203,6 +203,23 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void Wait_PreservesParentAndBranchPolicyIds()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait id="wait-id" for="all">
+                        <send-request id="first" response-variable-name="response" />
+                        <cache-lookup-value id="second" key="key" variable-name="cached" />
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
     [DataRow("inbound")]
     [DataRow("backend")]
     [DataRow("outbound")]
