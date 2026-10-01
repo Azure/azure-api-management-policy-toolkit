@@ -82,6 +82,14 @@ internal class GetAuthorizationContextHandler : PolicyHandler<GetAuthorizationCo
             context.Response.StatusCode = 500;
             context.Response.StatusReason = "Internal Server Error";
             context.LastError.Source = "get-authorization-context";
+            context.LastError.Section = context.CurrentSectionName switch
+            {
+                nameof(IInboundContext) => "inbound",
+                nameof(IOutboundContext) => "outbound",
+                nameof(IBackendContext) => "backend",
+                _ => throw new InvalidOperationException(
+                    "get-authorization-context requires an active inbound, outbound, or backend section.")
+            };
             context.LastError.Reason = "AuthorizationAcquisitionFailed";
             context.LastError.Message = error.Message;
             context.LastError.HttpErrorCode = 500;

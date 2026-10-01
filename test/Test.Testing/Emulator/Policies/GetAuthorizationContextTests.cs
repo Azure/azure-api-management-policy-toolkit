@@ -14,6 +14,9 @@ namespace Test.Emulator.Emulator.Policies;
 [TestClass]
 public class GetAuthorizationContextTests
 {
+    private const string AuthorizationErrorFragmentId = "authorization-section-error";
+    private const string AuthorizationWrapperFragmentId = "authorization-section-wrapper";
+
     [TestMethod]
     [DataRow("inbound")]
     [DataRow("outbound")]
@@ -276,6 +279,100 @@ public class GetAuthorizationContextTests
             .And.NotContainKey("continued");
         test.Context.Response.StatusCode.Should().Be(500);
         test.Context.LastError.HttpErrorCode.Should().Be(500);
+        test.Context.LastError.Section.Should().Be("inbound");
+    }
+
+    [TestMethod]
+    [DataRow("inbound", nameof(IInboundContext), false)]
+    [DataRow("outbound", nameof(IOutboundContext), false)]
+    [DataRow("backend", nameof(IBackendContext), false)]
+    [DataRow("inbound", nameof(IInboundContext), true)]
+    [DataRow("outbound", nameof(IOutboundContext), true)]
+    [DataRow("backend", nameof(IBackendContext), true)]
+    public void GetAuthorizationContext_OnErrorReadsExecutingSection(
+        string section, string exceptionSection, bool staleSection)
+    {
+        var document = new AuthorizationErrorDocument(section);
+        var test = document.AsTestDocument();
+        var failure = new HttpRequestException("authorization unavailable");
+        test.Context.Services.Register<IAuthorizationProvider>(new FaultedAuthorizationProvider(failure));
+
+        AssertFailureSection(test, document, failure, section, exceptionSection, staleSection);
+    }
+
+    [TestMethod]
+    [DataRow("inbound", nameof(IInboundContext), false)]
+    [DataRow("outbound", nameof(IOutboundContext), false)]
+    [DataRow("backend", nameof(IBackendContext), false)]
+    [DataRow("inbound", nameof(IInboundContext), true)]
+    [DataRow("outbound", nameof(IOutboundContext), true)]
+    [DataRow("backend", nameof(IBackendContext), true)]
+    public void GetAuthorizationContext_FragmentFailureOnErrorReadsCallerSection(
+        string section, string exceptionSection, bool nested)
+    {
+        var document = new AuthorizationErrorDocument(
+            section, nested ? AuthorizationWrapperFragmentId : AuthorizationErrorFragmentId);
+        var test = document.AsTestDocument();
+        test.RegisterFragment(AuthorizationErrorFragmentId, new AuthorizationErrorFragment());
+        test.RegisterFragment(AuthorizationWrapperFragmentId, new AuthorizationWrapperFragment());
+        var failure = new HttpRequestException("fragment authorization unavailable");
+        test.Context.Services.Register<IAuthorizationProvider>(new FaultedAuthorizationProvider(failure));
+
+        AssertFailureSection(test, document, failure, section, exceptionSection, staleSection: true);
+    }
+
+    [TestMethod]
+    [DataRow("inbound", false)]
+    [DataRow("outbound", false)]
+    [DataRow("backend", false)]
+    [DataRow("inbound", true)]
+    [DataRow("outbound", true)]
+    [DataRow("backend", true)]
+    public void GetAuthorizationContext_IgnoreErrorPreservesExistingLastError(string section, bool fragment)
+    {
+        var document = new AuthorizationErrorDocument(
+            section, fragment ? AuthorizationErrorFragmentId : null, ignoreError: true);
+        var test = document.AsTestDocument();
+        test.RegisterFragment(AuthorizationErrorFragmentId, new AuthorizationErrorFragment(ignoreError: true));
+        test.Context.Services.Register<IAuthorizationProvider>(
+            new FaultedAuthorizationProvider(new HttpRequestException("authorization unavailable")));
+        SeedLastError(test, staleSection: true);
+        var lastError = test.Context.LastError;
+        test.Context.Variables["authorization"] = CreateAuthorization("stale-token");
+        test.Context.Response.StatusCode = 202;
+        test.Context.Response.StatusReason = "Accepted";
+
+        Run(test, section);
+
+        test.Context.LastError.Should().BeSameAs(lastError);
+        AssertUnchangedLastError(test);
+        test.Context.Variables.Should().ContainKey("authorization").WhoseValue.Should().BeNull();
+        test.Context.Variables.Should().Contain("continued", true);
+        if (fragment)
+        {
+            test.Context.Variables.Should().Contain("fragment-continued", true);
+        }
+        test.Context.Response.StatusCode.Should().Be(202);
+        test.Context.Response.StatusReason.Should().Be("Accepted");
+    }
+
+    [TestMethod]
+    [DataRow("inbound")]
+    [DataRow("outbound")]
+    [DataRow("backend")]
+    public void GetAuthorizationContext_SuccessPreservesExistingLastError(string section)
+    {
+        var authorization = CreateAuthorization();
+        var test = CreateTest(CreateConfig(), section);
+        test.Context.Services.Register<IAuthorizationProvider>(new RecordingAuthorizationProvider(_ => authorization));
+        SeedLastError(test, staleSection: true);
+        var lastError = test.Context.LastError;
+
+        Run(test, section);
+
+        test.Context.LastError.Should().BeSameAs(lastError);
+        AssertUnchangedLastError(test);
+        test.Context.Variables["authorization"].Should().BeSameAs(authorization);
     }
 
     [TestMethod]
@@ -511,6 +608,68 @@ public class GetAuthorizationContextTests
         test.Context.Variables.Should().Contain("continued", true);
     }
 
+    private static void AssertFailureSection(
+        TestDocument test, AuthorizationErrorDocument document, Exception failure,
+        string section, string exceptionSection, bool staleSection)
+    {
+        SeedLastError(test, staleSection);
+        var lastError = test.Context.LastError;
+        test.Context.Response.StatusCode = 202;
+
+        var error = Assert.ThrowsExactly<PolicyException>(() => Run(test, section));
+        test.RunOnError();
+
+        test.Context.LastError.Section.Should().Be(section);
+        document.ObservedErrorSection.Should().Be(section);
+        test.Context.LastError.Should().BeSameAs(lastError);
+        test.Context.LastError.Source.Should().Be("get-authorization-context");
+        test.Context.LastError.Reason.Should().Be("AuthorizationAcquisitionFailed");
+        test.Context.LastError.Message.Should().Be(failure.Message);
+        test.Context.LastError.HttpErrorCode.Should().Be(500);
+        test.Context.LastError.Scope.Should().Be("api");
+        test.Context.LastError.Path.Should().Be("choose[2]\\when[1]");
+        test.Context.LastError.PolicyId.Should().Be("authorization-policy");
+        error.Policy.Should().Be(nameof(IInboundContext.GetAuthorizationContext));
+        error.Section.Should().Be(exceptionSection);
+        error.InnerException.Should().BeSameAs(failure);
+        test.Context.Response.StatusCode.Should().Be(500);
+        test.Context.Response.StatusReason.Should().Be("Internal Server Error");
+        test.Context.Variables.Should().Contain("error-source", "get-authorization-context")
+            .And.Contain("error-reason", "AuthorizationAcquisitionFailed")
+            .And.Contain("error-message", failure.Message)
+            .And.Contain("error-status-code", 500);
+        test.Context.Variables.Should().NotContainKeys("authorization", "continued", "fragment-continued");
+    }
+
+    private static void SeedLastError(TestDocument test, bool staleSection)
+    {
+        var error = test.Context.LastError;
+        error.Source = "prior-source";
+        error.Reason = "prior-reason";
+        error.Message = "prior-message";
+        error.HttpErrorCode = 418;
+        error.Scope = "api";
+        error.Path = "choose[2]\\when[1]";
+        error.PolicyId = "authorization-policy";
+        if (staleSection)
+        {
+            error.Section = "on-error";
+        }
+    }
+
+    private static void AssertUnchangedLastError(TestDocument test)
+    {
+        var error = test.Context.LastError;
+        error.Section.Should().Be("on-error");
+        error.Source.Should().Be("prior-source");
+        error.Reason.Should().Be("prior-reason");
+        error.Message.Should().Be("prior-message");
+        error.HttpErrorCode.Should().Be(418);
+        error.Scope.Should().Be("api");
+        error.Path.Should().Be("choose[2]\\when[1]");
+        error.PolicyId.Should().Be("authorization-policy");
+    }
+
     private static SecurityTokenException CreateTokenValidationFailure(string exceptionType) => exceptionType switch
     {
         nameof(SecurityTokenException) => new SecurityTokenException("identity validation failed"),
@@ -633,22 +792,78 @@ public class GetAuthorizationContextTests
         }
     }
 
-    private sealed class AuthorizationErrorDocument : IDocument
+    private sealed class AuthorizationErrorDocument(
+        string section = "inbound", string? fragmentId = null, bool ignoreError = false) : IDocument
     {
+        private readonly GetAuthorizationContextConfig _config = CreateConfig() with { IgnoreError = ignoreError };
+
+        public string? ObservedErrorSection { get; private set; }
+
         public void Inbound(IInboundContext context)
         {
-            context.GetAuthorizationContext(CreateConfig() with { IgnoreError = false });
+            if (section != "inbound") { return; }
+            if (fragmentId is not null)
+            {
+                context.IncludeFragment(fragmentId);
+            }
+            else
+            {
+                context.GetAuthorizationContext(_config);
+            }
+            context.SetVariable("continued", true);
+        }
+
+        public void Outbound(IOutboundContext context)
+        {
+            if (section != "outbound") { return; }
+            if (fragmentId is not null)
+            {
+                context.IncludeFragment(fragmentId);
+            }
+            else
+            {
+                context.GetAuthorizationContext(_config);
+            }
+            context.SetVariable("continued", true);
+        }
+
+        public void Backend(IBackendContext context)
+        {
+            if (section != "backend") { return; }
+            if (fragmentId is not null)
+            {
+                context.IncludeFragment(fragmentId);
+            }
+            else
+            {
+                context.GetAuthorizationContext(_config);
+            }
             context.SetVariable("continued", true);
         }
 
         public void OnError(IOnErrorContext context)
         {
             var error = context.ExpressionContext.LastError;
+            ObservedErrorSection = error.Section;
             context.SetVariable("error-source", error.Source);
             context.SetVariable("error-reason", error.Reason);
             context.SetVariable("error-message", error.Message);
             context.SetVariable("error-status-code", context.ExpressionContext.Response.StatusCode);
         }
+    }
+
+    private sealed class AuthorizationErrorFragment(bool ignoreError = false) : IFragment
+    {
+        public void Fragment(IFragmentContext context)
+        {
+            context.GetAuthorizationContext(CreateConfig() with { IgnoreError = ignoreError });
+            context.SetVariable("fragment-continued", true);
+        }
+    }
+
+    private sealed class AuthorizationWrapperFragment : IFragment
+    {
+        public void Fragment(IFragmentContext context) => context.IncludeFragment(AuthorizationErrorFragmentId);
     }
 
     private sealed class MultipleAuthorizations : IDocument
