@@ -9,9 +9,9 @@
     <RootNamespace>Test.Emulator</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MSTest" Version="3.11.1" />
-    <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="FluentAssertions" Version="7.0.0" />
+    <PackageReference Include="MSTest" Version="4.4.1" />
+    <PackageReference Include="coverlet.collector" Version="10.0.1" />
+    <PackageReference Include="FluentAssertions" Version="8.11.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Testing\Testing.csproj" />
