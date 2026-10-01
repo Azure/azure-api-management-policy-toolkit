@@ -21,7 +21,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
       - name: Restore dependencies
         run: dotnet restore
       - name: Build with dotnet
@@ -55,9 +58,20 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
       - name: Create new packages
         run: dotnet pack
+      - name: Verify generated .NET 9 and .NET 10 solutions
+        shell: bash
+        run: |
+          dotnet new install ./output/Microsoft.Azure.ApiManagement.PolicyToolkit.Templates.1.0.0.nupkg
+          dotnet new policytoolkitsolution --Framework net9.0 --output ./template-net9
+          dotnet build ./template-net9
+          dotnet new policytoolkitsolution --Framework net10.0 --output ./template-net10
+          dotnet build ./template-net10
       - name: Rename example project
         working-directory: ./example
         run: mv Example.sln.example Example.sln
