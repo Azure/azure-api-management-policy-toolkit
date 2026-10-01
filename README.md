@@ -41,8 +41,32 @@ External services are modeled through injected test implementations, not live Az
 The [emulator checklist](docs/EmulatorPolicyChecklist.md) lists the 74 authored policy
 methods, their sections, behavioral tests, and verified limitations. This is not full
 APIM parity: for example, raw `InlinePolicy` XML is callback-only, `CrossDomain` does
-not serve legacy client routes, and parallel `Wait` modes fail explicitly unless
-mocked.
+not serve legacy client routes, and parallel `Wait` has a bounded branch contract.
+Use the section-typed `Wait` overload for parallel child policies:
+
+```csharp
+public void Inbound(IInboundContext context)
+{
+    context.Wait("all",
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            Url = "https://api.example.com/first",
+            ResponseVariableName = "first"
+        }),
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            Url = "https://api.example.com/second",
+            ResponseVariableName = "second"
+        }));
+}
+```
+
+Each action must contain one direct `SendRequest` or `CacheLookupValue`, or one
+`if`/`else if`/`else` chain that compiles to a single `choose` child. The analyzer
+reports invalid branch shapes and captured outer section contexts; the compiler
+enforces the same boundaries. Configure an injected `IHttpClient` or cache for
+emulator execution. The previous `Wait(Action, string?)` overload is obsolete
+but still compiles; its emulator behavior remains explicit-mock-only.
 
 For emulator contributions, run the two gates in
 [`emulator-gates.ps1`](emulator-gates.ps1) from the admission worktree:
