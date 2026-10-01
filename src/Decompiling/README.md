@@ -21,6 +21,8 @@ policy, or migrating legacy XML policies into C#-based source control workflows.
 
 ## Install
 
+The decompiler requires the .NET 10 runtime.
+
 Install the Microsoft Azure API Management Policy Toolkit decompiler CLI tool with [NuGet][nuget]:
 
 ```shell
@@ -32,13 +34,13 @@ dotnet tool install Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling
 The command name is `azure-apim-policy-decompiler`.
 
 ```shell
-azure-apim-policy-decompiler --input .\policy.xml --output .\generated
+azure-apim-policy-decompiler generate --input .\policy.xml --output .\generated
 ```
 
 Process all XML files under a folder recursively:
 
 ```shell
-azure-apim-policy-decompiler --input-dir .\policies --pattern "*.xml" --output .\generated
+azure-apim-policy-decompiler generate --input-dir .\policies --pattern "*.xml" --output .\generated
 ```
 
 Common options:

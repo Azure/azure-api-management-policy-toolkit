@@ -279,7 +279,7 @@ public class AuthenticationManagedIdentityHandlerTests
         test.SetupInbound().AuthenticationManagedIdentity().WithError("InternalServerError");
 
         // Act
-        var ex = Assert.ThrowsException<PolicyException>(() => test.RunInbound());
+        var ex = Assert.ThrowsExactly<PolicyException>(() => test.RunInbound());
 
         // Assert
         ex.Policy.Should().Be("AuthenticationManagedIdentity");
@@ -307,7 +307,7 @@ public class AuthenticationManagedIdentityHandlerTests
             .ReturnsToken("token-a");
 
         // Act
-        var ex = Assert.ThrowsException<PolicyException>(() => test.RunInbound());
+        var ex = Assert.ThrowsExactly<PolicyException>(() => test.RunInbound());
 
         // Assert
         ex.Policy.Should().Be("AuthenticationManagedIdentity");

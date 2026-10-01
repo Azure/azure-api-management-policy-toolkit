@@ -187,7 +187,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 10.0.x
 
     - name: Restore dependencies
       run: dotnet restore
@@ -255,7 +255,7 @@ steps:
   - task: UseDotNet@2
     displayName: 'Setup .NET'
     inputs:
-      version: 8.x
+      version: 10.x
       performMultiLevelLookup: true
       includePreviewVersions: true
 
@@ -302,4 +302,3 @@ You can replicate these steps in the CI/CD pipeline.
 
 We prepared a short guide to integrate the policy documents solution with APIOps.
 You can read about it in the [APIOps integration](./IntegratePolicySolutionWithApiOps.md) document.
-

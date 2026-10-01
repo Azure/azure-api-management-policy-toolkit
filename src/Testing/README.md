@@ -6,6 +6,8 @@ platform-as-a-service, API Management supports the complete API lifecycle.
 This library contains classes, implementation of authoring library interfaces and mocks which allow testing policy
 expression and policy documents wrote in C# for Microsoft Azure Api Management.
 
+The NuGet package includes assemblies for .NET 8, .NET 9, and .NET 10.
+
 ## Getting started
 
 ### Install the package
