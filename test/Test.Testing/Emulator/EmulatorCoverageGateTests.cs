@@ -67,6 +67,11 @@ public class EmulatorCoverageGateTests
 
         foreach (var section in s_pipelineSections.Append(typeof(IFragmentContext)))
         {
+            if (GetPolicyMethods(section).Count(IsSectionTypedWait) != 1)
+            {
+                failures.Add($"{section.Name} must expose exactly one branch-scoped Wait overload");
+            }
+
             var helpers = GetInterfaceMethods(section)
                 .Where(method => method.Name == nameof(IInboundContext.WithId))
                 .ToArray();
@@ -256,11 +261,32 @@ public class EmulatorCoverageGateTests
             .Distinct()
             .ToArray();
 
-    private static bool HaveSameSignature(MethodInfo first, MethodInfo second) =>
-        first.Name == second.Name
-        && first.ReturnType == second.ReturnType
-        && first.GetParameters().Select(parameter => parameter.ParameterType)
+    private static bool HaveSameSignature(MethodInfo first, MethodInfo second)
+    {
+        if (first.Name != second.Name || first.ReturnType != second.ReturnType)
+        {
+            return false;
+        }
+
+        if (IsSectionTypedWait(first) || IsSectionTypedWait(second))
+        {
+            return IsSectionTypedWait(first) && IsSectionTypedWait(second);
+        }
+
+        return first.GetParameters().Select(parameter => parameter.ParameterType)
             .SequenceEqual(second.GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
+    private static bool IsSectionTypedWait(MethodInfo method)
+    {
+        var parameters = method.GetParameters();
+        return method.Name == nameof(IInboundContext.Wait)
+            && method.DeclaringType is { } section
+            && parameters.Length == 2
+            && parameters[0].ParameterType == typeof(string)
+            && parameters[1].IsDefined(typeof(ParamArrayAttribute))
+            && parameters[1].ParameterType == typeof(Action<>).MakeGenericType(section).MakeArrayType();
+    }
 
     private static Type GetProxyType(Type section) =>
         typeof(GatewayContext).Assembly
