@@ -18,6 +18,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Testing\Testing.csproj" />
+        <ProjectReference Include="..\..\src\Core\Core.csproj" />
     </ItemGroup>
 
 </Project>

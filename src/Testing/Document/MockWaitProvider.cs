@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
@@ -51,6 +52,8 @@ public static class MockWaitProvider
     /// <summary>
     /// Configures an explicit override of a typed Wait invocation. Branch delegates are passed unchanged;
     /// this mock does not simulate parallel execution. Existing Wait() mocks apply only to the legacy overload.
+    /// This setup matches the pipeline section's delegate type. Use WaitFragmentBranches() for typed
+    /// Wait invocations inside fragments included from this section.
     /// </summary>
     public static BranchSetup<T> WaitBranches<T>(
         this MockPoliciesProvider<T> mock,
@@ -58,6 +61,20 @@ public static class MockWaitProvider
     {
         ArgumentNullException.ThrowIfNull(mock);
         return new BranchSetup<T>(predicate ?? ((_, _, _) => true),
+            mock.SectionContextProxy.GetHandler<WaitHandler>());
+    }
+
+    /// <summary>
+    /// Configures an override for typed Wait invocations inside fragments included from this setup section.
+    /// The callback receives the original Action&lt;IFragmentContext&gt; array through the calling section's
+    /// Wait handler. It does not match pipeline-typed Wait invocations or implicitly execute its branches.
+    /// </summary>
+    public static BranchSetup<IFragmentContext> WaitFragmentBranches<T>(
+        this MockPoliciesProvider<T> mock,
+        Func<GatewayContext, Action<IFragmentContext>[], string?, bool>? predicate = null) where T : class
+    {
+        ArgumentNullException.ThrowIfNull(mock);
+        return new BranchSetup<IFragmentContext>(predicate ?? ((_, _, _) => true),
             mock.SectionContextProxy.GetHandler<WaitHandler>());
     }
 
