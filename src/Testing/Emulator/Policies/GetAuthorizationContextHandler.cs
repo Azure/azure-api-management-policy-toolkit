@@ -16,7 +16,8 @@ internal class GetAuthorizationContextHandler : PolicyHandler<GetAuthorizationCo
     public List<Tuple<
         Func<GatewayContext, GetAuthorizationContextConfig, bool>,
         Func<AuthorizationRequest, Authorization>
-    >> ProvideAuthorizationHooks { get; } = [];
+    >> ProvideAuthorizationHooks
+    { get; } = [];
 
     public override string PolicyName => nameof(IInboundContext.GetAuthorizationContext);
 
@@ -57,9 +58,9 @@ internal class GetAuthorizationContextHandler : PolicyHandler<GetAuthorizationCo
                         "No IAuthorizationProvider registered. Register one via " +
                         "test.Context.Services.Register<IAuthorizationProvider>(provider) " +
                         "or configure GetAuthorizationContext().ReturnsAuthorization(...).");
-                var acquisition = provider.GetAuthorizationAsync(request)
+                var acquisition = provider.GetAuthorizationAsync(request, HttpPolicyTransport.GetCancellationToken(context))
                     ?? throw new InvalidOperationException("The authorization provider returned no acquisition task.");
-                authorization = acquisition.GetAwaiter().GetResult();
+                authorization = PolicyServiceAwaiter.Wait(context, acquisition);
             }
 
             if (authorization is null || string.IsNullOrWhiteSpace(authorization.AccessToken) || authorization.Claims is null)
@@ -67,6 +68,10 @@ internal class GetAuthorizationContextHandler : PolicyHandler<GetAuthorizationCo
                 throw new InvalidOperationException(
                     "The authorization provider must return an Authorization with a nonempty access token and nonnull claims.");
             }
+        }
+        catch (OperationCanceledException) when (HttpPolicyTransport.GetCancellationToken(context).IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception error) when (error is HttpRequestException or UnauthorizedAccessException
             or InvalidOperationException or ArgumentException or TimeoutException or OperationCanceledException

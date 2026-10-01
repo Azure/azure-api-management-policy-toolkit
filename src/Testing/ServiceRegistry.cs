@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 
 /// <summary>
@@ -63,6 +65,25 @@ public class ServiceRegistry
         foreach (var kvp in _services)
         {
             target._services.TryAdd(kvp.Key, kvp.Value);
+        }
+    }
+
+    internal void CopyForWait(GatewayContext target)
+    {
+        foreach (var registration in _services)
+        {
+            var service = registration.Value switch
+            {
+                HttpTransportState => null,
+                PolicyCounterService counters => counters.ForkForWait(target),
+                TokenLimitService tokens => tokens.ForkForWait(target),
+                PolicyResponseHeaderOverlay => null,
+                _ => registration.Value
+            };
+            if (service is not null)
+            {
+                target.Services._services.TryAdd(registration.Key, service);
+            }
         }
     }
 }

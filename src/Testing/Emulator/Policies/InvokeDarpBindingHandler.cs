@@ -79,14 +79,21 @@ internal class InvokeDarpBindingHandler : PolicyHandler<InvokeDarpBindingConfig>
             context.Variables[config.ResponseVariableName] = null!;
         }
 
-        using var cancellation = new CancellationTokenSource(request.Timeout);
+        using var cancellation = HttpPolicyTransport.GetState(context).CreateCancellation();
+        cancellation.CancelAfter(request.Timeout);
         IResponse response;
         try
         {
-            response = service.InvokeAsync(request, cancellation.Token)
-                .WaitAsync(cancellation.Token).GetAwaiter().GetResult();
+            var operation = service.InvokeAsync(request, cancellation.Token)
+                ?? throw new InvalidOperationException("The Dapr binding service returned a null task.");
+            HttpPolicyTransport.ObserveFault(operation);
+            response = operation.WaitAsync(cancellation.Token).GetAwaiter().GetResult();
         }
-        catch (OperationCanceledException error) when (cancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (HttpPolicyTransport.GetCancellationToken(context).IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException error) when (cancellation.Token.IsCancellationRequested)
         {
             var timeoutError = new TimeoutException($"{PolicyName} timed out after {timeout} seconds.", error);
             if (config.IgnoreError != true)

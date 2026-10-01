@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
@@ -13,12 +12,19 @@ internal sealed class WaitBranchExecution : IDisposable
     private readonly GatewayContext _context;
     private readonly CancellationToken _cancellationToken;
     private readonly HttpTransportState _transport;
+    private readonly Guid _requestId;
+    private readonly WaitMessageSynchronization _messages;
+    private WaitMessageSnapshot _snapshot;
     private int _completed;
 
     public WaitBranchExecution(GatewayContext context, CancellationToken cancellationToken)
     {
         _context = context;
         _cancellationToken = cancellationToken;
+        _requestId = context.RequestId;
+        _messages = context.WaitMessages
+            ?? throw new InvalidOperationException("Wait branch requires shared message synchronization.");
+        _snapshot = _messages.Capture(context);
         _transport = context.Services.Resolve<HttpTransportState>()
             ?? throw new InvalidOperationException("Wait branch requires its own transport cancellation state.");
         _previous = s_current.Value;
@@ -43,6 +49,10 @@ internal sealed class WaitBranchExecution : IDisposable
         {
             throw new InvalidOperationException("The wait branch has completed; its proxy can no longer execute.");
         }
+        if (context.RequestId != execution._requestId)
+        {
+            throw new InvalidOperationException("A Wait branch must retain its logical RequestId.");
+        }
         if (!ReferenceEquals(context.Services.Resolve<HttpTransportState>(), execution._transport))
         {
             throw new NotSupportedException(
@@ -52,22 +62,33 @@ internal sealed class WaitBranchExecution : IDisposable
         execution._cancellationToken.ThrowIfCancellationRequested();
     }
 
-    internal static void ValidatePolicy(GatewayContext context, string policy)
+    internal static void Synchronize(GatewayContext context)
     {
         ValidateAccess(context);
-        if (IsExecuting(context) && policy is not
-            (nameof(IInboundContext.SendRequest) or nameof(IInboundContext.CacheLookupValue)))
+        if (s_current.Value is { } execution)
         {
-            throw new NotSupportedException(
-                $"Wait branch policy '{policy}' is not supported. Branch delegates may execute SendRequest and " +
-                "CacheLookupValue, including conditional choose logic. Other policies cannot be faithfully " +
-                "executed against an isolated parallel gateway context.");
+            execution._snapshot = execution._messages.Synchronize(context, execution._snapshot, execution._cancellationToken);
+        }
+    }
+
+    internal static void Publish(GatewayContext context)
+    {
+        if (s_current.Value is { } execution && ReferenceEquals(execution._context, context))
+        {
+            execution._snapshot = execution._messages.Publish(context, execution._snapshot, execution._cancellationToken);
         }
     }
 
     public void Dispose()
     {
-        Interlocked.Exchange(ref _completed, 1);
-        s_current.Value = _previous;
+        try
+        {
+            Publish(_context);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _completed, 1);
+            s_current.Value = _previous;
+        }
     }
 }

@@ -22,9 +22,9 @@ internal class LlmContentSafetyHandler : PolicyHandler<LlmContentSafetyConfig>
                             $"No ILlmContentSafetyEvaluator registered for backend '{request.BackendId}'. " +
                             "Register one via test.Context.Services.Register<ILlmContentSafetyEvaluator>(evaluator) " +
                             "or Register<ILlmContentSafetyEvaluator>(backendId, evaluator).");
-        var evaluationTask = evaluator.EvaluateAsync(request)
+        var evaluationTask = evaluator.EvaluateAsync(request, HttpPolicyTransport.GetCancellationToken(context))
                              ?? throw new InvalidOperationException("The content safety evaluator returned no evaluation task.");
-        var result = evaluationTask.GetAwaiter().GetResult()
+        var result = PolicyServiceAwaiter.Wait(context, evaluationTask)
                      ?? throw new InvalidOperationException("The content safety evaluator returned no evaluation result.");
 
         ValidateEvaluationResult(request, result);

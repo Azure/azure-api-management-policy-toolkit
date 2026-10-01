@@ -270,7 +270,7 @@ public partial class WaitTests
     }
 
     [TestMethod]
-    public void TypedWait_AllMergesOnlyChangedVariablesAndPropagatesRemovals()
+    public void TypedWait_AllMergesChangedVariablesWithoutPropagatingDictionaryRemovals()
     {
         var document = new InboundWaitAction(context => context.Wait("all",
             branch => branch.CacheLookupValue(new CacheLookupValueConfig { Key = "missing", VariableName = "removed" }),
@@ -283,7 +283,7 @@ public partial class WaitTests
 
         test.RunInbound();
 
-        test.Context.Variables.Should().NotContainKey("removed");
+        test.Context.Variables["removed"].Should().Be("old");
         test.Context.Variables["changed"].Should().Be("new");
         test.Context.Variables["untouched"].Should().Be("keep");
     }
@@ -321,7 +321,7 @@ public partial class WaitTests
     }
 
     [TestMethod]
-    public void TypedWait_AllRejectsConflictingVariableOutputsWithoutChangingParent()
+    public void TypedWait_AllMergesConflictingVariableOutputsInAuthoredBranchOrder()
     {
         var document = new InboundWaitAction(context => context.Wait("all",
             branch => branch.CacheLookupValue(new CacheLookupValueConfig { Key = "one", VariableName = "same" }),
@@ -330,16 +330,13 @@ public partial class WaitTests
         test.Context.Variables["same"] = "original";
         test.SetupCacheStore().WithInternalCacheValue("one", "first").WithInternalCacheValue("two", "second");
 
-        var error = Assert.ThrowsExactly<PolicyException>(test.RunInbound);
+        test.RunInbound();
 
-        error.Policy.Should().Be(nameof(IInboundContext.Wait));
-        error.InnerException.Should().BeOfType<InvalidOperationException>();
-        error.Message.Should().Contain("same").And.Contain("conflict");
-        test.Context.Variables["same"].Should().Be("original");
+        test.Context.Variables["same"].Should().Be("second");
     }
 
     [TestMethod]
-    public void TypedWait_ChildCallbacksUseSeparateContextsAndServiceRegistries()
+    public void TypedWait_ChildCallbacksUseSeparateContextsAndRegistriesButPublishMessageEffects()
     {
         var test = new TypedWaitDocument("all").AsTestDocument();
         var contexts = new ConcurrentDictionary<string, GatewayContext>();
@@ -382,11 +379,12 @@ public partial class WaitTests
 
         contexts["first"].Should().NotBeSameAs(contexts["second"]);
         contexts["first"].Variables.Should().NotBeSameAs(contexts["second"].Variables);
-        test.Context.Request.Body.Content.Should().Be("parent");
-        test.Context.Request.Headers.Should().NotContainKey("X-Branch");
-        test.Context.Response.StatusCode.Should().Be(200);
+        test.Context.Request.Body.Content.Should().BeOneOf("first", "second");
+        test.Context.Request.Headers["X-Branch"].Single().Should().BeOneOf("first", "second");
+        test.Context.Response.StatusCode.Should().Be(503);
         test.Context.Services.Resolve<IHttpClient>().Should().BeSameAs(sharedClient);
-        originalResponse.Headers["X-Seed"].Should().Equal("original");
+        originalResponse.Headers["X-Seed"].Should().Equal("changed");
+        test.Context.Variables["seed"].Should().BeSameAs(originalResponse);
         test.Context.Variables["seed"].Should().BeOfType<MockResponse>()
             .Which.Headers["X-Seed"].Should().Equal("changed");
         test.Context.Variables["first"].Should().Be("first");
@@ -444,7 +442,7 @@ public partial class WaitTests
     }
 
     [TestMethod]
-    public async Task TypedWait_AnyDoesNotShareCommittedObjectsOrPermitLateCallbackWrites()
+    public async Task TypedWait_AnySharesWinnerVariableValuesButDoesNotPublishLateLoserMessages()
     {
         var test = new TypedWaitDocument("any").AsTestDocument();
         var firstStarted = WaitSignal<bool>();
@@ -485,14 +483,14 @@ public partial class WaitTests
 
             loser.Should().NotBeNull();
             loser!.Services.Resolve<HttpTransportState>()!.CancellationToken.IsCancellationRequested.Should().BeTrue();
-            test.Context.Variables["first"].Should().NotBeSameAs(winner);
+            test.Context.Variables["first"].Should().BeSameAs(winner);
             winner!.Headers["X-Winner"][0] = "after";
             releaseSecond.SetResult(true);
             await loserFinished.Task.WaitAsync(s_waitTimeout);
 
             test.Context.Variables.Should().NotContainKey("second");
             test.Context.Variables["first"].Should().BeOfType<MockResponse>()
-                .Which.Headers["X-Winner"].Should().Equal("before");
+                .Which.Headers["X-Winner"].Should().Equal("after");
             test.Context.Request.Body.Content.Should().Be("parent");
         }
         finally
@@ -696,23 +694,39 @@ public partial class WaitTests
     [DataRow("set-variable")]
     [DataRow("nested-wait")]
     [DataRow("include-fragment")]
-    public void TypedWait_RejectsPoliciesOutsideSupportedBranchOperations(string policy)
+    public void TypedWait_ExecutesSupportedNestedPoliciesAndPreservesTheirOwnErrors(string policy)
     {
         var test = new InboundWaitAction(context => context.Wait("all", branch =>
         {
             switch (policy)
             {
                 case "set-variable": branch.SetVariable("illegal", true); break;
-                case "nested-wait": branch.Wait("all", _ => { }); break;
+                case "nested-wait":
+                    branch.Wait("all", nested => nested.CacheLookupValue(new CacheLookupValueConfig
+                    {
+                        Key = "nested",
+                        VariableName = "nested",
+                        DefaultValue = "value"
+                    }));
+                    break;
                 case "include-fragment": branch.IncludeFragment("unknown"); break;
                 default: throw new ArgumentException("Unknown policy.", nameof(policy));
             }
         })).AsTestDocument();
 
-        var error = Assert.ThrowsExactly<PolicyException>(test.RunInbound);
-
-        error.InnerException.Should().BeOfType<NotSupportedException>();
-        test.Context.Variables.Should().NotContainKey("illegal");
+        if (policy == "include-fragment")
+        {
+            var error = Assert.ThrowsExactly<PolicyException>(test.RunInbound);
+            error.Policy.Should().Be(nameof(IInboundContext.IncludeFragment));
+            error.InnerException.Should().BeOfType<InvalidOperationException>();
+            error.Message.Should().Contain("unknown");
+        }
+        else
+        {
+            test.RunInbound();
+            test.Context.Variables[policy == "set-variable" ? "illegal" : "nested"]
+                .Should().Be(policy == "set-variable" ? true : "value");
+        }
     }
 
     [TestMethod]
@@ -742,21 +756,19 @@ public partial class WaitTests
     }
 
     [TestMethod]
-    public void TypedWait_RejectsUnsupportedMutableInputRatherThanSharingIt()
+    public void TypedWait_ShallowCopiesGatewayVariableValuesWithoutRejectingArbitraryObjects()
     {
         var test = new TypedWaitDocument("all").AsTestDocument();
-        var client = new ControlledWaitHttpClient();
-        test.Context.Services.Register<IHttpClient>(client);
+        test.SetupInbound().SendRequest().WithCallback((branch, config) =>
+            branch.Variables[config.ResponseVariableName] = branch.Variables["unsafe"]);
         var unsafeValue = new object();
         test.Context.Variables["unsafe"] = unsafeValue;
 
-        var error = Assert.ThrowsExactly<PolicyException>(test.RunInbound);
+        test.RunInbound();
 
-        error.InnerException.Should().BeOfType<NotSupportedException>();
-        error.Message.Should().Contain("isolat");
         test.Context.Variables["unsafe"].Should().BeSameAs(unsafeValue);
-        client.First.Started.Task.IsCompleted.Should().BeFalse();
-        client.Second.Started.Task.IsCompleted.Should().BeFalse();
+        test.Context.Variables["first"].Should().BeSameAs(unsafeValue);
+        test.Context.Variables["second"].Should().BeSameAs(unsafeValue);
     }
 
     [TestMethod]

@@ -84,7 +84,7 @@ internal class CacheValueHandler : IPolicyHandler
                     CachePolicyServices.ValidateTtl(expiresAfter, refreshAfter);
                     return new CacheValueFactoryResult(value, expiresAfter, refreshAfter);
                 }, cancellation),
-                forceRefresh));
+                forceRefresh, HttpPolicyTransport.GetCancellationToken(context)));
             ArgumentNullException.ThrowIfNull(result);
             CachePolicyServices.SetVariable(context, config.VariableName, result.Value ?? config.DefaultValue);
             completed = true;

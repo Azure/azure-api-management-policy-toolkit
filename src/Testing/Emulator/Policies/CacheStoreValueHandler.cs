@@ -22,7 +22,8 @@ internal class CacheStoreValueHandler : PolicyHandler<CacheStoreValueConfig>
         ArgumentNullException.ThrowIfNull(config.Value);
         ArgumentOutOfRangeException.ThrowIfNegative(config.Duration);
 
-        CachePolicyServices.ResolveRequired(context, config.CachingType)
-            .SetAsync(config.Key, config.Value, TimeSpan.FromSeconds(config.Duration)).GetAwaiter().GetResult();
+        PolicyServiceAwaiter.Wait(context, CachePolicyServices.ResolveRequired(context, config.CachingType)
+            .SetAsync(config.Key, config.Value, TimeSpan.FromSeconds(config.Duration),
+                HttpPolicyTransport.GetCancellationToken(context)));
     }
 }

@@ -19,7 +19,8 @@ internal class RetryHandler : IPolicyHandler
     public List<Tuple<
         Func<GatewayContext, RetryConfig, Action, bool>,
         Action<GatewayContext, RetryConfig, Action>
-    >> CallbackHooks { get; } = [];
+    >> CallbackHooks
+    { get; } = [];
 
     public string PolicyName => nameof(IInboundContext.Retry);
 
@@ -101,11 +102,13 @@ internal class RetryHandler : IPolicyHandler
 
     private static void Execute(GatewayContext context, RetryConfig config, Action section, int interval)
     {
+        HttpPolicyTransport.GetCancellationToken(context).ThrowIfCancellationRequested();
         section();
 
         IRetryScheduler? scheduler = null;
         for (var retry = 1; retry <= config.Count; retry++)
         {
+            HttpPolicyTransport.GetCancellationToken(context).ThrowIfCancellationRequested();
             if (!(config.ConditionEvaluator?.Invoke() ?? config.Condition))
             {
                 return;
@@ -117,6 +120,7 @@ internal class RetryHandler : IPolicyHandler
                 scheduler.Delay(GetDelay(config, interval, retry, scheduler));
             }
 
+            HttpPolicyTransport.GetCancellationToken(context).ThrowIfCancellationRequested();
             section();
         }
     }

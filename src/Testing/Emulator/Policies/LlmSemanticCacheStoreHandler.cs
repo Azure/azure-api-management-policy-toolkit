@@ -67,8 +67,9 @@ internal class LlmSemanticCacheStoreHandler : PolicyHandler<uint>, IPolicyHandle
             var value = new SemanticCachePartition(Array.AsReadOnly(entries.ToArray()));
             updated = true;
             return Task.FromResult(new CacheValueFactoryResult(value, remaining, remaining));
-        }, forceRefresh: true) ?? throw new InvalidOperationException("The external cache returned no semantic store task.");
-        var result = task.GetAwaiter().GetResult()
+        }, forceRefresh: true, ct: HttpPolicyTransport.GetCancellationToken(context))
+            ?? throw new InvalidOperationException("The external cache returned no semantic store task.");
+        var result = PolicyServiceAwaiter.Wait(context, task)
             ?? throw new InvalidOperationException("The external cache returned no semantic store result.");
         if (!updated || result.Value is not SemanticCachePartition)
         {

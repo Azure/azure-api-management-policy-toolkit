@@ -51,8 +51,9 @@ internal static class SemanticCachePolicyServices
             BackendId = config.EmbeddingsBackendId,
             Authentication = config.EmbeddingsBackendAuth,
             Prompt = prompt.Content
-        }) ?? throw new InvalidOperationException("The embedding provider returned no embedding task.");
-        var embedding = SemanticCacheVectors.Snapshot(task.GetAwaiter().GetResult());
+        }, HttpPolicyTransport.GetCancellationToken(context))
+            ?? throw new InvalidOperationException("The embedding provider returned no embedding task.");
+        var embedding = SemanticCacheVectors.Snapshot(PolicyServiceAwaiter.Wait(context, task));
         return state with { Embedding = embedding };
     }
 

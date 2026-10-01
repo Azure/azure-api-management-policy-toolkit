@@ -78,6 +78,6 @@ internal class SendServiceBusMessageHandler : PolicyHandler<SendServiceBusMessag
             "No IServiceBusMessageService registered. Register one via test.Context.Services.Register<IServiceBusMessageService>(service) " +
             "or use a policy callback override.");
 
-        service.SendAsync(request).GetAwaiter().GetResult();
+        PolicyServiceAwaiter.Wait(context, service.SendAsync(request, HttpPolicyTransport.GetCancellationToken(context)));
     }
 }

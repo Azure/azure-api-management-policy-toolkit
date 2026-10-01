@@ -47,7 +47,8 @@ internal class CacheLookupHandler : PolicyHandler<CacheLookupConfig>
             return;
         }
 
-        var cachedValue = cache.GetAsync(key).GetAwaiter().GetResult();
+        var cachedValue = PolicyServiceAwaiter.Wait(context,
+            cache.GetAsync(key, HttpPolicyTransport.GetCancellationToken(context)));
         var now = CachePolicyServices.GetTimeProvider(context, cache).GetUtcNow();
         var expiresAt = (cachedValue as CachedResponse)?.ExpiresAt;
         if (expiresAt is { } expiration && now >= expiration)

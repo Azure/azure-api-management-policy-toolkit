@@ -19,7 +19,7 @@ internal class CacheRemoveValueHandler : PolicyHandler<CacheRemoveValueConfig>
     protected override void Handle(GatewayContext context, CacheRemoveValueConfig config)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(config.Key);
-        CachePolicyServices.ResolveRequired(context, config.CachingType)
-            .RemoveAsync(config.Key).GetAwaiter().GetResult();
+        PolicyServiceAwaiter.Wait(context, CachePolicyServices.ResolveRequired(context, config.CachingType)
+            .RemoveAsync(config.Key, HttpPolicyTransport.GetCancellationToken(context)));
     }
 }

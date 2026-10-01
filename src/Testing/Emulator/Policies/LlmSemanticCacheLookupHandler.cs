@@ -27,9 +27,9 @@ internal class LlmSemanticCacheLookupHandler : PolicyHandler<SemanticCacheLookup
             return;
         }
 
-        var task = state.Cache.GetAsync(state.PartitionKey)
+        var task = state.Cache.GetAsync(state.PartitionKey, HttpPolicyTransport.GetCancellationToken(context))
             ?? throw new InvalidOperationException("The external cache returned no semantic lookup task.");
-        var partition = SemanticCachePolicyServices.ReadPartition(task.GetAwaiter().GetResult());
+        var partition = SemanticCachePolicyServices.ReadPartition(PolicyServiceAwaiter.Wait(context, task));
         var similarity = context.Services.Resolve<ISemanticCacheSimilarity>() ?? SemanticCachePolicyServices.DefaultSimilarity;
         var matches = new List<(double Distance, SemanticCacheEntry Entry)>();
         foreach (var entry in partition.Entries)

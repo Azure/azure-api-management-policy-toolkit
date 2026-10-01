@@ -67,7 +67,8 @@ internal class CacheStoreHandler : IPolicyHandler
             ExpiresAt = CachePolicyServices.GetTimeProvider(context, cache).GetUtcNow() + ttl
         };
         CachePolicyServices.SetCacheControl(snapshot.Headers, cacheControl);
-        cache.SetAsync(state.Key, snapshot, ttl).GetAwaiter().GetResult();
+        PolicyServiceAwaiter.Wait(context, cache.SetAsync(state.Key, snapshot, ttl,
+            HttpPolicyTransport.GetCancellationToken(context)));
         CachePolicyServices.SetCacheControl(context.Response.Headers, cacheControl);
     }
 

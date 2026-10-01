@@ -29,18 +29,23 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 /// IncrementAfterResponse defers counting, not re-evaluation of those scalar values.
 /// Generated response headers survive backend forwarding, while subsequent explicit
 /// response-header overrides and removals remain authoritative.
+/// Typed Wait owns one service instance per context while sharing the logical request ledger.
+/// Admissions and deferred counts are not rolled back when a branch loses or fails.
+/// Response-phase branch variable outputs are not copied to the parent after Wait completes;
+/// shared response headers and counters still settle against the final logical response.
 /// </remarks>
 public sealed class PolicyCounterService
 {
     private readonly GatewayContext _context;
-    private readonly object _sync = new();
-    private readonly Queue<Action> _rateIncrements = [];
-    private readonly Queue<Action> _responseBandwidth = [];
-    private readonly HashSet<string> _quotaCallKeys = new(StringComparer.Ordinal);
-    private readonly HashSet<string> _requestBandwidthKeys = new(StringComparer.Ordinal);
-    private readonly HashSet<string> _responseBandwidthKeys = new(StringComparer.Ordinal);
-    private Guid _requestId;
-    private bool _settling;
+    private readonly RequestState _state;
+    private object _sync => _state.Sync;
+    private Queue<DeferredRate> _rateIncrements => _state.RateIncrements;
+    private Queue<IReadOnlyList<PolicyCounterLimit>> _responseBandwidth => _state.ResponseBandwidth;
+    private HashSet<string> _quotaCallKeys => _state.QuotaCallKeys;
+    private HashSet<string> _requestBandwidthKeys => _state.RequestBandwidthKeys;
+    private HashSet<string> _responseBandwidthKeys => _state.ResponseBandwidthKeys;
+    private ref Guid _requestId => ref _state.RequestId;
+    private ref bool _settling => ref _state.Settling;
 
     /// <summary>
     /// Creates request bookkeeping for one gateway context, not shared request state.
@@ -50,8 +55,17 @@ public sealed class PolicyCounterService
     {
         ArgumentNullException.ThrowIfNull(context);
         _context = context;
+        _state = new RequestState();
         _requestId = context.RequestId;
     }
+
+    private PolicyCounterService(GatewayContext context, RequestState state)
+    {
+        _context = context;
+        _state = state;
+    }
+
+    internal PolicyCounterService ForkForWait(GatewayContext context) => new(context, _state);
 
     private RateLimitStore Store => _context.Services.Resolve<RateLimitStore>() ?? _context.RateLimitStore;
     private DateTimeOffset UtcNow => (_context.Services.Resolve<TimeProvider>() ?? TimeProvider.System).GetUtcNow();
@@ -73,7 +87,8 @@ public sealed class PolicyCounterService
             var service = context.Services.Resolve<PolicyCounterService>();
             if (service is null)
             {
-                service = new PolicyCounterService(context);
+                service = context.WaitMessages is { Owner: var owner } && !ReferenceEquals(owner, context)
+                    ? For(owner).ForkForWait(context) : new PolicyCounterService(context);
                 context.Services.Register(service);
             }
             else if (!ReferenceEquals(service._context, context))
@@ -113,7 +128,9 @@ public sealed class PolicyCounterService
                 {
                     try
                     {
-                        increment();
+                        var result = ConsumeStore(increment.Limits, increment.Calls, 0, checkLimits: false);
+                        ApplyRateLimit(result, increment.Output, writeHeaders: !result.Allowed || !_context.ResponseTerminated,
+                            writeVariables: ReferenceEquals(increment.Origin, _context));
                     }
                     catch (FinishSectionProcessingException)
                     {
@@ -126,7 +143,11 @@ public sealed class PolicyCounterService
                 // Admission vetoes can replace the response; measure only the final payload.
                 while (_responseBandwidth.TryPeek(out var accountBandwidth))
                 {
-                    accountBandwidth();
+                    var bytes = GetMessageLength(_context.Response);
+                    if (bytes != 0)
+                    {
+                        Store.TryConsume(accountBandwidth, 0, bytes, UtcNow, checkLimits: false);
+                    }
                     _responseBandwidth.Dequeue();
                 }
 
@@ -201,11 +222,7 @@ public sealed class PolicyCounterService
         lock (_sync)
         {
             EnsureRequest();
-            _rateIncrements.Enqueue(() =>
-            {
-                var result = ConsumeStore(limits, calls, 0, checkLimits: false);
-                ApplyRateLimit(result, output, writeHeaders: !result.Allowed || !_context.ResponseTerminated);
-            });
+            _rateIncrements.Enqueue(new DeferredRate(limits, calls, output, _context));
         }
     }
 
@@ -224,14 +241,7 @@ public sealed class PolicyCounterService
                 return;
             }
 
-            _responseBandwidth.Enqueue(() =>
-            {
-                var bytes = GetMessageLength(_context.Response);
-                if (bytes != 0)
-                {
-                    Store.TryConsume(limits, 0, bytes, UtcNow, checkLimits: false);
-                }
-            });
+            _responseBandwidth.Enqueue(limits);
         }
     }
 
@@ -258,7 +268,8 @@ public sealed class PolicyCounterService
         {
             foreach (var limit in limits)
             {
-                if (!limiter.TryConsumeAsync(limit.LimiterKey, calls).GetAwaiter().GetResult())
+                if (!PolicyServiceAwaiter.Wait(_context,
+                        limiter.TryConsumeAsync(limit.LimiterKey, calls, HttpPolicyTransport.GetCancellationToken(_context))))
                 {
                     return new PolicyCounterResult(false, 0, store.GetRetryAfter(limit, calls, bandwidth, UtcNow));
                 }
@@ -292,7 +303,8 @@ public sealed class PolicyCounterService
         PolicyCounterResult result,
         RateLimitOutput output,
         bool restoreSuccessfulResponse = false,
-        bool writeHeaders = true)
+        bool writeHeaders = true,
+        bool writeVariables = true)
     {
         if (!result.Allowed)
         {
@@ -319,7 +331,7 @@ public sealed class PolicyCounterService
             WriteHeader(output.RemainingCallsHeaderName, remaining);
         }
 
-        if (output.RemainingCallsVariableName is not null)
+        if (writeVariables && output.RemainingCallsVariableName is not null)
         {
             _context.Variables[output.RemainingCallsVariableName] = remaining;
         }
@@ -329,7 +341,7 @@ public sealed class PolicyCounterService
             WriteHeader(output.TotalCallsHeaderName, output.Calls);
         }
 
-        if (output.RetryAfterVariableName is not null)
+        if (writeVariables && output.RetryAfterVariableName is not null)
         {
             _context.Variables[output.RetryAfterVariableName] = result.RetryAfter;
         }
@@ -418,6 +430,21 @@ public sealed class PolicyCounterService
         return id is not null
             ? string.Equals(id, contextId, StringComparison.OrdinalIgnoreCase)
             : string.Equals(name, contextName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record DeferredRate(
+        IReadOnlyList<PolicyCounterLimit> Limits, int Calls, RateLimitOutput Output, GatewayContext Origin);
+
+    private sealed class RequestState
+    {
+        internal readonly object Sync = new();
+        internal readonly Queue<DeferredRate> RateIncrements = [];
+        internal readonly Queue<IReadOnlyList<PolicyCounterLimit>> ResponseBandwidth = [];
+        internal readonly HashSet<string> QuotaCallKeys = new(StringComparer.Ordinal);
+        internal readonly HashSet<string> RequestBandwidthKeys = new(StringComparer.Ordinal);
+        internal readonly HashSet<string> ResponseBandwidthKeys = new(StringComparer.Ordinal);
+        internal Guid RequestId;
+        internal bool Settling;
     }
 }
 

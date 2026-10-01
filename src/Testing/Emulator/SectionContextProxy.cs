@@ -30,7 +30,7 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
         ArgumentNullException.ThrowIfNull(targetMethod.DeclaringType);
-        WaitBranchExecution.ValidateAccess(_context);
+        WaitBranchExecution.Synchronize(_context);
 
         // Policy IDs are compile-time metadata; chaining must retain this proxy.
         if (targetMethod.Name == nameof(IInboundContext.WithId))
@@ -59,7 +59,6 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
 
         try
         {
-            WaitBranchExecution.ValidatePolicy(_context, targetMethod.Name);
             if (!_handlers.TryGetValue(targetMethod.Name, out var handler))
             {
                 throw new NotImplementedException(targetMethod.Name);
@@ -81,11 +80,15 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
         }
         finally
         {
+            WaitBranchExecution.Publish(_context);
             _context.CurrentSectionHandlers = previousHandlers;
             _context.CurrentSectionName = previousSectionName;
             _context.CurrentPolicyMethod = previousMethod;
         }
     }
+
+    internal void CopyHandlersFrom(SectionContextProxy<TSection> source) =>
+        _handlers = WaitHandlerSnapshot.Copy(source._handlers);
 
     internal THandler GetHandler<THandler>() where THandler : class, IPolicyHandler
     {

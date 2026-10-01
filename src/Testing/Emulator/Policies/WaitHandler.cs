@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Runtime.ExceptionServices;
+
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
@@ -144,9 +146,9 @@ internal class WaitHandler : IPolicyHandler
             TaskCreationOptions.RunContinuationsAsynchronously);
         var executions = new List<BranchExecution<TSection>>(branches.Length);
         var sources = new List<CancellationTokenSource>(branches.Length);
-        var tasks = new List<Task<WaitVariableChange[]>>(branches.Length);
+        var tasks = new List<Task<WaitBranchResult>>(branches.Length);
         var cancellationTasks = new List<Task>();
-        Task<WaitVariableChange[]>? selected = null;
+        Task<WaitBranchResult>? selected = null;
         try
         {
             foreach (var branch in branches)
@@ -163,11 +165,11 @@ internal class WaitHandler : IPolicyHandler
                 // Synchronous authored delegates need separate owning threads; none execute against the parent context.
                 var task = Task.Factory.StartNew(() =>
                 {
+                    ExceptionDispatchInfo? error = null;
                     try
                     {
                         launch.Task.GetAwaiter().GetResult();
                         using var scope = new WaitBranchExecution(execution.Context, execution.Cancellation.Token);
-                        WaitVariableChange[]? changes = null;
                         execution.Context.ExecuteSection(() =>
                         {
                             try
@@ -179,21 +181,23 @@ internal class WaitHandler : IPolicyHandler
                                 firstCompletion.TrySetResult(execution);
                             }
                             WaitBranchExecution.ValidateAccess(execution.Context);
-                            changes = snapshot.CaptureChanges(execution.Context);
-                            WaitBranchExecution.ValidateAccess(execution.Context);
                         });
-                        return changes ?? throw new InvalidOperationException("Wait branch did not capture its outputs.");
                     }
-                    catch (FinishSectionProcessingException termination)
+                    catch (FinishSectionProcessingException)
                     {
-                        throw new NotSupportedException(
-                            "A parallel Wait branch cannot terminate the enclosing pipeline. " +
-                            "Use an explicit WaitBranches callback to simulate pipeline termination.", termination);
+                        // The gateway child pipeline keeps its stage change local while sharing the response.
+                    }
+                    catch (Exception failure)
+                    {
+                        error = ExceptionDispatchInfo.Capture(failure);
                     }
                     finally
                     {
                         firstCompletion.TrySetResult(execution);
                     }
+                    ArgumentNullException.ThrowIfNull(execution.Context.Variables);
+                    return new WaitBranchResult(execution.Context,
+                        new(execution.Context.Variables, execution.Context.Variables.Comparer), error);
                 }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                 execution.Task = task;
                 tasks.Add(task);
@@ -201,20 +205,29 @@ internal class WaitHandler : IPolicyHandler
 
             // Record delegate completion before output copying so snapshot costs cannot reorder the any winner.
             launch.SetResult(true);
-            WaitVariableChange[][] outputs;
             if (waitFor == "any")
             {
                 var winner = firstCompletion.Task.WaitAsync(callerCancellation).GetAwaiter().GetResult();
                 selected = winner.Task ?? throw new InvalidOperationException("Wait winner was not scheduled.");
                 RequestCancellation(executions, selected, cancellationTasks, onlyPending: false);
-                outputs = [selected.GetAwaiter().GetResult()];
+                var result = selected.GetAwaiter().GetResult();
+                callerCancellation.ThrowIfCancellationRequested();
+                WaitContextSnapshot.PropagateResult(context, result);
             }
             else
             {
-                outputs = Task.WhenAll(tasks).WaitAsync(callerCancellation).GetAwaiter().GetResult();
+                var results = Task.WhenAll(tasks).WaitAsync(callerCancellation).GetAwaiter().GetResult();
+                callerCancellation.ThrowIfCancellationRequested();
+                var failed = results.FirstOrDefault(result => result.Error is not null);
+                if (failed is not null)
+                {
+                    WaitContextSnapshot.PropagateResult(context, failed);
+                }
+                else
+                {
+                    snapshot.MergeChangedVariables(context, results);
+                }
             }
-            callerCancellation.ThrowIfCancellationRequested();
-            Commit(context, outputs);
         }
         finally
         {
@@ -225,14 +238,16 @@ internal class WaitHandler : IPolicyHandler
             finally
             {
                 launch.TrySetResult(true);
-                ObserveAndDispose(tasks, sources, cancellationTasks, selected, waitFor == "any", context.Trace);
+                ObserveAndDispose(tasks, sources, cancellationTasks,
+                    executions.SelectMany(execution => execution.Transport.PendingOneWayRequests).Distinct().ToArray(),
+                    selected, waitFor == "any", context.Trace);
             }
         }
     }
 
     private static void RequestCancellation<TSection>(
         IEnumerable<BranchExecution<TSection>> executions,
-        Task<WaitVariableChange[]>? selected,
+        Task<WaitBranchResult>? selected,
         List<Task> cancellationTasks,
         bool onlyPending) where TSection : class
     {
@@ -252,50 +267,31 @@ internal class WaitHandler : IPolicyHandler
         }
     }
 
-    private static void Commit(GatewayContext context, IEnumerable<WaitVariableChange[]> outputs)
-    {
-        var changes = new Dictionary<string, WaitVariableChange>(context.Variables.Comparer);
-        foreach (var output in outputs)
-        {
-            foreach (var change in output)
-            {
-                if (!changes.TryAdd(change.Name, change))
-                {
-                    throw new InvalidOperationException(
-                        $"Wait branches have conflicting outputs for variable '{change.Name}'. " +
-                        "Parallel branches must write distinct variables.");
-                }
-            }
-        }
-        foreach (var change in changes.Values)
-        {
-            if (change.Exists)
-            {
-                context.Variables[change.Name] = change.Value!;
-            }
-            else
-            {
-                context.Variables.Remove(change.Name);
-            }
-        }
-    }
-
     private static void ObserveAndDispose(
-        IReadOnlyList<Task<WaitVariableChange[]>> tasks,
+        IReadOnlyList<Task<WaitBranchResult>> tasks,
         IReadOnlyList<CancellationTokenSource> sources,
         IReadOnlyList<Task> cancellations,
-        Task<WaitVariableChange[]>? selected,
+        IReadOnlyList<Task> oneWayRequests,
+        Task<WaitBranchResult>? selected,
         bool any,
         Action<string> trace)
     {
         var detached = tasks.Where(task => !ReferenceEquals(task, selected) && (any || !task.IsCompleted)).ToArray();
-        var settled = Task.WhenAll(tasks.Cast<Task>().Concat(cancellations));
+        var settled = Task.WhenAll(tasks.Cast<Task>().Concat(cancellations).Concat(oneWayRequests));
         var cleanup = settled.ContinueWith(completed =>
         {
             try
             {
                 _ = completed.Exception;
-                foreach (var task in detached.Cast<Task>().Concat(cancellations))
+                foreach (var task in detached)
+                {
+                    if (task.IsCompletedSuccessfully && task.Result.Error is { SourceException: var failure }
+                        && failure.GetBaseException() is not OperationCanceledException)
+                    {
+                        trace($"Wait canceled branch failed: {failure.GetBaseException().Message}");
+                    }
+                }
+                foreach (var task in cancellations)
                 {
                     if (task.Exception is { } error && error.GetBaseException() is not OperationCanceledException)
                     {
@@ -324,6 +320,6 @@ internal class WaitHandler : IPolicyHandler
         internal CancellationTokenSource Cancellation { get; } = cancellation;
         internal HttpTransportState Transport { get; } = context.Services.Resolve<HttpTransportState>()
             ?? throw new InvalidOperationException("Wait branch requires its own transport cancellation state.");
-        internal Task<WaitVariableChange[]>? Task { get; set; }
+        internal Task<WaitBranchResult>? Task { get; set; }
     }
 }

@@ -14,7 +14,10 @@ public sealed class VirtualRetryScheduler : IRetryScheduler
     /// <summary>
     /// Gets the delays scheduled in execution order.
     /// </summary>
-    public IReadOnlyList<TimeSpan> Delays => _delays.AsReadOnly();
+    public IReadOnlyList<TimeSpan> Delays
+    {
+        get { lock (_delays) return Array.AsReadOnly(_delays.ToArray()); }
+    }
 
     /// <inheritdoc />
     public void Delay(TimeSpan delay)
@@ -24,7 +27,10 @@ public sealed class VirtualRetryScheduler : IRetryScheduler
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Retry delay cannot be negative.");
         }
 
-        _delays.Add(delay);
+        lock (_delays)
+        {
+            _delays.Add(delay);
+        }
     }
 
     /// <inheritdoc />

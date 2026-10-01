@@ -36,22 +36,27 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 /// A later call-limiter response replacement can clear token output headers; settled counts and
 /// token variables still describe the observed LLM response, not the replacement error payload.
 /// No backend calls, tokenizer heuristics, or fallback token counts are supplied.
+/// Typed Wait services retain context ownership but share one request reservation/settlement ledger.
+/// Branch variable outputs are merged only at Wait completion; subsequent final-response accounting
+/// does not introduce a losing branch's variable outputs into the parent.
 /// </remarks>
 public sealed class TokenLimitService
 {
     private readonly GatewayContext _context;
-    private readonly object _sync = new();
-    private readonly Dictionary<string, PendingKey> _pending = new(StringComparer.Ordinal);
-    private readonly List<Invocation> _invocations = [];
-    private readonly HashSet<Guid> _completedRequests = [];
-    private TokenLimitCounterStore _store = null!;
-    private TimeProvider _clock = null!;
-    private Guid _requestId;
-    private bool _hasRequest;
-    private bool _completed;
-    private bool _settling;
-    private long? _observedTokens;
-    private bool _observationFailed;
+    private readonly GatewayContext _dependencyContext;
+    private readonly RequestState _state;
+    private object _sync => _state.Sync;
+    private Dictionary<string, PendingKey> _pending => _state.Pending;
+    private List<Invocation> _invocations => _state.Invocations;
+    private HashSet<Guid> _completedRequests => _state.CompletedRequests;
+    private ref TokenLimitCounterStore _store => ref _state.Store;
+    private ref TimeProvider _clock => ref _state.Clock;
+    private ref Guid _requestId => ref _state.RequestId;
+    private ref bool _hasRequest => ref _state.HasRequest;
+    private ref bool _completed => ref _state.Completed;
+    private ref bool _settling => ref _state.Settling;
+    private ref long? _observedTokens => ref _state.ObservedTokens;
+    private ref bool _observationFailed => ref _state.ObservationFailed;
 
     /// <summary>
     /// Creates bookkeeping owned by one context. Register shared storage and TimeProvider
@@ -61,9 +66,20 @@ public sealed class TokenLimitService
     {
         ArgumentNullException.ThrowIfNull(context);
         _context = context;
+        _dependencyContext = context;
+        _state = new RequestState();
         _requestId = context.RequestId;
         CaptureDependencies();
     }
+
+    private TokenLimitService(GatewayContext context, GatewayContext dependencyContext, RequestState state)
+    {
+        _context = context;
+        _dependencyContext = dependencyContext;
+        _state = state;
+    }
+
+    internal TokenLimitService ForkForWait(GatewayContext context) => new(context, _dependencyContext, _state);
 
     /// <summary>Gets whether observed final response usage is still required.</summary>
     public bool HasPendingResponse
@@ -95,7 +111,19 @@ public sealed class TokenLimitService
             var service = context.Services.Resolve<TokenLimitService>();
             if (service is null)
             {
-                service = new TokenLimitService(context);
+                if (context.WaitMessages is { Owner: var owner } && !ReferenceEquals(owner, context))
+                {
+                    var shared = For(owner);
+                    if (context.Services.Resolve<TokenLimitCounterStore>() is null)
+                    {
+                        context.Services.Register(shared._store);
+                    }
+                    service = shared.ForkForWait(context);
+                }
+                else
+                {
+                    service = new TokenLimitService(context);
+                }
                 context.Services.Register(service);
             }
             else
@@ -199,7 +227,7 @@ public sealed class TokenLimitService
             EnsureCurrentRequestId();
             EnsureDependencies();
 
-            var invocation = new Invocation(policyName, config);
+            var invocation = new Invocation(policyName, config, _context);
             _pending.TryGetValue(config.CounterKey, out var pending);
             var reservation = pending?.Reservation ?? new TokenLimitReservation(config.CounterKey, Guid.NewGuid());
             var reservedPrompt = Math.Max(pending?.PromptEstimate ?? 0, estimate);
@@ -471,21 +499,21 @@ public sealed class TokenLimitService
         if (result.RemainingTokens is { } rate)
         {
             WriteHeader(config.RemainingTokensHeaderName, rate);
-            WriteVariable(config.RemainingTokensVariableName, rate);
+            WriteVariable(invocation, config.RemainingTokensVariableName, rate);
         }
 
         if (result.RemainingQuotaTokens is { } quota)
         {
             WriteHeader(config.RemainingQuotaTokensHeaderName, quota);
-            WriteVariable(config.RemainingQuotaTokensVariableName, quota);
+            WriteVariable(invocation, config.RemainingQuotaTokensVariableName, quota);
         }
 
-        WriteVariable(config.RetryAfterVariableName, result.RetryAfter);
+        WriteVariable(invocation, config.RetryAfterVariableName, result.RetryAfter);
     }
 
     private void WriteConsumed(Invocation invocation, long consumed, bool actual)
     {
-        WriteVariable(invocation.Config.TokensConsumedVariableName, consumed);
+        WriteVariable(invocation, invocation.Config.TokensConsumedVariableName, consumed);
         if (actual)
         {
             WriteHeader(invocation.Config.TokensConsumedHeaderName, consumed);
@@ -555,9 +583,9 @@ public sealed class TokenLimitService
     private void WriteHeader(string? name, long value) =>
         PolicyResponseHeaderOverlay.SetNumericHeader(_context, name, value, typeof(TokenLimitService));
 
-    private void WriteVariable(string? name, object value)
+    private void WriteVariable(Invocation invocation, string? name, object value)
     {
-        if (name is not null)
+        if (name is not null && ReferenceEquals(invocation.Origin, _context))
         {
             _context.Variables[name] = value;
         }
@@ -668,11 +696,11 @@ public sealed class TokenLimitService
 
     private void CaptureDependencies()
     {
-        lock (_context.Services)
+        lock (_dependencyContext.Services)
         {
-            _store = _context.Services.Resolve<TokenLimitCounterStore>() ?? new TokenLimitCounterStore();
-            _context.Services.Register(_store);
-            _clock = _context.Services.Resolve<TimeProvider>() ?? TimeProvider.System;
+            _store = _dependencyContext.Services.Resolve<TokenLimitCounterStore>() ?? new TokenLimitCounterStore();
+            _dependencyContext.Services.Register(_store);
+            _clock = _dependencyContext.Services.Resolve<TimeProvider>() ?? TimeProvider.System;
         }
     }
 
@@ -739,11 +767,27 @@ public sealed class TokenLimitService
     }
 
     private sealed record Invocation(
-        string PolicyName, TokenLimitConfig Config, TokenLimitCounterResult? Rejection = null);
+        string PolicyName, TokenLimitConfig Config, GatewayContext Origin, TokenLimitCounterResult? Rejection = null);
 
     private sealed class PendingKey(TokenLimitReservation reservation)
     {
         public TokenLimitReservation Reservation { get; } = reservation;
         public long PromptEstimate { get; set; }
+    }
+
+    private sealed class RequestState
+    {
+        internal readonly object Sync = new();
+        internal readonly Dictionary<string, PendingKey> Pending = new(StringComparer.Ordinal);
+        internal readonly List<Invocation> Invocations = [];
+        internal readonly HashSet<Guid> CompletedRequests = [];
+        internal TokenLimitCounterStore Store = null!;
+        internal TimeProvider Clock = null!;
+        internal Guid RequestId;
+        internal bool HasRequest;
+        internal bool Completed;
+        internal bool Settling;
+        internal long? ObservedTokens;
+        internal bool ObservationFailed;
     }
 }

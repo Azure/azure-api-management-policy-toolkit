@@ -10,11 +10,19 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 /// typed branch overloads execute in parallel by default.
 /// </summary>
 /// <remarks>
-/// Typed branches must use their supplied section proxies. Conditional choose delegates may perform
-/// SendRequest and CacheLookupValue operations; other policies and branch pipeline termination are rejected.
-/// All merges only changed variable outputs and rejects conflicting writes. Any observes the first
-/// completed delegate, including errors, cancels the others, and commits only its isolated output snapshot.
-/// Unsupported mutable inputs and caller-owned gateway certificates require an explicit mock.
+/// Typed branches must use their supplied section proxies. Conditional choose delegates may execute
+/// every handler registered for the calling section, retaining each handler's normal limitations.
+/// Handler setups and context-owned service instances are branch-local; caches, telemetry, concurrency
+/// limits, and logical-request accounting are shared. Message deltas are published atomically at policy
+/// boundaries rather than sharing the public mocks' non-thread-safe dictionaries during blocked operations.
+/// Variable dictionaries are copied shallowly, as in the gateway. All merges changed entries in authored
+/// order without propagating removals. Any propagates the winner's entries, including before its error,
+/// cancels other branches, and does not undo their already-executed external or message side effects.
+/// A terminating policy ends its child pipeline; its response effects are shared but its stage is not
+/// copied to the parent. Wait nested within Retry remains invalid.
+/// Scalar body/status writes and message replacements are recorded even when they match a previous
+/// working snapshot. Callback reads observe a policy-boundary snapshot, not a physically shared object.
+/// Mutable variable values deliberately remain shared references; callers must synchronize their mutation.
 /// Injected services, token providers, child callbacks, and trace sinks must support concurrent calls;
 /// callbacks must not mutate a captured outer gateway or replace a branch's transport cancellation state.
 /// Cancellation prevents further proxy execution but cannot forcibly stop arbitrary synchronous callback code.

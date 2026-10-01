@@ -51,9 +51,12 @@ public class GatewayContext : MockExpressionContext
 
     internal MethodInfo? CurrentPolicyMethod { get; set; }
 
+    internal WaitMessageSynchronization? WaitMessages { get; set; }
+
     internal bool BackendResponseReceived => _backendResponseRequestId == RequestId;
     internal bool BackendExecutionFailed => _backendFailureRequestId == RequestId;
     internal long BackendResponseVersion => _backendResponseVersion;
+    internal long TerminalResponseVersion => _terminalResponseVersion;
 
     /// <summary>
     /// Service registry for injecting custom service implementations (e.g., IHttpClient, ICache).
@@ -88,6 +91,30 @@ public class GatewayContext : MockExpressionContext
         BackendProxy = SectionContextProxy<IBackendContext>.Create(this);
         OutboundProxy = SectionContextProxy<IOutboundContext>.Create(this);
         OnErrorProxy = SectionContextProxy<IOnErrorContext>.Create(this);
+    }
+
+    internal GatewayContext(GatewayContext parent) : this()
+    {
+        CertificateStore = parent.CertificateStore;
+        CacheStore = parent.CacheStore;
+        ResponseExampleStore = parent.ResponseExampleStore;
+        LoggerStore = parent.LoggerStore;
+        RateLimitStore = parent.RateLimitStore;
+    }
+
+    internal void CopyBackendStateFrom(GatewayContext source)
+    {
+        _backendResponseRequestId = source._backendResponseRequestId;
+        _backendFailureRequestId = source._backendFailureRequestId;
+        _backendResponseVersion = source._backendResponseVersion;
+    }
+
+    internal void MergeBackendStateFrom(GatewayContext source)
+    {
+        if (source._backendResponseVersion > _backendResponseVersion)
+        {
+            CopyBackendStateFrom(source);
+        }
     }
 
     internal void RegisterFragment(string fragmentId, IFragment fragment)
@@ -234,12 +261,14 @@ public class GatewayContext : MockExpressionContext
             var dispatcher = new ExecutionThreadDispatcher(this);
             try
             {
-                var pending = Task.Run(() =>
+                var operationTask = Task.Run(() =>
                 {
                     var task = operation(dispatcher.InvokeAsync);
                     ArgumentNullException.ThrowIfNull(task);
                     return task;
                 });
+                HttpPolicyTransport.ObserveFault(operationTask);
+                var pending = operationTask.WaitAsync(HttpPolicyTransport.GetCancellationToken(this));
                 return dispatcher.WaitFor(pending);
             }
             finally

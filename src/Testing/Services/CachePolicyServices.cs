@@ -95,9 +95,7 @@ internal static class CachePolicyServices
     {
         if (value is not null)
         {
-            context.Variables[variableName] = WaitBranchExecution.IsExecuting(context)
-                ? WaitContextSnapshot.CopyVariable(value)!
-                : value;
+            context.Variables[variableName] = value;
         }
         else
         {

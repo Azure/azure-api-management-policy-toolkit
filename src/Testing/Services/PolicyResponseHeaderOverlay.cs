@@ -59,6 +59,60 @@ internal sealed class PolicyResponseHeaderOverlay
         }
     }
 
+    internal static void CopyForWait(GatewayContext source, GatewayContext target)
+    {
+        var snapshot = Existing(source)?.Capture();
+        if (snapshot is null && Existing(target) is null)
+        {
+            return;
+        }
+        var overlay = For(target);
+        lock (overlay._sync)
+        {
+            overlay.EnsureRequest();
+            overlay._headers.Clear();
+            foreach (var entry in snapshot?.Headers ?? [])
+            {
+                overlay._headers.Add(entry.Key, entry.Value with { Values = entry.Value.Values.ToArray() });
+            }
+        }
+    }
+
+    internal static void MergeFromWait(GatewayContext target, GatewayContext branch, Snapshot? previous)
+    {
+        var snapshot = Existing(branch)?.Capture();
+        if (snapshot is null && previous is null)
+        {
+            return;
+        }
+        var before = (previous?.Headers ?? []).ToDictionary(entry => entry.Key, entry => entry.Value,
+            StringComparer.OrdinalIgnoreCase);
+        var after = (snapshot?.Headers ?? []).ToDictionary(entry => entry.Key, entry => entry.Value,
+            StringComparer.OrdinalIgnoreCase);
+        var overlay = For(target);
+        lock (overlay._sync)
+        {
+            overlay.EnsureRequest();
+            overlay.Reconcile();
+            foreach (var entry in after)
+            {
+                if (!before.TryGetValue(entry.Key, out var original) || !Equivalent(original, entry.Value))
+                {
+                    overlay._headers[entry.Key] = entry.Value with { Values = entry.Value.Values.ToArray() };
+                }
+            }
+            foreach (var name in before.Keys.Where(name => !after.ContainsKey(name)))
+            {
+                overlay._headers.Remove(name);
+            }
+        }
+    }
+
+    private static bool Equivalent(HeaderOutput first, HeaderOutput second) =>
+        first.Source == second.Source && first.DeferredValue == second.DeferredValue
+        && first.IsPresent == second.IsPresent && first.IsSuppressed == second.IsSuppressed
+        && first.Values.SequenceEqual(second.Values);
+
     internal static void SetHeader(GatewayContext context, string name, string[] values, Type source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);

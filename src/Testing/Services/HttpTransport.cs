@@ -50,12 +50,25 @@ public sealed record HttpTransportOptions
 /// Per-context transport state. Register an instance to supply caller cancellation to HTTP,
 /// cache-value lookup, and typed Wait policies; HTTP handlers create one otherwise.
 /// One-way requests are tracked rather than synchronously waiting for their responses.
+/// Typed Wait branches retain separate cancellation state and share the request's one-way tracking queue.
 /// </summary>
 public sealed class HttpTransportState
 {
-    private readonly ConcurrentQueue<Task> _pendingOneWayRequests = new();
+    private readonly ConcurrentQueue<Task> _pendingOneWayRequests;
     private readonly object _cancellationSync = new();
     private readonly HashSet<CancellationTokenSource> _requestCancellations = [];
+
+    public HttpTransportState() : this(new ConcurrentQueue<Task>())
+    {
+    }
+
+    private HttpTransportState(ConcurrentQueue<Task> pendingOneWayRequests)
+    {
+        _pendingOneWayRequests = pendingOneWayRequests;
+    }
+
+    internal HttpTransportState ForkForWait(CancellationToken cancellationToken) =>
+        new(_pendingOneWayRequests) { CancellationToken = cancellationToken, Proxy = Proxy };
 
     /// <summary>Caller cancellation propagated to outgoing HTTP requests, cache-value lookups, and Wait branches.</summary>
     public CancellationToken CancellationToken { get; init; }

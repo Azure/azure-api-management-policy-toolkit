@@ -10,8 +10,8 @@ public class LoggerStore
 {
     private readonly Dictionary<string, Logger> _loggers = new();
 
-    internal readonly IList<TraceEvent> TracesInternal = new List<TraceEvent>();
-    internal readonly IList<MetricEvent> MetricsInternal = new List<MetricEvent>();
+    internal readonly IList<TraceEvent> TracesInternal = new SynchronizedList<TraceEvent>();
+    internal readonly IList<MetricEvent> MetricsInternal = new SynchronizedList<MetricEvent>();
 
     /// <summary>
     /// Gets an immutable snapshot of trace policy telemetry recorded in this gateway context.
@@ -32,12 +32,20 @@ public class LoggerStore
 
     public void Add(Logger logger)
     {
-        if (!_loggers.TryAdd(logger.LoggerId, logger))
+        lock (_loggers)
         {
-            throw new Exception($"Logger with id {logger.LoggerId} already exists.");
+            if (!_loggers.TryAdd(logger.LoggerId, logger))
+            {
+                throw new Exception($"Logger with id {logger.LoggerId} already exists.");
+            }
         }
     }
 
-    public bool TryGet(string loggerId, [NotNullWhen(true)] out Logger logger) =>
-        _loggers.TryGetValue(loggerId, out logger!);
+    public bool TryGet(string loggerId, [NotNullWhen(true)] out Logger logger)
+    {
+        lock (_loggers)
+        {
+            return _loggers.TryGetValue(loggerId, out logger!);
+        }
+    }
 }
