@@ -77,12 +77,6 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                     continue;
                 }
 
-                if (symbol is IPropertySymbol { Name: "ExpressionContext" } expressionProperty &&
-                    IsBaseContext(expressionProperty.ContainingType))
-                {
-                    continue;
-                }
-
                 var type = symbol switch
                 {
                     IParameterSymbol p => p.Type,
@@ -92,11 +86,14 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                     _ => null
                 };
                 if (type is INamedTypeSymbol section && IsWaitContextType(section) &&
-                    !symbol.DeclaringSyntaxReferences.Any(reference =>
-                        reference.SyntaxTree == lambda.SyntaxTree && lambda.Body.Span.Contains(reference.Span)))
+                    !IsBranchLocalSymbol(symbol, lambda, parameter) &&
+                    !(IsExpressionContextType(section) &&
+                      IsBranchExpressionContextProjection(name, symbol, lambda, parameter,
+                          context.SemanticModel)))
                 {
                     context.ReportDiagnostic(Diagnostic.Create(Rules.WaitBranch.CapturedContext,
                         name.GetLocation()));
+                    break;
                 }
             }
         }
@@ -169,9 +166,53 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
     private static bool IsWaitContextType(INamedTypeSymbol type) =>
         IsSectionContext(type) ||
         IsBaseContext(type) ||
-        IsExpressionContext(type) ||
+        IsExpressionContextType(type) ||
         type.AllInterfaces.Any(section => IsSectionContext(section) || IsBaseContext(section) ||
             IsExpressionContext(section));
+
+    private static bool IsExpressionContextType(INamedTypeSymbol type) =>
+        IsExpressionContext(type) || type.AllInterfaces.Any(IsExpressionContext);
+
+    private static bool IsBranchLocalSymbol(ISymbol symbol, LambdaExpressionSyntax lambda, IParameterSymbol parameter) =>
+        SymbolEqualityComparer.Default.Equals(symbol, parameter) ||
+        symbol.DeclaringSyntaxReferences.Any(reference =>
+            reference.SyntaxTree == lambda.SyntaxTree && lambda.Body.Span.Contains(reference.Span));
+
+    private static bool IsBranchExpressionContextProjection(IdentifierNameSyntax name, ISymbol symbol,
+        LambdaExpressionSyntax lambda, IParameterSymbol parameter, SemanticModel model)
+    {
+        if (symbol is not IPropertySymbol { Name: "ExpressionContext" } property ||
+            !IsBaseContext(property.ContainingType) ||
+            name.Parent is not MemberAccessExpressionSyntax member || member.Name != name ||
+            model.GetOperation(member) is not IPropertyReferenceOperation projection)
+        {
+            return false;
+        }
+
+        var receiver = projection.Instance;
+        while (receiver is not null)
+        {
+            switch (receiver)
+            {
+                case IConversionOperation conversion:
+                    receiver = conversion.Operand;
+                    break;
+                case IInvocationOperation invocation
+                    when invocation.TargetMethod.Name == "WithId" &&
+                         IsSectionContext(invocation.TargetMethod.ContainingType):
+                    receiver = invocation.Instance;
+                    break;
+                case IParameterReferenceOperation referencedParameter:
+                    return IsBranchLocalSymbol(referencedParameter.Parameter, lambda, parameter);
+                case ILocalReferenceOperation local:
+                    return IsBranchLocalSymbol(local.Local, lambda, parameter);
+                default:
+                    return false;
+            }
+        }
+
+        return false;
+    }
 
     private static bool IsBaseContext(INamedTypeSymbol type) =>
         type.ContainingNamespace.ToDisplayString() == AuthoringNamespace &&

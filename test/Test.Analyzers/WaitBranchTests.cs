@@ -288,4 +288,33 @@ public class WaitBranchTests
             """,
             DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
     }
+
+    [TestMethod]
+    public async Task RejectsCapturedExpressionContextThroughHelper()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                private readonly IInboundContext outer;
+
+                public Policy(IInboundContext outer) => this.outer = outer;
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", branch =>
+                    {
+                        if (ShouldRun(GetOuter().{|#0:ExpressionContext|}))
+                        {
+                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "wrong" });
+                        }
+                    });
+                }
+
+                private IInboundContext GetOuter() => outer;
+                private static bool ShouldRun(IExpressionContext context) => true;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
+    }
 }
