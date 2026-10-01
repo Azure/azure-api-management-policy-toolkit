@@ -10,18 +10,18 @@ public class LoggerStore
 {
     private readonly Dictionary<string, Logger> _loggers = new();
 
-    internal readonly IList<TraceEvent> TracesInternal = new SynchronizedList<TraceEvent>();
-    internal readonly IList<MetricEvent> MetricsInternal = new SynchronizedList<MetricEvent>();
+    internal readonly SynchronizedList<TraceEvent> TracesInternal = new();
+    internal readonly SynchronizedList<MetricEvent> MetricsInternal = new();
 
     /// <summary>
     /// Gets an immutable snapshot of trace policy telemetry recorded in this gateway context.
     /// </summary>
-    public ImmutableArray<TraceEvent> Traces => TracesInternal.ToImmutableArray();
+    public ImmutableArray<TraceEvent> Traces => TracesInternal.Snapshot();
 
     /// <summary>
     /// Gets an immutable snapshot of emit-metric policy telemetry recorded in this gateway context.
     /// </summary>
-    public ImmutableArray<MetricEvent> Metrics => MetricsInternal.ToImmutableArray();
+    public ImmutableArray<MetricEvent> Metrics => MetricsInternal.Snapshot();
 
     public Logger Add(string loggerId)
     {

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections;
+using System.Collections.Immutable;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 
@@ -30,5 +31,11 @@ internal sealed class SynchronizedList<T> : IList<T>
     {
         lock (_sync) return ((IEnumerable<T>)_items.ToArray()).GetEnumerator();
     }
+
+    public ImmutableArray<T> Snapshot()
+    {
+        lock (_sync) return ImmutableArray.CreateRange(_items);
+    }
+
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
