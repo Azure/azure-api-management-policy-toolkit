@@ -403,6 +403,291 @@ public class ValidateClientCertificateTests
     }
 
     [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public void CoordinatedCertificateErrorRunsOnErrorAndMayReplaceResponse(bool nested, bool replaceResponse)
+    {
+        var config = new ValidateClientCertificateConfig();
+        var pipeline = CreateErrorPipeline(config, replaceResponse ? ReplaceErrorResponse : null);
+        PolicyException? original = null;
+        pipeline.Context.Response.StatusCode = 200;
+        pipeline.Context.Response.StatusReason = "OK";
+        pipeline.Context.Response.Headers["Content-Length"] = ["999"];
+        pipeline.Context.Response.Body.Content = "stale successful response";
+
+        pipeline.RunRequest(request =>
+        {
+            original = Assert.ThrowsExactly<PolicyException>(() => SettlementTest.RunAll(request, nested));
+            AssertFailureResponse(request.Context);
+            ExecutionTest.RunSection(request, "on-error", nested);
+        });
+
+        AssertCertificateError(original!, pipeline.Context, config);
+        pipeline.Context.Variables["error-ran"].Should().Be(true);
+        pipeline.Context.Variables["on-error-reason"].Should().Be("ClientCertificateNotPresent");
+        pipeline.Context.Variables["outer-error-ran"].Should().Be(true);
+        pipeline.Context.Variables["after-error-handler"].Should().Be(true);
+        pipeline.Context.ResponseTerminated.Should().BeFalse();
+        pipeline.Context.Response.Headers.Should().NotContainKey("Content-Length");
+        AssertNormalSectionsSkipped(pipeline.Context);
+        if (replaceResponse)
+        {
+            AssertReplacementResponse(pipeline.Context);
+        }
+        else
+        {
+            AssertFailureResponse(pipeline.Context);
+        }
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void ExplicitPipelineOnErrorRemainsAvailableAfterUnhandledCertificateFailure(bool nested)
+    {
+        var config = new ValidateClientCertificateConfig();
+        var pipeline = CreateErrorPipeline(config);
+
+        var error = Assert.ThrowsExactly<PolicyException>(() => SettlementTest.RunAll(pipeline, nested));
+        ExecutionTest.RunSection(pipeline, "on-error", nested);
+
+        AssertCertificateError(error, pipeline.Context, config);
+        AssertFailureResponse(pipeline.Context);
+        pipeline.Context.Variables["error-ran"].Should().Be(true);
+        pipeline.Context.Variables["outer-error-ran"].Should().Be(true);
+        pipeline.Context.ResponseTerminated.Should().BeFalse();
+        AssertNormalSectionsSkipped(pipeline.Context);
+    }
+
+    [TestMethod]
+    public void NestedCertificateErrorUnwindsParentBaseAndStillRunsOnError()
+    {
+        var config = new ValidateClientCertificateConfig();
+        var pipeline = PolicyPipelineBuilder.Create()
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.SetVariable("outer-before", true);
+                    section.Base();
+                    section.SetVariable("outer-after", true);
+                },
+                BackendAction = section => section.SetVariable("global-backend", true),
+                OutboundAction = section => section.SetVariable("global-outbound", true),
+                OnErrorAction = section => section.SetVariable("outer-error-ran", true)
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.ValidateClientCertificate(config);
+                    section.SetVariable("continued", true);
+                },
+                BackendAction = section => section.SetVariable("backend", true),
+                OutboundAction = section => section.SetVariable("outbound", true),
+                OnErrorAction = section =>
+                {
+                    RecordOnError(section);
+                    section.Base();
+                    ReplaceErrorResponse(section);
+                }
+            })
+            .Build();
+        PolicyException? original = null;
+
+        pipeline.RunRequest(request =>
+        {
+            original = Assert.ThrowsExactly<PolicyException>(request.RunAllNested);
+            request.RunOnErrorNested();
+        });
+
+        AssertCertificateError(original!, pipeline.Context, config);
+        pipeline.Context.Variables["outer-before"].Should().Be(true);
+        pipeline.Context.Variables["error-ran"].Should().Be(true);
+        pipeline.Context.Variables["outer-error-ran"].Should().Be(true);
+        pipeline.Context.Variables.Should().NotContainKey("outer-after");
+        AssertNormalSectionsSkipped(pipeline.Context);
+        AssertReplacementResponse(pipeline.Context);
+        pipeline.Context.ResponseTerminated.Should().BeFalse();
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void OnErrorMayRethrowTheOriginalCertificateError(bool nested)
+    {
+        var config = new ValidateClientCertificateConfig();
+        PolicyException? original = null;
+        var pipeline = CreateErrorPipeline(config, _ => throw original!);
+
+        var propagated = Assert.ThrowsExactly<PolicyException>(() => pipeline.RunRequest(request =>
+        {
+            original = Assert.ThrowsExactly<PolicyException>(() => SettlementTest.RunAll(request, nested));
+            ExecutionTest.RunSection(request, "on-error", nested);
+        }));
+
+        propagated.Should().BeSameAs(original);
+        AssertCertificateError(propagated, pipeline.Context, config);
+        AssertFailureResponse(pipeline.Context);
+        pipeline.Context.Variables["error-ran"].Should().Be(true);
+        pipeline.Context.Variables.Should().NotContainKey("after-error-handler");
+        pipeline.Context.ResponseTerminated.Should().BeFalse();
+        AssertNormalSectionsSkipped(pipeline.Context);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void OnErrorReturnResponseStillTerminatesRemainingScopesAndSections(bool nested)
+    {
+        var config = new ValidateClientCertificateConfig();
+        var onErrorCalls = 0;
+        var pipeline = CreateErrorPipeline(config, section =>
+        {
+            onErrorCalls++;
+            CompleteErrorResponse(section);
+        }, chainBeforeHandling: false);
+        PolicyException? original = null;
+
+        pipeline.RunRequest(request =>
+        {
+            original = Assert.ThrowsExactly<PolicyException>(() => SettlementTest.RunAll(request, nested));
+            ExecutionTest.RunSection(request, "on-error", nested);
+        });
+        SettlementTest.RunAll(pipeline, nested);
+        ExecutionTest.RunSection(pipeline, "on-error", nested);
+
+        AssertCertificateError(original!, pipeline.Context, config);
+        pipeline.Context.Response.StatusCode.Should().Be(503);
+        pipeline.Context.Response.StatusReason.Should().Be("Service Unavailable");
+        pipeline.Context.Response.Body.Content.Should().Be("completed certificate error");
+        pipeline.Context.ResponseTerminated.Should().BeTrue();
+        pipeline.Context.Variables["error-ran"].Should().Be(true);
+        pipeline.Context.Variables.Should().NotContainKey("outer-error-ran").And.NotContainKey("after-error-handler");
+        onErrorCalls.Should().Be(1);
+        AssertNormalSectionsSkipped(pipeline.Context);
+    }
+
+    [TestMethod]
+    [DataRow("preserve")]
+    [DataRow("replace")]
+    [DataRow("rethrow")]
+    [DataRow("return")]
+    public void StandaloneCertificateFailurePreservesResponseAndAllowsOnError(string behavior)
+    {
+        var config = new ValidateClientCertificateConfig();
+        Action<IOnErrorContext>? action = null;
+        var test = new CertificateDocument(config, section => action?.Invoke(section)).AsTestDocument();
+
+        var original = Assert.ThrowsExactly<PolicyException>(test.RunAll);
+        AssertCertificateError(original, test.Context, config);
+        AssertFailureResponse(test.Context);
+        test.Context.ResponseTerminated.Should().BeFalse();
+        action = behavior switch
+        {
+            "replace" => ReplaceErrorResponse,
+            "rethrow" => _ => throw original,
+            "return" => CompleteErrorResponse,
+            _ => null
+        };
+        if (behavior == "rethrow")
+        {
+            Assert.ThrowsExactly<PolicyException>(test.RunOnError).Should().BeSameAs(original);
+        }
+        else
+        {
+            test.RunOnError();
+        }
+
+        AssertCertificateError(original, test.Context, config);
+        test.Context.Variables["error-ran"].Should().Be(true);
+        test.Context.Variables["on-error-reason"].Should().Be("ClientCertificateNotPresent");
+        test.Context.Variables.Should().NotContainKey("continued").And.NotContainKey("backend").And.NotContainKey("outbound");
+        test.Context.Variables.ContainsKey("after-error-handler").Should().Be(behavior is "preserve" or "replace");
+        test.Context.ResponseTerminated.Should().Be(behavior == "return");
+        if (behavior == "replace") { AssertReplacementResponse(test.Context); }
+        else if (behavior == "return")
+        {
+            test.Context.Response.StatusCode.Should().Be(503);
+            test.Context.Response.Body.Content.Should().Be("completed certificate error");
+        }
+        else { AssertFailureResponse(test.Context); }
+    }
+
+    [TestMethod]
+    public void StandaloneCertificateErrorDoesNotClearAPreexistingTerminalResponseFlag()
+    {
+        var test = CreateTest();
+        test.Context.ResponseTerminated = true;
+
+        var error = Assert.ThrowsExactly<PolicyException>(test.RunInbound);
+
+        AssertCertificateError(error, test.Context);
+        AssertFailureResponse(test.Context);
+        test.Context.ResponseTerminated.Should().BeTrue();
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void CoordinatedIgnoreErrorStillContinuesNormalExecution(bool nested)
+    {
+        var pipeline = CreateErrorPipeline(new ValidateClientCertificateConfig { IgnoreError = true },
+            _ => Assert.Fail("IgnoreError must not route normal execution into on-error."));
+        var traces = new List<string>();
+        pipeline.Context.Trace = traces.Add;
+        pipeline.Context.Response.StatusCode = 202;
+        pipeline.Context.Response.StatusReason = "Accepted";
+        pipeline.Context.Response.Body.Content = "existing response";
+
+        SettlementTest.RunAll(pipeline, nested);
+
+        pipeline.Context.Variables.Should().ContainKeys("continued", "after-base", "inner",
+            "backend", "outbound", "global-backend", "global-outbound");
+        pipeline.Context.Variables.Should().NotContainKey("error-ran");
+        pipeline.Context.LastError.Reason.Should().Be("ClientCertificateNotPresent");
+        pipeline.Context.Response.StatusCode.Should().Be(202);
+        pipeline.Context.Response.StatusReason.Should().Be("Accepted");
+        pipeline.Context.Response.Body.Content.Should().Be("existing response");
+        pipeline.Context.ResponseTerminated.Should().BeFalse();
+        traces.Should().ContainSingle();
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void ExistingTerminalRejectionStillSkipsCertificateValidationAndOnError(bool nested)
+    {
+        var pipeline = PolicyPipelineBuilder.Create()
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.ReturnResponse(new ReturnResponseConfig
+                    {
+                        Status = new StatusConfig { Code = 409, Reason = "Conflict" },
+                        Body = new BodyConfig { Content = "already terminal" }
+                    });
+                    section.ValidateClientCertificate(new ValidateClientCertificateConfig());
+                },
+                BackendAction = _ => Assert.Fail("Terminal response must skip backend."),
+                OutboundAction = _ => Assert.Fail("Terminal response must skip outbound."),
+                OnErrorAction = _ => Assert.Fail("Terminal response must skip coordinated on-error.")
+            })
+            .Build();
+
+        SettlementTest.RunAll(pipeline, nested);
+        ExecutionTest.RunSection(pipeline, "on-error", nested);
+
+        pipeline.Context.Response.StatusCode.Should().Be(409);
+        pipeline.Context.Response.Body.Content.Should().Be("already terminal");
+        pipeline.Context.ResponseTerminated.Should().BeTrue();
+        pipeline.Context.LastError.Source.Should().NotBe("validate-client-certificate");
+    }
+
+    [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
     public void SecurityRejectionHonorsIgnoreError(bool ignoreError)
@@ -542,7 +827,7 @@ public class ValidateClientCertificateTests
         var error = Assert.ThrowsExactly<PolicyException>(() => pipeline.RunAll());
 
         error.Policy.Should().Be(nameof(IInboundContext.ValidateClientCertificate));
-        pipeline.Context.ResponseTerminated.Should().BeTrue();
+        pipeline.Context.ResponseTerminated.Should().BeFalse();
         pipeline.Context.Response.StatusCode.Should().Be(403);
         pipeline.Context.Variables.Should().NotContainKey("continued").And.NotContainKey("inner")
             .And.NotContainKey("backend").And.NotContainKey("outbound");
@@ -552,20 +837,112 @@ public class ValidateClientCertificateTests
     {
         var error = Assert.ThrowsExactly<PolicyException>(() => test.RunInbound());
 
-        error.Policy.Should().Be(nameof(IInboundContext.ValidateClientCertificate));
-        error.InnerException.Should().BeAssignableTo<SecurityException>();
-        test.Context.Response.StatusCode.Should().Be(403);
-        test.Context.Response.StatusReason.Should().Be("Forbidden");
-        test.Context.ResponseTerminated.Should().BeTrue();
+        AssertCertificateError(error, test.Context);
+        AssertFailureResponse(test.Context);
+        test.Context.ResponseTerminated.Should().BeFalse();
         test.Context.Variables.Should().NotContainKey("continued");
-        test.Context.LastError.Source.Should().Be("validate-client-certificate");
-        test.Context.LastError.Section.Should().Be("inbound");
-        test.Context.LastError.HttpErrorCode.Should().Be(403);
         if (reason is not null) { test.Context.LastError.Reason.Should().Be(reason); }
-        using var body = JsonDocument.Parse(test.Context.Response.Body.Content!);
-        body.RootElement.GetProperty("statusCode").GetInt32().Should().Be(403);
-        body.RootElement.GetProperty("message").GetString().Should().Be(test.Context.LastError.Message);
     }
+
+    private static void AssertCertificateError(
+        PolicyException error, GatewayContext context, ValidateClientCertificateConfig? config = null)
+    {
+        error.Policy.Should().Be(nameof(IInboundContext.ValidateClientCertificate));
+        error.Section.Should().Be(nameof(IInboundContext));
+        error.InnerException.Should().BeAssignableTo<SecurityException>();
+        error.Message.Should().Be(context.LastError.Message);
+        var argument = error.PolicyArgs.Should().ContainSingle().Which;
+        argument.Should().BeOfType<ValidateClientCertificateConfig>();
+        if (config is not null) { argument.Should().BeSameAs(config); }
+        context.LastError.Source.Should().Be("validate-client-certificate");
+        context.LastError.Section.Should().Be("inbound");
+        context.LastError.HttpErrorCode.Should().Be(403);
+    }
+
+    private static void AssertFailureResponse(GatewayContext context)
+    {
+        context.Response.StatusCode.Should().Be(403);
+        context.Response.StatusReason.Should().Be("Forbidden");
+        context.Response.Headers["Content-Type"].Should().Equal("application/json");
+        using var body = JsonDocument.Parse(context.Response.Body.Content!);
+        body.RootElement.GetProperty("statusCode").GetInt32().Should().Be(403);
+        body.RootElement.GetProperty("message").GetString().Should().Be(context.LastError.Message);
+    }
+
+    private static void AssertNormalSectionsSkipped(GatewayContext context) =>
+        context.Variables.Should().NotContainKey("continued").And.NotContainKey("after-base")
+            .And.NotContainKey("inner").And.NotContainKey("backend").And.NotContainKey("outbound")
+            .And.NotContainKey("global-backend").And.NotContainKey("global-outbound");
+
+    private static void AssertReplacementResponse(GatewayContext context)
+    {
+        context.Response.StatusCode.Should().Be(502);
+        context.Response.StatusReason.Should().Be("Bad Gateway");
+        context.Response.Headers["Content-Type"].Should().Equal("text/plain");
+        context.Response.Headers["X-Error-Handled"].Should().Equal("certificate");
+        context.Response.Body.Content.Should().Be("certificate rejected by on-error");
+    }
+
+    private static void RecordOnError(IOnErrorContext context)
+    {
+        context.SetVariable("error-ran", true);
+        context.SetVariable("on-error-reason", context.ExpressionContext.LastError.Reason);
+    }
+
+    private static void ReplaceErrorResponse(IOnErrorContext context)
+    {
+        context.SetStatus(new StatusConfig { Code = 502, Reason = "Bad Gateway" });
+        context.SetHeader("Content-Type", "text/plain");
+        context.SetHeader("X-Error-Handled", "certificate");
+        context.SetBody("certificate rejected by on-error");
+    }
+
+    private static void CompleteErrorResponse(IOnErrorContext context) =>
+        context.ReturnResponse(new ReturnResponseConfig
+        {
+            Status = new StatusConfig { Code = 503, Reason = "Service Unavailable" },
+            Body = new BodyConfig { Content = "completed certificate error" }
+        });
+
+    private static PolicyPipeline CreateErrorPipeline(ValidateClientCertificateConfig config,
+        Action<IOnErrorContext>? onError = null, bool chainBeforeHandling = true) =>
+        PolicyPipelineBuilder.Create()
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.ValidateClientCertificate(config);
+                    section.SetVariable("continued", true);
+                    section.Base();
+                    section.SetVariable("after-base", true);
+                },
+                BackendAction = section =>
+                {
+                    section.SetVariable("global-backend", true);
+                    section.Base();
+                },
+                OutboundAction = section => section.SetVariable("global-outbound", true),
+                OnErrorAction = section => section.SetVariable("outer-error-ran", true)
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section => section.SetVariable("inner", true),
+                BackendAction = section => section.SetVariable("backend", true),
+                OutboundAction = section =>
+                {
+                    section.SetVariable("outbound", true);
+                    section.Base();
+                },
+                OnErrorAction = section =>
+                {
+                    RecordOnError(section);
+                    if (chainBeforeHandling) { section.Base(); }
+                    onError?.Invoke(section);
+                    section.SetVariable("after-error-handler", true);
+                    if (!chainBeforeHandling) { section.Base(); }
+                }
+            })
+            .Build();
 
     private static X509Certificate2 CreateCertificate(string subject = "CN=client", bool includeDns = true,
         DateTimeOffset? notBefore = null, DateTimeOffset? notAfter = null)
@@ -603,7 +980,8 @@ public class ValidateClientCertificateTests
         return issued.CopyWithPrivateKey(rsa);
     }
 
-    private sealed class CertificateDocument(ValidateClientCertificateConfig config) : IDocument
+    private sealed class CertificateDocument(
+        ValidateClientCertificateConfig config, Action<IOnErrorContext>? onError = null) : IDocument
     {
         public void Inbound(IInboundContext context)
         {
@@ -611,8 +989,15 @@ public class ValidateClientCertificateTests
             context.SetVariable("continued", true);
         }
 
-        public void OnError(IOnErrorContext context) =>
-            context.SetVariable("on-error-reason", context.ExpressionContext.LastError.Reason);
+        public void Backend(IBackendContext context) => context.SetVariable("backend", true);
+        public void Outbound(IOutboundContext context) => context.SetVariable("outbound", true);
+
+        public void OnError(IOnErrorContext context)
+        {
+            RecordOnError(context);
+            onError?.Invoke(context);
+            context.SetVariable("after-error-handler", true);
+        }
     }
 
     private sealed class RecordingCertificateValidator(

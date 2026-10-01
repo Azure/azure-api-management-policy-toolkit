@@ -5,6 +5,7 @@ using System.Formats.Asn1;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
@@ -219,8 +220,11 @@ internal class ValidateClientCertificateHandler : PolicyHandler<ValidateClientCe
             return;
         }
 
-        ValidateJwtHandler.WriteFailure(context, "validate-client-certificate", reason, message, 403);
-        // Certificate rejection is a policy error so callers can execute their on-error section.
+        ValidateJwtHandler.RecordFailure(context, "validate-client-certificate", reason, message, 403);
+        ResponseUtilities.Overwrite(context.Response, 403, "Forbidden");
+        context.Response.Headers["Content-Type"] = ["application/json"];
+        context.Response.Body.Content = JsonSerializer.Serialize(new { statusCode = 403, message });
+        // This provisional error response must leave on-error available; the exception stops normal execution.
         throw new SecurityException(message);
     }
 
