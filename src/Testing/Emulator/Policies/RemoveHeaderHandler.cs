@@ -42,6 +42,7 @@ internal abstract class RemoveHeaderHandler : PolicyHandler<string>
         {
             headers.Remove(key);
         }
+        WaitBranchExecution.RecordHeaderMutation(context, headers, name, removeCaseVariants: true);
     }
 
     protected abstract Dictionary<string, string[]> GetHeaders(GatewayContext context);

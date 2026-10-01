@@ -30,6 +30,8 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 /// Generated response headers survive backend forwarding, while subsequent explicit
 /// response-header overrides and removals remain authoritative.
 /// Typed Wait owns one service instance per context while sharing the logical request ledger.
+/// Provider awaits never hold the shared ledger monitor. Same-key keyed quota admissions
+/// are serialized separately so request calls and bandwidth remain counted once.
 /// Admissions and deferred counts are not rolled back when a branch loses or fails.
 /// Response-phase branch variable outputs are not copied to the parent after Wait completes;
 /// shared response headers and counters still settle against the final logical response.
@@ -108,6 +110,7 @@ public sealed class PolicyCounterService
     /// </summary>
     public void CompleteResponse()
     {
+        Guid requestId;
         lock (_sync)
         {
             if (_settling)
@@ -121,45 +124,64 @@ public sealed class PolicyCounterService
             }
 
             _settling = true;
-            try
-            {
-                var terminated = false;
-                while (_rateIncrements.TryPeek(out var increment))
-                {
-                    try
-                    {
-                        var result = ConsumeStore(increment.Limits, increment.Calls, 0, checkLimits: false);
-                        ApplyRateLimit(result, increment.Output, writeHeaders: !result.Allowed || !_context.ResponseTerminated,
-                            writeVariables: ReferenceEquals(increment.Origin, _context));
-                    }
-                    catch (FinishSectionProcessingException)
-                    {
-                        terminated = true;
-                    }
+            requestId = _requestId;
+        }
 
+        try
+        {
+            var terminated = false;
+            while (PeekResponseWork(_rateIncrements) is { } increment)
+            {
+                try
+                {
+                    var result = ConsumeStore(increment.Limits, increment.Calls, requestId);
+                    ApplyRateLimit(result, increment.Output, writeHeaders: !result.Allowed || !_context.ResponseTerminated,
+                        writeVariables: ReferenceEquals(increment.Origin, _context));
+                }
+                catch (FinishSectionProcessingException)
+                {
+                    terminated = true;
+                }
+                lock (_sync)
+                {
                     _rateIncrements.Dequeue();
                 }
+            }
 
-                // Admission vetoes can replace the response; measure only the final payload.
-                while (_responseBandwidth.TryPeek(out var accountBandwidth))
+            // Admission vetoes can replace the response; measure only the final payload.
+            while (PeekResponseWork(_responseBandwidth) is { } accountBandwidth)
+            {
+                var bytes = GetMessageLength(_context.Response);
+                lock (_sync)
                 {
-                    var bytes = GetMessageLength(_context.Response);
+                    EnsureCurrentRequest(requestId);
                     if (bytes != 0)
                     {
                         Store.TryConsume(accountBandwidth, 0, bytes, UtcNow, checkLimits: false);
                     }
                     _responseBandwidth.Dequeue();
                 }
-
-                if (terminated)
-                {
-                    throw new FinishSectionProcessingException();
-                }
             }
-            finally
+
+            if (terminated)
+            {
+                throw new FinishSectionProcessingException();
+            }
+        }
+        finally
+        {
+            lock (_sync)
             {
                 _settling = false;
             }
+        }
+    }
+
+    private T? PeekResponseWork<T>(Queue<T> work) where T : class
+    {
+        lock (_sync)
+        {
+            return work.TryPeek(out var pending) ? pending : null;
         }
     }
 
@@ -168,7 +190,25 @@ public sealed class PolicyCounterService
         int calls,
         long bandwidth = 0,
         bool oncePerRequest = false,
-        bool countRequest = true)
+        bool countRequest = true) =>
+        ConsumeCore(limits, calls, bandwidth, oncePerRequest, countRequest, null, false);
+
+    internal PolicyCounterResult ConsumeRate(
+        IReadOnlyList<PolicyCounterLimit> limits, int calls, bool deferred, RateLimitOutput output)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(calls);
+        var increment = deferred && calls != 0 ? new DeferredRate(limits, calls, output, _context) : null;
+        return ConsumeCore(limits, deferred ? 0 : calls, 0, false, true, increment, false);
+    }
+
+    internal PolicyCounterResult ConsumeQuota(
+        IReadOnlyList<PolicyCounterLimit> limits, int calls, long bandwidth,
+        bool oncePerRequest = false, bool countRequest = true) =>
+        ConsumeCore(limits, calls, bandwidth, oncePerRequest, countRequest, null, countRequest);
+
+    private PolicyCounterResult ConsumeCore(
+        IReadOnlyList<PolicyCounterLimit> limits, int calls, long bandwidth,
+        bool oncePerRequest, bool countRequest, DeferredRate? deferredRate, bool responseBandwidth)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(calls);
         ArgumentOutOfRangeException.ThrowIfNegative(bandwidth);
@@ -182,79 +222,124 @@ public sealed class PolicyCounterService
             throw new ArgumentException("Each counter must be configured once per policy call.", nameof(limits));
         }
 
+        var cancellationToken = HttpPolicyTransport.GetCancellationToken(_context);
+        cancellationToken.ThrowIfCancellationRequested();
+        var key = limits[0].Key;
+        SemaphoreSlim? admission = null;
+        Guid requestId;
         lock (_sync)
         {
             EnsureRequest();
-            var key = limits[0].Key;
-            var callsAlreadyCounted = oncePerRequest && _quotaCallKeys.Contains(key);
-            var bandwidthAlreadyCounted = oncePerRequest && _requestBandwidthKeys.Contains(key);
+            requestId = _requestId;
+            EnsureAdmission(requestId, cancellationToken);
+            if (oncePerRequest && !_state.QuotaAdmissions.TryGetValue(key, out admission))
+            {
+                admission = new SemaphoreSlim(1, 1);
+                _state.QuotaAdmissions.Add(key, admission);
+            }
+        }
+
+        admission?.Wait(cancellationToken);
+        try
+        {
+            bool callsAlreadyCounted;
+            bool bandwidthAlreadyCounted;
+            lock (_sync)
+            {
+                EnsureAdmission(requestId, cancellationToken);
+                callsAlreadyCounted = oncePerRequest && _quotaCallKeys.Contains(key);
+                bandwidthAlreadyCounted = oncePerRequest && _requestBandwidthKeys.Contains(key);
+            }
             var callsToConsume = callsAlreadyCounted ? 0 : calls;
             var bandwidthToConsume = bandwidthAlreadyCounted ? 0 : bandwidth;
-            var result = ConsumeStore(
-                limits, callsToConsume, bandwidthToConsume,
-                callsAlreadyCounted: callsAlreadyCounted,
-                bandwidthAlreadyCounted: bandwidthAlreadyCounted,
-                checkAdmission: !callsAlreadyCounted);
-            if (result.Allowed && oncePerRequest && countRequest)
+            var store = Store;
+            var result = CheckStoreAdmission(
+                store, limits, callsToConsume, bandwidthToConsume, checkLimits: true,
+                callsAlreadyCounted, bandwidthAlreadyCounted, checkAdmission: !callsAlreadyCounted);
+
+            lock (_sync)
             {
-                if (callsToConsume != 0)
+                EnsureAdmission(requestId, cancellationToken);
+                if (!result.Allowed)
                 {
-                    _quotaCallKeys.Add(key);
+                    return result;
                 }
 
-                if (bandwidthToConsume != 0)
+                result = store.TryConsume(
+                    limits, callsToConsume, bandwidthToConsume, UtcNow,
+                    callsAlreadyCounted: callsAlreadyCounted, bandwidthAlreadyCounted: bandwidthAlreadyCounted);
+                if (result.Allowed)
                 {
-                    _requestBandwidthKeys.Add(key);
+                    if (oncePerRequest && countRequest)
+                    {
+                        if (callsToConsume != 0)
+                        {
+                            _quotaCallKeys.Add(key);
+                        }
+                        if (bandwidthToConsume != 0)
+                        {
+                            _requestBandwidthKeys.Add(key);
+                        }
+                    }
+                    if (deferredRate is not null)
+                    {
+                        _rateIncrements.Enqueue(deferredRate);
+                    }
+                    if (responseBandwidth && limits.Any(limit => limit.Bandwidth is not null)
+                        && (!oncePerRequest || _responseBandwidthKeys.Add(key)))
+                    {
+                        _responseBandwidth.Enqueue(limits);
+                    }
                 }
-            }
 
-            return result;
+                return result;
+            }
+        }
+        finally
+        {
+            admission?.Release();
         }
     }
 
-    internal void DeferRateIncrement(IReadOnlyList<PolicyCounterLimit> limits, int calls, RateLimitOutput output)
+    private void EnsureAdmission(Guid requestId, CancellationToken cancellationToken)
     {
-        if (calls == 0)
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureCurrentRequest(requestId);
+        if (_settling)
         {
-            return;
+            throw new InvalidOperationException("Cannot add limiter work during final response settlement.");
         }
+    }
 
+    private void EnsureCurrentRequest(Guid requestId)
+    {
+        if (_requestId != requestId || _context.RequestId != requestId)
+        {
+            throw new InvalidOperationException("RequestId must remain unchanged until limiter admission or settlement completes.");
+        }
+    }
+
+    private PolicyCounterResult ConsumeStore(IReadOnlyList<PolicyCounterLimit> limits, int calls, Guid requestId)
+    {
+        var store = Store;
+        var result = CheckStoreAdmission(store, limits, calls, 0, checkLimits: false);
         lock (_sync)
         {
-            EnsureRequest();
-            _rateIncrements.Enqueue(new DeferredRate(limits, calls, output, _context));
+            HttpPolicyTransport.GetCancellationToken(_context).ThrowIfCancellationRequested();
+            EnsureCurrentRequest(requestId);
+            return result.Allowed
+                ? store.TryConsume(limits, calls, 0, UtcNow, checkLimits: false)
+                : result;
         }
     }
 
-    internal void DeferQuotaResponseBandwidth(IReadOnlyList<PolicyCounterLimit> limits, bool oncePerRequest = false)
-    {
-        if (!limits.Any(limit => limit.Bandwidth is not null))
-        {
-            return;
-        }
-
-        lock (_sync)
-        {
-            EnsureRequest();
-            if (oncePerRequest && !_responseBandwidthKeys.Add(limits[0].Key))
-            {
-                return;
-            }
-
-            _responseBandwidth.Enqueue(limits);
-        }
-    }
-
-    private PolicyCounterResult ConsumeStore(
-        IReadOnlyList<PolicyCounterLimit> limits,
-        int calls,
-        long bandwidth,
-        bool checkLimits = true,
+    private PolicyCounterResult CheckStoreAdmission(
+        RateLimitStore store, IReadOnlyList<PolicyCounterLimit> limits, int calls, long bandwidth,
+        bool checkLimits,
         bool callsAlreadyCounted = false,
         bool bandwidthAlreadyCounted = false,
         bool checkAdmission = true)
     {
-        var store = Store;
         var result = store.TryConsume(
             limits, calls, bandwidth, UtcNow, checkLimits: checkLimits, commit: false,
             callsAlreadyCounted: callsAlreadyCounted, bandwidthAlreadyCounted: bandwidthAlreadyCounted);
@@ -266,19 +351,19 @@ public sealed class PolicyCounterService
         var limiter = checkAdmission ? _context.Services.Resolve<IRateLimiter>() : null;
         if (limiter is not null)
         {
+            var cancellationToken = HttpPolicyTransport.GetCancellationToken(_context);
             foreach (var limit in limits)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!PolicyServiceAwaiter.Wait(_context,
-                        limiter.TryConsumeAsync(limit.LimiterKey, calls, HttpPolicyTransport.GetCancellationToken(_context))))
+                        limiter.TryConsumeAsync(limit.LimiterKey, calls, cancellationToken)))
                 {
                     return new PolicyCounterResult(false, 0, store.GetRetryAfter(limit, calls, bandwidth, UtcNow));
                 }
             }
         }
 
-        return store.TryConsume(
-            limits, calls, bandwidth, UtcNow, checkLimits: checkLimits,
-            callsAlreadyCounted: callsAlreadyCounted, bandwidthAlreadyCounted: bandwidthAlreadyCounted);
+        return result;
     }
 
     private void EnsureRequest()
@@ -297,6 +382,7 @@ public sealed class PolicyCounterService
         _quotaCallKeys.Clear();
         _requestBandwidthKeys.Clear();
         _responseBandwidthKeys.Clear();
+        _state.QuotaAdmissions.Clear();
     }
 
     internal void ApplyRateLimit(
@@ -443,6 +529,7 @@ public sealed class PolicyCounterService
         internal readonly HashSet<string> QuotaCallKeys = new(StringComparer.Ordinal);
         internal readonly HashSet<string> RequestBandwidthKeys = new(StringComparer.Ordinal);
         internal readonly HashSet<string> ResponseBandwidthKeys = new(StringComparer.Ordinal);
+        internal readonly Dictionary<string, SemaphoreSlim> QuotaAdmissions = new(StringComparer.Ordinal);
         internal Guid RequestId;
         internal bool Settling;
     }

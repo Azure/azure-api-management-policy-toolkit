@@ -33,6 +33,7 @@ internal abstract class AppendHeaderHandler : PolicyHandler<string, string[]>
         }
 
         headers[name] = values;
+        WaitBranchExecution.RecordHeaderMutation(context, headers, name);
     }
 
     protected abstract Dictionary<string, string[]> GetHeaders(GatewayContext context);

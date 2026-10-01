@@ -27,6 +27,7 @@ internal class SetHeaderResponseHandler : SetHeaderHandler
         var displayName = headers.Keys.FirstOrDefault(key => key.Equals(name, StringComparison.OrdinalIgnoreCase)) ?? name;
         ResponseHeaderUtilities.RemoveCaseVariants(headers, name);
         headers[displayName] = values;
+        WaitBranchExecution.RecordHeaderMutation(context, headers, displayName, removeCaseVariants: true);
         overlay?.UpdateRegistered(name, values);
     }
 }
@@ -40,7 +41,9 @@ internal abstract class SetHeaderHandler : PolicyHandler<string, string[]>
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(values);
 
-        GetHeaders(context)[name] = values;
+        var headers = GetHeaders(context);
+        headers[name] = values;
+        WaitBranchExecution.RecordHeaderMutation(context, headers, name);
     }
 
     protected abstract Dictionary<string, string[]> GetHeaders(GatewayContext context);

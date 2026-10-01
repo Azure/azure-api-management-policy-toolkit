@@ -28,13 +28,9 @@ internal class QuotaByKeyHandler : PolicyHandler<QuotaByKeyConfig>
             ? PolicyCounterService.GetMessageLength(context.Request)
             : 0;
         var counters = PolicyCounterService.For(context);
-        var result = counters.Consume(
+        var result = counters.ConsumeQuota(
             limits, incrementCondition ? incrementCount : 0, bandwidth,
             oncePerRequest: true, countRequest: incrementCondition);
         counters.ApplyQuota(result);
-        if (incrementCondition)
-        {
-            counters.DeferQuotaResponseBandwidth(limits, oncePerRequest: true);
-        }
     }
 }

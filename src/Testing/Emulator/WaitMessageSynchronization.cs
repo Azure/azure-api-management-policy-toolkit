@@ -34,7 +34,11 @@ internal sealed class WaitMessageSynchronization(GatewayContext parent)
         context.Request, context.Response, context.Request.Body, context.Response.Body,
         context.Request.Body.ContentWriteVersion, context.Response.Body.ContentWriteVersion,
         context.Response.StatusCodeWriteVersion, context.Response.StatusReasonWriteVersion,
-        context.BackendResponseVersion, context.TerminalResponseVersion);
+        context.BackendResponseVersion, context.TerminalResponseVersion,
+        CaptureHeaders(context.Request.Headers), CaptureHeaders(context.Response.Headers));
+
+    private static WaitHeaderSnapshot CaptureHeaders(Dictionary<string, string[]> headers) =>
+        new(headers, new Dictionary<string, string[]>(headers, headers.Comparer));
 
     internal void Refresh(GatewayContext branch)
     {
@@ -54,31 +58,35 @@ internal sealed class WaitMessageSynchronization(GatewayContext parent)
     }
 
     internal WaitMessageSnapshot Synchronize(
-        GatewayContext branch, WaitMessageSnapshot previous, CancellationToken cancellationToken)
+        GatewayContext branch, WaitMessageSnapshot previous, CancellationToken cancellationToken,
+        IReadOnlyList<WaitHeaderMutation> requestHeaders, IReadOnlyList<WaitHeaderMutation> responseHeaders)
     {
         lock (_sync)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            PublishCore(branch, previous);
+            PublishCore(branch, previous, requestHeaders, responseHeaders);
             Refresh(branch);
             return Capture(branch);
         }
     }
 
     internal WaitMessageSnapshot Publish(
-        GatewayContext branch, WaitMessageSnapshot previous, CancellationToken cancellationToken)
+        GatewayContext branch, WaitMessageSnapshot previous, CancellationToken cancellationToken,
+        IReadOnlyList<WaitHeaderMutation> requestHeaders, IReadOnlyList<WaitHeaderMutation> responseHeaders)
     {
         lock (_sync)
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                PublishCore(branch, previous);
+                PublishCore(branch, previous, requestHeaders, responseHeaders);
             }
             return Capture(branch);
         }
     }
 
-    private void PublishCore(GatewayContext branch, WaitMessageSnapshot previous)
+    private void PublishCore(
+        GatewayContext branch, WaitMessageSnapshot previous,
+        IReadOnlyList<WaitHeaderMutation> requestHeaders, IReadOnlyList<WaitHeaderMutation> responseHeaders)
     {
         if (!ReferenceEquals(previous.RequestReference, branch.Request))
         {
@@ -86,7 +94,7 @@ internal sealed class WaitMessageSynchronization(GatewayContext parent)
         }
         else
         {
-            ApplyDelta(parent.Request, previous.Request, branch.Request);
+            ApplyDelta(parent.Request, previous.Request, branch.Request, previous.RequestHeaders, requestHeaders);
             if (!ReferenceEquals(previous.RequestBodyReference, branch.Request.Body)
                 || previous.RequestContentVersion != branch.Request.Body.ContentWriteVersion)
             {
@@ -101,7 +109,7 @@ internal sealed class WaitMessageSynchronization(GatewayContext parent)
         }
         else
         {
-            ApplyDelta(parent.Response, previous.Response, branch.Response);
+            ApplyDelta(parent.Response, previous.Response, branch.Response, previous.ResponseHeaders, responseHeaders);
             if (!ReferenceEquals(previous.ResponseBodyReference, branch.Response.Body)
                 || previous.ResponseContentVersion != branch.Response.Body.ContentWriteVersion)
             {
@@ -194,7 +202,9 @@ internal sealed class WaitMessageSynchronization(GatewayContext parent)
         }
     }
 
-    private static void ApplyDelta(object target, object previous, object current)
+    private static void ApplyDelta(
+        object target, object previous, object current,
+        WaitHeaderSnapshot? headerSnapshot = null, IReadOnlyList<WaitHeaderMutation>? headerMutations = null)
     {
         foreach (var property in Properties(target.GetType()))
         {
@@ -202,9 +212,33 @@ internal sealed class WaitMessageSynchronization(GatewayContext parent)
             var after = property.GetValue(current);
             if (before is Dictionary<string, string[]> oldHeaders && after is Dictionary<string, string[]> newHeaders)
             {
+                if (headerSnapshot is not null && !ReferenceEquals(headerSnapshot.Reference, newHeaders))
+                {
+                    property.SetValue(target, CopyValue(newHeaders));
+                    continue;
+                }
                 var headers = (Dictionary<string, string[]>)property.GetValue(target)!;
                 MergeDictionary(headers, oldHeaders, newHeaders,
-                    (first, second) => first.SequenceEqual(second), values => values.ToArray());
+                    (first, second) => first.SequenceEqual(second), values => values.ToArray(),
+                    (name, values) => headerSnapshot is not null
+                        && (!headerSnapshot.Values.TryGetValue(name, out var original) || !ReferenceEquals(original, values)));
+                foreach (var mutation in headerMutations ?? [])
+                {
+                    if (mutation.RemoveCaseVariants)
+                    {
+                        ResponseHeaderUtilities.RemoveCaseVariants(headers, mutation.Name);
+                    }
+                    else
+                    {
+                        headers.Remove(mutation.Name);
+                    }
+                    foreach (var entry in newHeaders.Where(entry => mutation.RemoveCaseVariants
+                                 ? entry.Key.Equals(mutation.Name, StringComparison.OrdinalIgnoreCase)
+                                 : newHeaders.Comparer.Equals(entry.Key, mutation.Name)))
+                    {
+                        headers[entry.Key] = entry.Value.ToArray();
+                    }
+                }
             }
             else if (before is Dictionary<string, string> oldValues && after is Dictionary<string, string> newValues)
             {
@@ -225,11 +259,12 @@ internal sealed class WaitMessageSynchronization(GatewayContext parent)
 
     private static void MergeDictionary<T>(
         Dictionary<string, T> target, Dictionary<string, T> before, Dictionary<string, T> after,
-        Func<T, T, bool> equal, Func<T, T> copy)
+        Func<T, T, bool> equal, Func<T, T> copy, Func<string, T, bool>? explicitChange = null)
     {
         foreach (var entry in after)
         {
-            if (!before.TryGetValue(entry.Key, out var original) || !equal(original, entry.Value))
+            if (!before.TryGetValue(entry.Key, out var original) || !equal(original, entry.Value)
+                || explicitChange?.Invoke(entry.Key, entry.Value) == true)
             {
                 target[entry.Key] = copy(entry.Value);
             }
@@ -247,4 +282,8 @@ internal sealed record WaitMessageSnapshot(
     MockRequest RequestReference, MockResponse ResponseReference,
     MockBody RequestBodyReference, MockBody ResponseBodyReference,
     long RequestContentVersion, long ResponseContentVersion,
-    long StatusCodeVersion, long StatusReasonVersion, long BackendVersion, long TerminalVersion);
+    long StatusCodeVersion, long StatusReasonVersion, long BackendVersion, long TerminalVersion,
+    WaitHeaderSnapshot RequestHeaders, WaitHeaderSnapshot ResponseHeaders);
+
+internal sealed record WaitHeaderSnapshot(
+    Dictionary<string, string[]> Reference, Dictionary<string, string[]> Values);

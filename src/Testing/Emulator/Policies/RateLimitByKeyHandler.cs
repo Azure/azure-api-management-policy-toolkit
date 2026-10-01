@@ -25,11 +25,7 @@ internal class RateLimitByKeyHandler : PolicyHandler<RateLimitByKeyConfig>
         ];
         var counters = PolicyCounterService.For(context);
         var output = RateLimitOutput.From(config);
-        var result = counters.Consume(limits, deferred ? 0 : increment);
+        var result = counters.ConsumeRate(limits, increment, deferred, output);
         counters.ApplyRateLimit(result, output);
-        if (deferred)
-        {
-            counters.DeferRateIncrement(limits, increment, output);
-        }
     }
 }

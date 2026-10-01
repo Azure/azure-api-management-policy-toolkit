@@ -37,6 +37,8 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 /// token variables still describe the observed LLM response, not the replacement error payload.
 /// No backend calls, tokenizer heuristics, or fallback token counts are supplied.
 /// Typed Wait services retain context ownership but share one request reservation/settlement ledger.
+/// A child denial cannot release that shared ledger: only a proven terminal logical request
+/// before backend participation can cancel earlier admissions.
 /// Branch variable outputs are merged only at Wait completion; subsequent final-response accounting
 /// does not introduce a losing branch's variable outputs into the parent.
 /// </remarks>
@@ -458,7 +460,8 @@ public sealed class TokenLimitService
 
     private void Reject(Invocation rejected, TokenLimitCounterResult result)
     {
-        var unused = !_observationFailed && _observedTokens is null
+        var unused = ReferenceEquals(_context, _dependencyContext)
+            && !_observationFailed && _observedTokens is null
             && !_context.BackendResponseReceived && !_context.BackendExecutionFailed;
         var invocations = unused ? _invocations.Append(rejected).ToArray() : new[] { rejected };
         var reservations = _pending.Values.Select(pending => pending.Reservation).ToArray();

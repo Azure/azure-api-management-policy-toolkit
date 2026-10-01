@@ -26,7 +26,11 @@ internal abstract class SetHeaderIfNotExistHandler : PolicyHandler<string, strin
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(values);
 
-        GetHeaders(context).TryAdd(name, values);
+        var headers = GetHeaders(context);
+        if (headers.TryAdd(name, values))
+        {
+            WaitBranchExecution.RecordHeaderMutation(context, headers, name);
+        }
     }
 
     protected abstract Dictionary<string, string[]> GetHeaders(GatewayContext context);

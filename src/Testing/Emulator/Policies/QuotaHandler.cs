@@ -24,9 +24,8 @@ internal class QuotaHandler : PolicyHandler<QuotaConfig>
             ? PolicyCounterService.GetMessageLength(context.Request)
             : 0;
         var counters = PolicyCounterService.For(context);
-        var result = counters.Consume(limits, 1, bandwidth);
+        var result = counters.ConsumeQuota(limits, 1, bandwidth);
         counters.ApplyQuota(result);
-        counters.DeferQuotaResponseBandwidth(limits);
     }
 
     private static List<PolicyCounterLimit> GetLimitsToCheck(GatewayContext context, QuotaConfig config)

@@ -14,6 +14,8 @@ internal sealed class WaitBranchExecution : IDisposable
     private readonly HttpTransportState _transport;
     private readonly Guid _requestId;
     private readonly WaitMessageSynchronization _messages;
+    private readonly List<WaitHeaderMutation> _requestHeaders = [];
+    private readonly List<WaitHeaderMutation> _responseHeaders = [];
     private WaitMessageSnapshot _snapshot;
     private int _completed;
 
@@ -67,7 +69,10 @@ internal sealed class WaitBranchExecution : IDisposable
         ValidateAccess(context);
         if (s_current.Value is { } execution)
         {
-            execution._snapshot = execution._messages.Synchronize(context, execution._snapshot, execution._cancellationToken);
+            execution._snapshot = execution._messages.Synchronize(context, execution._snapshot, execution._cancellationToken,
+                execution._requestHeaders, execution._responseHeaders);
+            execution._requestHeaders.Clear();
+            execution._responseHeaders.Clear();
         }
     }
 
@@ -75,8 +80,24 @@ internal sealed class WaitBranchExecution : IDisposable
     {
         if (s_current.Value is { } execution && ReferenceEquals(execution._context, context))
         {
-            execution._snapshot = execution._messages.Publish(context, execution._snapshot, execution._cancellationToken);
+            execution._snapshot = execution._messages.Publish(context, execution._snapshot, execution._cancellationToken,
+                execution._requestHeaders, execution._responseHeaders);
+            execution._requestHeaders.Clear();
+            execution._responseHeaders.Clear();
         }
+    }
+
+    internal static void RecordHeaderMutation(
+        GatewayContext context, Dictionary<string, string[]> headers, string name, bool removeCaseVariants = false)
+    {
+        if (s_current.Value is not { } execution || !ReferenceEquals(execution._context, context))
+        {
+            return;
+        }
+        var mutations = ReferenceEquals(headers, context.Request.Headers) ? execution._requestHeaders
+            : ReferenceEquals(headers, context.Response.Headers) ? execution._responseHeaders
+            : throw new InvalidOperationException("A Wait header mutation must belong to its branch message.");
+        mutations.Add(new WaitHeaderMutation(name, removeCaseVariants));
     }
 
     public void Dispose()
@@ -92,3 +113,5 @@ internal sealed class WaitBranchExecution : IDisposable
         }
     }
 }
+
+internal readonly record struct WaitHeaderMutation(string Name, bool RemoveCaseVariants);
