@@ -123,16 +123,10 @@ internal class CacheLookupHandler : PolicyHandler<CacheLookupConfig>
 
     private static string[]? GetHeader(GatewayContext context, string name)
     {
-        foreach (var header in context.Request.Headers)
-        {
-            if (string.Equals(header.Key, name, StringComparison.OrdinalIgnoreCase))
-            {
-                ArgumentNullException.ThrowIfNull(header.Value);
-                return header.Value;
-            }
-        }
-
-        return null;
+        var headers = context.Request.Headers;
+        return headers.Keys.Any(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+            ? SchemaValidationSession.HeaderValues(headers, name)
+            : null;
     }
 
     private static void AppendValues(StringBuilder key, string kind, string name, string[]? values)

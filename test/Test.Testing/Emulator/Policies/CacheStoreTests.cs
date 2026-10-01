@@ -155,9 +155,11 @@ public class CacheStoreTests
     }
 
     [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-    public void CacheStore_ResponseDurationAndConditionCanUseExpressions(bool injected)
+    [DataRow(false, -1, true)]
+    [DataRow(false, 0, false)]
+    [DataRow(true, -1, true)]
+    [DataRow(true, 0, false)]
+    public void CacheStore_ResponseDurationAndConditionCanUseExpressions(bool injected, int ticks, bool hit)
     {
         var clock = new CacheTestClock();
         var test = new ExecutionTestDocument
@@ -175,13 +177,14 @@ public class CacheStoreTests
 
         test.RunInbound();
         test.RunOutbound();
-        clock.Advance(TimeSpan.FromSeconds(17));
+        clock.Advance(TimeSpan.FromSeconds(17) + TimeSpan.FromTicks(ticks));
         test.Context.Response = new MockResponse();
         test.RunInbound();
 
-        test.Context.Variables["__cache_hit"].Should().Be(false);
-        test.Context.ResponseTerminated.Should().BeFalse();
-        test.Context.Response.Body.Content.Should().BeNull();
+        test.Context.Variables["__cache_hit"].Should().Be(hit);
+        test.Context.ResponseTerminated.Should().Be(hit);
+        test.Context.Response.StatusCode.Should().Be(hit ? 202 : 200);
+        test.Context.Response.Body.Content.Should().Be(hit ? "accepted" : null);
     }
 
     [TestMethod]
