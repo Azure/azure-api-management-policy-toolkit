@@ -95,6 +95,49 @@ public class JsonPTests
     }
 
     [TestMethod]
+    public void Outbound_JsonP_ShouldReplaceCaseSensitiveContentHeadersOnSuccess()
+    {
+        var test = new TestDocument(new JsonPDocument());
+        test.Context.Request.Url.Query["callback"] = ["app.cb"];
+        test.Context.Response.Headers = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        test.Context.Response.Headers["content-type"] = ["application/json"];
+        test.Context.Response.Headers["content-length"] = ["999"];
+        test.Context.Response.Headers["X-Test"] = ["keep-me"];
+        test.Context.Response.Body.Content = "{ \"message\": \"测试\" }";
+
+        test.RunOutbound();
+
+        var body = test.Context.Response.Body.Content;
+        test.Context.Response.Headers["Content-Type"].Should().Equal("application/javascript");
+        test.Context.Response.Headers["Content-Length"].Should().Equal(Encoding.UTF8.GetByteCount(body).ToString());
+        test.Context.Response.Headers.Keys.Should().NotContain(k => k.Equals("content-type", StringComparison.Ordinal));
+        test.Context.Response.Headers.Keys.Should().NotContain(k => k.Equals("content-length", StringComparison.Ordinal));
+        test.Context.Response.Headers["X-Test"].Should().Equal("keep-me");
+    }
+
+    [TestMethod]
+    public void Outbound_JsonP_ShouldReplaceCaseSensitiveContentHeadersOnError()
+    {
+        var test = new TestDocument(new JsonPDocument());
+        test.Context.Request.Url.Query["callback"] = ["alert(1)"];
+        test.Context.Response.Headers = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        test.Context.Response.Headers["content-type"] = ["application/json"];
+        test.Context.Response.Headers["content-length"] = ["999"];
+        test.Context.Response.Headers["X-Test"] = ["keep-me"];
+        test.Context.Response.Body.Content = "{ \"message\": \"测试\" }";
+
+        test.RunOutbound();
+
+        var body = test.Context.Response.Body.Content;
+        test.Context.Response.StatusCode.Should().Be(400);
+        test.Context.Response.Headers["Content-Type"].Should().Equal("application/json");
+        test.Context.Response.Headers["Content-Length"].Should().Equal(Encoding.UTF8.GetByteCount(body).ToString());
+        test.Context.Response.Headers.Keys.Should().NotContain(k => k.Equals("content-type", StringComparison.Ordinal));
+        test.Context.Response.Headers.Keys.Should().NotContain(k => k.Equals("content-length", StringComparison.Ordinal));
+        test.Context.Response.Headers["X-Test"].Should().Equal("keep-me");
+    }
+
+    [TestMethod]
     public void Outbound_JsonP_ShouldRejectEmptyCallbackValue()
     {
         var test = new TestDocument(new JsonPDocument());

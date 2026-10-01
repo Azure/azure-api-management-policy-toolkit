@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -65,8 +66,7 @@ internal class JsonPHandler : PolicyHandler<string>
 
         var wrappedBody = $"{callbackValue}({responseBody});";
         context.Response.Body.Content = wrappedBody;
-        context.Response.Headers["Content-Type"] = [SafeJsonContentType];
-        context.Response.Headers["Content-Length"] = [Encoding.UTF8.GetByteCount(wrappedBody).ToString(CultureInfo.InvariantCulture)];
+        SetContentHeaders(context.Response, SafeJsonContentType, wrappedBody);
     }
 
     private static bool IsSafeCallback(string callbackValue) =>
@@ -101,10 +101,25 @@ internal class JsonPHandler : PolicyHandler<string>
         var response = context.Response;
         response.StatusCode = 400;
         response.StatusReason = "Bad Request";
-        response.Headers["Content-Type"] = [ErrorJsonContentType];
         var errorBody = JObject.FromObject(new { error = message }).ToString(Formatting.None);
         response.Body.Content = errorBody;
-        response.Headers["Content-Length"] = [Encoding.UTF8.GetByteCount(errorBody).ToString(CultureInfo.InvariantCulture)];
+        SetContentHeaders(response, ErrorJsonContentType, errorBody);
         throw new FinishSectionProcessingException();
+    }
+
+    private static void SetContentHeaders(MockMessage response, string contentType, string body)
+    {
+        var keys = response.Headers.Keys
+            .Where(key => key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                || key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        foreach (var key in keys)
+        {
+            response.Headers.Remove(key);
+        }
+
+        response.Headers["Content-Type"] = [contentType];
+        response.Headers["Content-Length"] = [Encoding.UTF8.GetByteCount(body).ToString(CultureInfo.InvariantCulture)];
     }
 }
