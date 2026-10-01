@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
 
@@ -69,6 +70,12 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                     continue;
                 }
 
+                if (name.Ancestors().OfType<InvocationExpressionSyntax>()
+                    .Any(invocation => context.SemanticModel.GetOperation(invocation) is INameOfOperation))
+                {
+                    continue;
+                }
+
                 var type = symbol switch
                 {
                     IParameterSymbol p => p.Type,
@@ -77,7 +84,9 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
                     IPropertySymbol property => property.Type,
                     _ => null
                 };
-                if (type is INamedTypeSymbol section && IsSectionContext(section))
+                if (type is INamedTypeSymbol section && IsSectionContextType(section) &&
+                    !symbol.DeclaringSyntaxReferences.Any(reference =>
+                        reference.SyntaxTree == lambda.SyntaxTree && lambda.Body.Span.Contains(reference.Span)))
                 {
                     context.ReportDiagnostic(Diagnostic.Create(Rules.WaitBranch.CapturedContext,
                         name.GetLocation()));
@@ -149,4 +158,13 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
     private static bool IsSectionContext(INamedTypeSymbol type) =>
         type.ContainingNamespace.ToDisplayString() == AuthoringNamespace &&
         s_sectionNames.Contains(type.Name);
+
+    private static bool IsSectionContextType(INamedTypeSymbol type) =>
+        IsSectionContext(type) ||
+        IsBaseContext(type) ||
+        type.AllInterfaces.Any(section => IsSectionContext(section) || IsBaseContext(section));
+
+    private static bool IsBaseContext(INamedTypeSymbol type) =>
+        type.ContainingNamespace.ToDisplayString() == AuthoringNamespace &&
+        type.Name == "IHaveExpressionContext";
 }

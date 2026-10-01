@@ -69,6 +69,23 @@ public class WaitBranchTests
     }
 
     [TestMethod]
+    public async Task AcceptsCompileTimeNamesOfOuterContexts()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Wait("all", child =>
+                        child.WithId(nameof(context)).SendRequest(
+                            new SendRequestConfig { ResponseVariableName = "response" }));
+                }
+            }
+            """);
+    }
+
+    [TestMethod]
     public async Task RejectsMultipleTopLevelPoliciesInOneBranch()
     {
         await VerifyAsync(
@@ -175,6 +192,31 @@ public class WaitBranchTests
                     context.Wait("all", child =>
                     {
                         if (ShouldRun({|#0:context|}.ExpressionContext))
+                        {
+                            child.SendRequest(new SendRequestConfig { ResponseVariableName = "wrong" });
+                        }
+                    });
+                }
+
+                private static bool ShouldRun(IExpressionContext context) => true;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.WaitBranch.CapturedContext.Id).WithLocation(0));
+    }
+
+    [TestMethod]
+    public async Task RejectsCapturedBaseExpressionContext()
+    {
+        await VerifyAsync(
+            """
+            public class Policy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    IHaveExpressionContext outer = context;
+                    context.Wait("all", child =>
+                    {
+                        if (ShouldRun({|#0:outer|}.ExpressionContext))
                         {
                             child.SendRequest(new SendRequestConfig { ResponseVariableName = "wrong" });
                         }
