@@ -1,11 +1,16 @@
 # Gateway Emulator Policy Checklist
 
-**Gatekeeper admitted snapshot:** `2481fd0ed110a510ba660470ccf76c4b10bf7a7a`
-on `emulator/admission-complete`, not the isolated documentation branch.
-All policy packets and the structural audit are admitted. The preliminary **Full** gate
-passed complete `Test.Testing` **4942/4942, with no skips**, and the entire solution build
-with **0 errors / 8 existing warnings**. Final review, admission of this documentation,
-and the post-review Full-gate rerun remain outstanding; this is not a full APIM-parity claim.
+**Verified reviewed-code snapshot:** `dd55fc537253b9fc3fada0407984e2c186037e70`
+on gatekeeper branch `emulator/admission-complete`.
+All code packets, fixes, and the structural audit are admitted. The final reviewed-code
+**Full** gate passed complete `Test.Testing` **5320/5320, with 0 skipped**, and the entire
+solution build with **0 errors / 8 pre-existing warnings**.
+
+All five required integrated review passes are complete: correctness, test quality,
+consistency/style, meaningful duplication, and integration safety. Every in-scope
+high-confidence actionable finding was fixed and re-reviewed; **zero remain open**.
+This identifies the verified code snapshot, not a documentation commit, and does not
+claim unrestricted APIM parity.
 
 ## Inventory and status
 
@@ -128,6 +133,9 @@ These are tested contracts, not claims of complete APIM or live-cloud fidelity.
 | LLM metrics | Both metric aliases record usage already available at the inbound invocation from JSON response usage or `ILlmTokenUsageProvider`. There is no deferred response/SSE collection or invented token estimation. Both aliases run the behavioral suite through `AzureOpenAiEmitTokenMetricTests : LlmEmitTokenMetricTests`; semantic caching and token limiting have separate behavioral suites. |
 | Semantic cache | Both lookup/store families support text-only Chat Completions/Responses, Anthropic Messages, and Vertex `contents` envelopes. They require injected `ISemanticCacheEmbeddingProvider` (only `system-assigned` authentication is modeled; no token acquisition) and a configured external `ICache` fixture. Default local cosine distance is not Redis/model parity. `CacheId` requires an exact named registration without fallback; API, operation, endpoint, request options, backend, and ordered `VaryBy` isolate partitions. Enabled tools/tool-call history or responses, audio/multimodal content, and streaming requests/responses/RPCs fail explicitly. Stores require the prior inbound lookup and cache **HTTP 200 only**, with TTL in seconds. All four dedicated semantic-cache test classes verify these bounded behaviors and cross-alias cache sharing. |
 | Token limits | Both aliases enforce a rolling **60-second** rate (not the v2 token bucket) and fixed UTC Hourly/Daily/Weekly/Monthly/Yearly quotas, independently or together; weekly windows start Monday. Rate rejection is 429; quota rejection is 403. Enabling `EstimatePromptToken` requires injected `ITokenLimitPromptEstimator`, not a character-count heuristic. Actual backend prompt + completion usage is observed before outbound and settled once per key at final request completion, from JSON usage or `ILlmTokenUsageProvider`; missing usage is not invented. `RunAll` / successful outer `RunRequest` completes settlement; standalone sections need an explicit completion boundary. Share `TokenLimitCounterStore` and a consistent clock for shared counters. Streaming (`stream: true` / SSE) and estimated-image accounting fail explicitly; unestimated images require actual backend usage. `LlmTokenLimitTests` and inherited `AzureOpenAiTokenLimitTests` cover these contracts and coupled pipeline/HTTP behavior. |
+| Generated response-header provenance | `PolicyResponseHeaderOverlay` tracks generated CORS/rate/token outputs for the owning context, `RequestId`, and response object. Native `ForwardRequest` restores registered outputs after backend copying and before token-usage observation; arbitrary seeded/mock headers are not retained merely because their names resemble policy outputs. Replay respects subsequent overrides/removals of registered outputs, with case-insensitive replacement and preserved injected dictionary/comparer. Valid native CORS reconfiguration/no-match retires only its own earlier generated outputs. New request IDs or response-object replacements retire old provenance. `CorsTests`, `ForwardRequestTests`, `SetHeaderTests`, and `RemoveHeaderTests` verify these boundaries. |
+| Credentialed CORS wildcard exposure | With `AllowCredentials = true` and `ExposeHeaders` containing `*`, standalone inbound execution preserves immediate expansion over current headers. Native forwarding refreshes the wildcard portion from actual backend/policy headers while retaining explicitly configured exposure names; successful outer `RunAll` / `RunRequest` completion refreshes it after final response processing and limiter settlement. Wildcard enumeration excludes CORS control headers; native expansion also filters `Set-Cookie` and `Set-Cookie2`. Explicit exposure overrides/removals win; standalone sections do not imply request completion. Execution/settlement failures defer final refresh until successful recovery, and terminal/replacement responses are not taken over by an old resolver. `ForwardRequestTests`, `TestDocumentTests`, and `PolicyPipelineTests` cover flat/nested execution and completion-only recovery. |
+| Explicit callback ownership | A selected `ForwardRequest` callback bypasses native transport/header replay and retires deferred wildcard provenance before execution, including when its failure is later handled. CORS-looking names copied into a mock response do not authorize deferred exposure; successful forwarding callbacks still use backend-usage observation. Callbacks overriding response `SetHeader` / `RemoveHeader` do not implicitly perform default normalization or cancellation: a no-op callback does not cancel deferred exposure merely by invocation. The corresponding policy tests plus `TestDocumentTests` and `PolicyPipelineTests` verify that old deferred resolvers do not take ownership of callback-owned, terminal, or replacement responses. |
 
 ## Out-of-scope compilation integration caveat
 
@@ -141,10 +149,10 @@ that this compiler's XML conforms to the current APIM contract. No compiler fix 
 
 ## Structural audit and validation gates
 
-`test\Test.Testing\Emulator\EmulatorCoverageGateTests.cs` is **admitted at `2481fd0`**.
-The isolated preflight and targeted audit on admission both passed **7/7**; the previous
-five-class gap is closed. All six formerly pending semantic-cache/token-limit rows now
-have executable behavioral coverage, including the inherited Azure OpenAI token-limit suite.
+`test\Test.Testing\Emulator\EmulatorCoverageGateTests.cs` is admitted, and all **7/7**
+structural audit tests pass in the verified reviewed-code snapshot.
+All semantic-cache/token-limit rows have executable behavioral coverage, including
+the inherited Azure OpenAI token-limit suite.
 The structural audit checks inventory, registrations, executable metadata,
 helper/fragment contracts, and the raw-XML exclusion; it is not a replacement for
 behavioral tests or proof of unrestricted APIM parity.
@@ -154,20 +162,24 @@ worktree on the expected branch (default `emulator/admission-complete`).
 
 | Gate | Required checks | Snapshot state |
 |------|-----------------|----------------|
-| Admission | Latest policy-packet commit changes only the `-OwnedFiles` allowlist; `git diff --check HEAD^ HEAD`; `-TestFilter` selects every changed policy test class; targeted TRX has nonzero results and proves a passing test in each changed class; then the complete `Test.Testing` project runs. | All policy packets admitted. Semantic cache `296d028`: 473 targeted / 4355 complete passed. Token limits `ff7c44e`: 836 combined targeted / 4935 complete passed. |
-| Full | Requires the structural audit file above; runs the complete `Test.Testing` project, including that audit, then builds `apim-policy-toolkit.sln`. | Preliminary pass at `2481fd0` as recorded above. Final post-review/documentation-admission rerun still required. |
+| Admission | Latest policy-packet commit changes only the `-OwnedFiles` allowlist; `git diff --check HEAD^ HEAD`; `-TestFilter` selects every changed policy test class; targeted TRX has nonzero results and proves a passing test in each changed class; then the complete `Test.Testing` project runs. | **PASSED** for independently re-reviewed overlay `dd55fc5`: 1347 targeted / 5320 complete, 0 skipped. All policy packets and review fixes are admitted. |
+| Full | Requires the structural audit file above; runs the complete `Test.Testing` project, including that audit, then builds `apim-policy-toolkit.sln`. | **PASSED** on the verified reviewed-code snapshot after all five integrated reviews; complete test/build results are recorded above. |
 
 Run gates from the admission worktree, not an implementation/documentation branch.
 Set `$ownedFiles` to every allowed changed path and `$testFilter` to the changed policy
 test classes before a policy-packet Admission invocation. Audit-only/documentation-only
 commits do not satisfy that gate's changed-policy-test-class requirement; check the
-audit separately and rerun Full after final review/admission:
+audit separately or rerun Full as needed:
 
 ```powershell
 .\emulator-gates.ps1 -Gate Admission -OwnedFiles $ownedFiles -TestFilter $testFilter
 dotnet test test\Test.Testing\Test.Testing.csproj --filter "FullyQualifiedName~EmulatorCoverageGateTests" --no-logo --verbosity quiet
 .\emulator-gates.ps1 -Gate Full
 ```
+
+The coordinator reruns Full after this documentation-only correction is admitted.
+That follow-up confirms the documentation-only change; it does not change the verified
+code snapshot above or reopen the completed code reviews.
 
 Use Windows paths and positional test-project syntax:
 `dotnet test test\Test.Testing\Test.Testing.csproj` (local SDK 10 does not support
