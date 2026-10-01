@@ -1561,6 +1561,75 @@ public class LlmTokenLimitTests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void TokenLimit_AllNumericOutputsReplaceOrdinalAliasesAtFinalUsage(bool estimated)
+    {
+        var clock = new TokenClock();
+        var store = new TokenLimitCounterStore();
+        var test = CreateTest(BothConfig with { EstimatePromptToken = estimated }, store, clock, backend: SetUsage(3, 1));
+        if (estimated)
+        {
+            test.Context.Services.Register<ITokenLimitPromptEstimator>(new PromptEstimator(_ => 2));
+        }
+
+        var unrelated = new[] { "caf\u00e9", "\ud83d\ude42" };
+        var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["x-remaining"] = ["99"],
+            ["X-REMAINING"] = ["98"],
+            ["x-quota"] = ["99"],
+            ["X-QUOTA"] = ["98"],
+            ["x-tokens"] = ["99"],
+            ["X-TOKENS"] = ["98"],
+            ["Content-Type"] = ["application/json; charset=utf-8"],
+            ["X-Unrelated"] = unrelated
+        };
+        test.Context.Response.Headers = headers;
+
+        test.RunAll();
+
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        foreach (var name in new[] { "X-Remaining", "X-Quota", "X-Tokens" })
+        {
+            headers.Keys.Count(key => key.Equals(name, StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+            headers.Keys.Should().Contain(name);
+        }
+
+        headers["X-Unrelated"].Should().BeSameAs(unrelated);
+        headers["Content-Type"].Should().Equal("application/json; charset=utf-8");
+        test.Context.Response.Body.Content.Should().Be(UsageJson(3, 1));
+        AssertOutputs(test, 4, 6, 6);
+        store.GetRateTokens("customer", clock.GetUtcNow()).Should().Be(4);
+        store.GetQuotaTokens("customer", "Daily", clock.GetUtcNow()).Should().Be(4);
+    }
+
+    [TestMethod]
+    public void TokenLimit_NumericHeaderReplacementPreservesInt64ConsumedValues()
+    {
+        var clock = new TokenClock();
+        var store = new TokenLimitCounterStore();
+        var test = CreateTest(RateConfig, store, clock, backend: SetUsage(int.MaxValue, 1));
+        var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["x-tokens"] = ["99"],
+            ["X-TOKENS"] = ["98"]
+        };
+        test.Context.Response.Headers = headers;
+
+        test.RunAll();
+
+        test.Context.Response.StatusCode.Should().Be(200);
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        headers.Keys.Count(name => name.Equals("X-Tokens", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers["X-Tokens"].Should().Equal("2147483648");
+        test.Context.Variables["consumed"].Should().Be(2147483648L);
+        store.GetRateTokens("customer", clock.GetUtcNow()).Should().Be(2147483648L);
+    }
+
+    [TestMethod]
     [DataRow("document")]
     [DataRow("flat")]
     [DataRow("nested")]

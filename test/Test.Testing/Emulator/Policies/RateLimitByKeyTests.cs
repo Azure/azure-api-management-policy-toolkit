@@ -410,4 +410,126 @@ public class RateLimitByKeyTests
         error.InnerException.Should().BeOfType<InvalidOperationException>();
         test.SetupRateLimitStore().GetCount("rate-limit-by-key:customer").Should().Be(0);
     }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void RateLimitByKey_ReplacesOrdinalHeaderAliasesAtAdmissionAndDeferredCompletion(bool deferred)
+    {
+        var unrelated = new[] { "first", "second" };
+        var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["remaining"] = ["99"],
+            ["REMAINING"] = ["98"],
+            ["total"] = ["99"],
+            ["TOTAL"] = ["98"],
+            ["Content-Type"] = ["text/plain; charset=utf-8"],
+            ["X-Unrelated"] = unrelated
+        };
+        var test = LimiterTestHarness.Create(context => context.RateLimitByKey(Config with
+        {
+            IncrementCount = 2,
+            IncrementAfterResponse = deferred
+        }));
+        test.Context.Response.Headers = headers;
+        test.Context.Response.Body.Content = "caf\u00e9 \ud83d\ude42";
+
+        test.RunInbound();
+
+        headers.Keys.Count(name => name.Equals("Remaining", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers.Keys.Count(name => name.Equals("Total", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers["Remaining"].Should().Equal(deferred ? "5" : "3");
+        if (deferred)
+        {
+            headers["remaining"] = ["97"];
+            headers["REMAINING"] = ["96"];
+            headers["total"] = ["97"];
+            headers["TOTAL"] = ["96"];
+            test.CompleteLimiterResponse();
+        }
+
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        headers.Keys.Count(name => name.Equals("Remaining", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers.Keys.Count(name => name.Equals("Total", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers["Remaining"].Should().Equal("3");
+        headers["Total"].Should().Equal("5");
+        headers["X-Unrelated"].Should().BeSameAs(unrelated);
+        headers["Content-Type"].Should().Equal("text/plain; charset=utf-8");
+        test.Context.Response.Body.Content.Should().Be("caf\u00e9 \ud83d\ude42");
+        test.Context.Response.Body.Consumed.Should().BeFalse();
+        test.Context.Variables["remaining"].Should().Be(3);
+        test.SetupRateLimitStore().GetCount("rate-limit-by-key:customer").Should().Be(2);
+    }
+
+    [TestMethod]
+    [DataRow(false, null)]
+    [DataRow(false, "X-Retry")]
+    [DataRow(true, null)]
+    [DataRow(true, "X-Retry")]
+    public void RateLimitByKey_RejectionReplacesOrdinalOutputAliases(bool deferred, string? retryHeader)
+    {
+        var limiter = new RecordingRateLimiter((_, permits) => deferred && permits == 0);
+        var test = LimiterTestHarness.Create(context => context.RateLimitByKey(Config with
+        {
+            RetryAfterHeaderName = retryHeader,
+            IncrementAfterResponse = deferred
+        }), limiter: limiter);
+        var name = retryHeader ?? "Retry-After";
+        var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            [name.ToLowerInvariant()] = ["99"],
+            [name.ToUpperInvariant()] = ["98"],
+            ["remaining"] = ["99"],
+            ["total"] = ["99"]
+        };
+        test.Context.Response.Headers = headers;
+
+        test.RunInbound();
+        if (deferred)
+        {
+            test.CompleteLimiterResponse();
+        }
+
+        test.Context.Response.StatusCode.Should().Be(429);
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        headers.Keys.Should().BeEquivalentTo(new[] { name, "Remaining", "Total" });
+        headers[name].Should().Equal("60");
+        headers["Remaining"].Should().Equal("0");
+        headers["Total"].Should().Equal("5");
+    }
+
+    [TestMethod]
+    public void RateLimitByKey_DeferredCompletionReplacesHeadersInjectedAfterAdmission()
+    {
+        var test = LimiterTestHarness.Create(context => context.RateLimitByKey(Config with
+        {
+            IncrementCount = 2,
+            IncrementAfterResponse = true
+        }));
+        test.RunInbound();
+        var untouched = new[] { "caf\u00e9" };
+        var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["remaining"] = ["99"],
+            ["REMAINING"] = ["98"],
+            ["total"] = ["99"],
+            ["TOTAL"] = ["98"],
+            ["X-Unrelated"] = untouched
+        };
+        test.Context.Response.Headers = headers;
+
+        test.CompleteLimiterResponse();
+
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        headers.Keys.Count(name => name.Equals("Remaining", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers.Keys.Count(name => name.Equals("Total", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers["Remaining"].Should().Equal("3");
+        headers["Total"].Should().Equal("5");
+        headers["X-Unrelated"].Should().BeSameAs(untouched);
+        test.Context.Variables["remaining"].Should().Be(3);
+        test.SetupRateLimitStore().GetCount("rate-limit-by-key:customer").Should().Be(2);
+    }
 }

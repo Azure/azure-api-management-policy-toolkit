@@ -607,6 +607,39 @@ public class QuotaByKeyTests
         test.SetupRateLimitStore().GetBandwidth("quota-by-key:tenant").Should().Be(0);
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void QuotaByKey_RejectionKeepsOrdinalDictionaryAndSingleRetryHeader(bool bandwidth)
+    {
+        var test = LimiterTestHarness.Create(context => context.QuotaByKey(Config with
+        {
+            Calls = bandwidth ? null : 0,
+            Bandwidth = bandwidth ? 1 : null
+        }));
+        if (bandwidth)
+        {
+            test.Context.Request.Body.Content = new string('\u00e9', 512) + "a";
+        }
+
+        var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["retry-after"] = ["99"],
+            ["RETRY-AFTER"] = ["98"]
+        };
+        test.Context.Response.Headers = headers;
+
+        test.RunInbound();
+
+        test.Context.Response.StatusCode.Should().Be(403);
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        headers.Should().ContainSingle().Which.Key.Should().Be("Retry-After");
+        headers["Retry-After"].Should().Equal("300");
+        test.Context.Request.Body.Consumed.Should().BeFalse();
+        test.SetupRateLimitStore().GetCount("quota-by-key:tenant").Should().Be(0);
+    }
+
     private static TestDocument MixedQuotaDocument(
         bool bandwidthFirst,
         int calls = 10,

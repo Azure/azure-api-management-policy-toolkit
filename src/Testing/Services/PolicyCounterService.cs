@@ -38,6 +38,7 @@ public sealed class PolicyCounterService
     private readonly HashSet<string> _requestBandwidthKeys = new(StringComparer.Ordinal);
     private readonly HashSet<string> _responseBandwidthKeys = new(StringComparer.Ordinal);
     private Guid _requestId;
+    private bool _settling;
 
     /// <summary>
     /// Creates request bookkeeping for one gateway context, not shared request state.
@@ -84,39 +85,57 @@ public sealed class PolicyCounterService
 
     /// <summary>
     /// Settles deferred call counts and final response bandwidth once. Provider and payload
-    /// errors propagate. A limiter rejection sets the response and terminates processing.
+    /// errors propagate and leave the failed operation pending for a completion-only retry;
+    /// already settled operations are not replayed. A limiter rejection sets the response
+    /// and terminates processing.
     /// </summary>
     public void CompleteResponse()
     {
         lock (_sync)
         {
+            if (_settling)
+            {
+                throw new InvalidOperationException("Limiter response settlement is already running.");
+            }
+
             if (HasPendingResponse && _requestId != _context.RequestId)
             {
                 throw new InvalidOperationException("Complete the previous limiter response before changing RequestId.");
             }
 
-            var terminated = false;
-            while (_rateIncrements.TryDequeue(out var increment))
+            _settling = true;
+            try
             {
-                try
+                var terminated = false;
+                while (_rateIncrements.TryPeek(out var increment))
                 {
-                    increment();
+                    try
+                    {
+                        increment();
+                    }
+                    catch (FinishSectionProcessingException)
+                    {
+                        terminated = true;
+                    }
+
+                    _rateIncrements.Dequeue();
                 }
-                catch (FinishSectionProcessingException)
+
+                // Admission vetoes can replace the response; measure only the final payload.
+                while (_responseBandwidth.TryPeek(out var accountBandwidth))
                 {
-                    terminated = true;
+                    accountBandwidth();
+                    _responseBandwidth.Dequeue();
+                }
+
+                if (terminated)
+                {
+                    throw new FinishSectionProcessingException();
                 }
             }
-
-            // Admission vetoes can replace the response; measure only the final payload.
-            while (_responseBandwidth.TryDequeue(out var accountBandwidth))
+            finally
             {
-                accountBandwidth();
-            }
-
-            if (terminated)
-            {
-                throw new FinishSectionProcessingException();
+                _settling = false;
             }
         }
     }
@@ -287,14 +306,14 @@ public sealed class PolicyCounterService
                 _context.Response.Headers[header.Key] = header.Value;
             }
 
-            _context.Response.Headers.Remove(output.RetryAfterHeaderName ?? "Retry-After");
+            ResponseHeaderUtilities.RemoveCaseVariants(_context.Response.Headers, output.RetryAfterHeaderName ?? "Retry-After");
             _context.ResponseTerminated = false;
         }
 
         var remaining = result.Allowed ? result.RemainingCalls : 0;
         if (writeHeaders && output.RemainingCallsHeaderName is not null)
         {
-            _context.Response.Headers[output.RemainingCallsHeaderName] = [remaining.ToString(CultureInfo.InvariantCulture)];
+            ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, output.RemainingCallsHeaderName, remaining);
         }
 
         if (output.RemainingCallsVariableName is not null)
@@ -304,7 +323,7 @@ public sealed class PolicyCounterService
 
         if (writeHeaders && output.TotalCallsHeaderName is not null)
         {
-            _context.Response.Headers[output.TotalCallsHeaderName] = [output.Calls.ToString(CultureInfo.InvariantCulture)];
+            ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, output.TotalCallsHeaderName, output.Calls);
         }
 
         if (output.RetryAfterVariableName is not null)
@@ -314,8 +333,7 @@ public sealed class PolicyCounterService
 
         if (!result.Allowed)
         {
-            _context.Response.Headers[output.RetryAfterHeaderName ?? "Retry-After"] =
-                [result.RetryAfter.ToString(CultureInfo.InvariantCulture)];
+            ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, output.RetryAfterHeaderName ?? "Retry-After", result.RetryAfter);
             throw new FinishSectionProcessingException();
         }
     }
@@ -331,7 +349,7 @@ public sealed class PolicyCounterService
         _context.ResponseTerminated = true;
         if (result.RetryAfter > 0)
         {
-            _context.Response.Headers["Retry-After"] = [result.RetryAfter.ToString(CultureInfo.InvariantCulture)];
+            ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, "Retry-After", result.RetryAfter);
         }
 
         throw new FinishSectionProcessingException();

@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
+
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
@@ -727,6 +729,155 @@ public class RateLimitTests
         LimiterTestHarness.RunRequest(test);
         test.Context.Response.StatusCode.Should().Be(200);
         fallback.GetCount(key).Should().Be(1);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void RateLimit_OutputsReplaceCaseVariantsWithoutReplacingHeaderDictionary(bool ignoreCase)
+    {
+        var comparer = ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var unrelated = new[] { "first", "second" };
+        var headers = new Dictionary<string, string[]>(comparer)
+        {
+            ["remaining"] = ["99"],
+            ["REMAINING"] = ["98"],
+            ["total"] = ["99"],
+            ["TOTAL"] = ["98"],
+            ["X-Unrelated"] = unrelated
+        };
+        var test = LimiterTestHarness.Create(context => context.RateLimit(new RateLimitConfig
+        {
+            Calls = 3,
+            RenewalPeriod = 60,
+            RemainingCallsHeaderName = "Remaining",
+            RemainingCallsVariableName = "remaining",
+            TotalCallsHeaderName = "Total"
+        }));
+        test.Context.Response.Headers = headers;
+        var body = test.Context.Response.Body;
+        body.Content = "caf\u00e9 \ud83d\ude42";
+
+        test.RunInbound();
+
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(comparer);
+        headers.Keys.Count(name => name.Equals("Remaining", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers.Keys.Count(name => name.Equals("Total", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers.Keys.Should().Contain("Remaining").And.Contain("Total");
+        headers["Remaining"].Should().Equal("2");
+        headers["Total"].Should().Equal("3");
+        headers["X-Unrelated"].Should().BeSameAs(unrelated);
+        test.Context.Variables["remaining"].Should().Be(2);
+        test.Context.Response.Body.Should().BeSameAs(body);
+        body.Content.Should().Be("caf\u00e9 \ud83d\ude42");
+        body.Consumed.Should().BeFalse();
+    }
+
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("X-Retry")]
+    public void RateLimit_RecoveryRemovesEveryCaseVariantOfConfiguredRetryHeader(string? retryHeader)
+    {
+        var name = retryHeader ?? "Retry-After";
+        var unrelated = new[] { "retained" };
+        var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            [name.ToLowerInvariant()] = ["99"],
+            [name.ToUpperInvariant()] = ["98"],
+            ["remaining"] = ["99"],
+            ["X-Unrelated"] = unrelated
+        };
+        var test = LimiterTestHarness.Create(context => context.RateLimit(new RateLimitConfig
+        {
+            Calls = 3,
+            RenewalPeriod = 60,
+            RetryAfterHeaderName = retryHeader,
+            RemainingCallsHeaderName = "Remaining"
+        }));
+        test.Context.Response.Headers = headers;
+        test.Context.Response.StatusCode = 429;
+
+        test.RunInbound();
+
+        test.Context.Response.StatusCode.Should().Be(200);
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        headers.Keys.Should().NotContain(key => key.Equals(name, StringComparison.OrdinalIgnoreCase));
+        headers.Keys.Count(key => key.Equals("Remaining", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+        headers["Remaining"].Should().Equal("2");
+        headers["X-Unrelated"].Should().BeSameAs(unrelated);
+    }
+
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("X-Retry")]
+    public void RateLimit_RejectionWritesSingleCanonicalConfiguredOutputHeaders(string? retryHeader)
+    {
+        var name = retryHeader ?? "Retry-After";
+        var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            [name.ToLowerInvariant()] = ["99"],
+            [name.ToUpperInvariant()] = ["98"],
+            ["remaining"] = ["99"],
+            ["total"] = ["99"]
+        };
+        var test = LimiterTestHarness.Create(context => context.RateLimit(new RateLimitConfig
+        {
+            Calls = 0,
+            RenewalPeriod = 60,
+            RetryAfterHeaderName = retryHeader,
+            RemainingCallsHeaderName = "Remaining",
+            TotalCallsHeaderName = "Total"
+        }));
+        test.Context.Response.Headers = headers;
+
+        test.RunInbound();
+
+        test.Context.Response.StatusCode.Should().Be(429);
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        headers.Keys.Should().BeEquivalentTo(new[] { name, "Remaining", "Total" });
+        headers[name].Should().Equal("60");
+        headers["Remaining"].Should().Equal("0");
+        headers["Total"].Should().Equal("0");
+    }
+
+    [TestMethod]
+    public void RateLimit_HeaderReplacementUsesOrdinalCasingWithoutChangingUnicodeHeaders()
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("tr-TR");
+            var untouched = new[] { "caf\u00e9" };
+            var headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+            {
+                ["limit"] = ["99"],
+                ["LIMIT"] = ["98"],
+                ["l\u0131m\u0131t"] = untouched
+            };
+            var test = LimiterTestHarness.Create(context => context.RateLimit(new RateLimitConfig
+            {
+                Calls = 1234,
+                RenewalPeriod = 60,
+                TotalCallsHeaderName = "Limit"
+            }));
+            test.Context.Response.Headers = headers;
+
+            test.RunInbound();
+
+            headers.Keys.Count(name => name.Equals("Limit", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+            headers.Keys.Should().Contain("Limit");
+            headers["Limit"].Should().Equal("1234");
+            headers["l\u0131m\u0131t"].Should().BeSameAs(untouched);
+            test.Context.Response.Headers.Should().BeSameAs(headers);
+            headers.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+        }
     }
 
     private static void ApplyStorePolicy(IInboundContext context, string policy)

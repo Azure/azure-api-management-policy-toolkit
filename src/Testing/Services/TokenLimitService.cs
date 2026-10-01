@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Globalization;
 using System.Text.Json;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -551,21 +550,8 @@ public sealed class TokenLimitService
         PolicyArgs = [origin.Config]
     };
 
-    private void WriteHeader(string? name, long value)
-    {
-        if (name is null)
-        {
-            return;
-        }
-
-        var headers = _context.Response.Headers;
-        foreach (var existing in headers.Keys.Where(key => key.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray())
-        {
-            headers.Remove(existing);
-        }
-
-        headers[name] = [value.ToString(CultureInfo.InvariantCulture)];
-    }
+    private void WriteHeader(string? name, long value) =>
+        ResponseHeaderUtilities.SetNumericHeader(_context.Response.Headers, name, value);
 
     private void WriteVariable(string? name, object value)
     {
