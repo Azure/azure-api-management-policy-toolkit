@@ -27,6 +27,7 @@ public class DocumentCompiler
         var methods = document.DescendantNodes().OfType<MethodDeclarationSyntax>();
         var rootElement = new XElement(documentType == DocumentType.Fragment ? "fragment" : "policies");
         var context = new DocumentCompilationContext(compilation, document, rootElement);
+        document.ValidateDocumentName(semanticModel, context);
 
         if (documentType == DocumentType.Fragment)
             CompileFragment(context, methods);

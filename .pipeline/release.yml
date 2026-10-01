@@ -66,10 +66,10 @@ extends:
                           Write-Host "##vso[build.updatebuildnumber]$packageVersion"
 
                     - task: UseDotNet@2
-                      displayName: 'Setup .NET 8 SDK'
+                      displayName: 'Setup .NET 10 SDK'
                       inputs:
                         packageType: sdk
-                        version: '8.x'
+                        version: '10.x'
 
                     - task: PowerShell@2
                       displayName: 'Verify signed NuGet packages'

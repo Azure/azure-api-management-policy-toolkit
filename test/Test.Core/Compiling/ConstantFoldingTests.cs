@@ -4,7 +4,7 @@
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
-public class ConstFoldingRewriterTests
+public class ConstantFoldingTests
 {
     [TestMethod]
     [DataRow(

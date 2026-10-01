@@ -48,6 +48,12 @@ public class DirectoryCompiler(DocumentCompiler compiler)
                     Console.Error.WriteLine(error.ToString());
                 }
 
+                if (!documentResult.Errors.IsEmpty)
+                {
+                    Console.Error.WriteLine($"Document '{document.Identifier.ValueText}' not written due to errors");
+                    continue;
+                }
+
                 var policyFileName = document.ExtractDocumentFileName(semantics);
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {

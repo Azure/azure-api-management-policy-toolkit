@@ -65,6 +65,13 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
                     await Console.Error.WriteLineAsync(error.ToString());
                 }
 
+                if (!documentResult.Errors.IsEmpty)
+                {
+                    await Console.Error.WriteLineAsync(
+                        $"Document '{document.Identifier.ValueText}' not written due to errors");
+                    continue;
+                }
+
                 var policyFileName = document.ExtractDocumentFileName(semantics);
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
