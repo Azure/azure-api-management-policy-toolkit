@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Globalization;
+using System.Net.Http.Headers;
 using System.Text;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -177,6 +178,19 @@ internal static class HttpPolicyTransport
 
         if (response.Content is not null)
         {
+            var contentType = response.Content.Headers.ContentType;
+            if (contentType?.CharSet is { } charset)
+            {
+                try
+                {
+                    Encoding.GetEncoding(charset.Trim('"'));
+                }
+                catch (Exception error) when (error is ArgumentException or NotSupportedException)
+                {
+                    throw new NotSupportedException($"HTTP backend response charset '{charset}' is not supported.", error);
+                }
+            }
+
             var read = response.Content.ReadAsStringAsync(cancellationToken);
             ObserveFault(read);
             var body = await read.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -184,6 +198,13 @@ internal static class HttpPolicyTransport
             foreach (var header in response.Content.Headers)
             {
                 result.Headers[header.Key] = header.Value.ToArray();
+            }
+
+            if (contentType is not null)
+            {
+                var normalizedType = MediaTypeHeaderValue.Parse(contentType.ToString());
+                normalizedType.CharSet = Encoding.UTF8.WebName;
+                result.Headers["Content-Type"] = [normalizedType.ToString()];
             }
 
             result.Headers["Content-Length"] = [Encoding.UTF8.GetByteCount(body).ToString(CultureInfo.InvariantCulture)];

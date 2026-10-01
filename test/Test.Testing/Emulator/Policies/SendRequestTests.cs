@@ -1343,4 +1343,174 @@ public class SendRequestTests
             await execution;
         }
     }
+
+    [TestMethod]
+    [DataRow("forward", "iso-8859-1", false)]
+    [DataRow("send", "iso-8859-1", false)]
+    [DataRow("invoke", "iso-8859-1", false)]
+    [DataRow("forward", "iso-8859-1", true)]
+    [DataRow("send", "iso-8859-1", true)]
+    [DataRow("invoke", "iso-8859-1", true)]
+    [DataRow("forward", "utf-16", true)]
+    [DataRow("send", "utf-16", true)]
+    [DataRow("invoke", "utf-16", true)]
+    public void ShouldNormalizeTranscodedBackendCharsetAcrossNativeHttpPolicies(
+        string policy, string charset, bool caseSensitiveHeaders)
+    {
+        var test = CreateTransportTest(policy);
+        if (caseSensitiveHeaders)
+        {
+            test.Context.Request.Headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+            {
+                ["X-Request"] = ["first"],
+                ["x-request"] = ["second"]
+            };
+            test.Context.Response.Headers = new Dictionary<string, string[]>(StringComparer.Ordinal)
+            {
+                ["content-type"] = ["stale/lower"],
+                ["Content-Type"] = ["stale/upper"],
+                ["X-Stale"] = ["remove"]
+            };
+        }
+        var targetHeaders = test.Context.Response.Headers;
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient(request =>
+        {
+            if (caseSensitiveHeaders) request.Headers.GetValues("X-Request").Should().Equal("first", "second");
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(Encoding.GetEncoding(charset).GetBytes("\u00e9"))
+            };
+            response.Content.Headers.TryAddWithoutValidation("cOnTeNt-TyPe",
+                $"text/plain; charset={charset}; format=flowed").Should().BeTrue();
+            return response;
+        }));
+
+        RunTransport(test, policy);
+
+        var result = policy == "forward" ? test.Context.Response
+            : test.Context.Variables["resp"].Should().BeOfType<MockResponse>().Subject;
+        var typeValues = result.Headers.Where(header => header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(header => header.Value).ToArray();
+        typeValues.Should().ContainSingle();
+        var contentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(typeValues[0]);
+        contentType.MediaType.Should().Be("text/plain");
+        contentType.CharSet.Should().Be("utf-8");
+        contentType.Parameters.Single(parameter => parameter.Name == "format").Value.Should().Be("flowed");
+        var bytes = result.Body.As<byte[]>(preserveContent: true);
+        bytes.Should().Equal(0xC3, 0xA9);
+        Encoding.GetEncoding(contentType.CharSet!).GetString(bytes).Should().Be("\u00e9");
+        result.Headers["Content-Length"].Should().Equal(bytes.Length.ToString());
+        result.Headers.Should().NotContainKey("X-Stale");
+        test.Context.Response.Headers.Should().BeSameAs(targetHeaders);
+        if (caseSensitiveHeaders) targetHeaders.Comparer.Should().BeSameAs(StringComparer.Ordinal);
+    }
+
+    [TestMethod]
+    [DataRow("forward")]
+    [DataRow("send")]
+    [DataRow("invoke")]
+    public void ShouldDeclareUtf8ForBackendTextWithoutCharset(string policy)
+    {
+        var test = CreateTransportTest(policy);
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(Encoding.UTF8.GetBytes("{\"text\":\"\u00e9\"}"))
+            };
+            response.Content.Headers.ContentType =
+                System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json; profile=native");
+            return response;
+        }));
+
+        RunTransport(test, policy);
+
+        var result = policy == "forward" ? test.Context.Response
+            : test.Context.Variables["resp"].Should().BeOfType<MockResponse>().Subject;
+        var contentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(result.Headers["Content-Type"].Single());
+        contentType.CharSet.Should().Be("utf-8");
+        contentType.Parameters.Single(parameter => parameter.Name == "profile").Value.Should().Be("native");
+        result.Headers["Content-Length"].Should().Equal(result.Body.As<byte[]>(preserveContent: true).Length.ToString());
+    }
+
+    [TestMethod]
+    [DataRow("forward")]
+    [DataRow("send")]
+    [DataRow("invoke")]
+    public void ShouldRejectUnsupportedBackendCharsetExplicitly(string policy)
+    {
+        const string charset = "x-apim-unsupported-backend-encoding";
+        var test = CreateTransportTest(policy);
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([0xE9])
+            };
+            response.Content.Headers.ContentType =
+                System.Net.Http.Headers.MediaTypeHeaderValue.Parse($"text/plain; charset={charset}");
+            return response;
+        }));
+
+        var error = Assert.ThrowsExactly<PolicyException>(() => RunTransport(test, policy));
+
+        error.InnerException.Should().BeOfType<NotSupportedException>().Which.Message.Should().Contain(charset);
+        test.Context.Variables.Should().NotContainKey("resp");
+    }
+
+    [TestMethod]
+    [DataRow("forward", "HEAD", 200)]
+    [DataRow("send", "HEAD", 200)]
+    [DataRow("invoke", "HEAD", 200)]
+    [DataRow("forward", "GET", 304)]
+    [DataRow("send", "GET", 304)]
+    [DataRow("invoke", "GET", 304)]
+    public void ShouldPreserveBodylessRepresentationCharsetAndLength(string policy, string method, int status)
+    {
+        var test = CreateTransportTest(policy, method: method);
+        const string representationType = "text/plain; charset=iso-8859-1; format=flowed";
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient(_ =>
+        {
+            var response = new HttpResponseMessage((HttpStatusCode)status) { Content = new ByteArrayContent([]) };
+            response.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(representationType);
+            response.Content.Headers.ContentLength = 321;
+            return response;
+        }));
+
+        RunTransport(test, policy);
+
+        var result = policy == "forward" ? test.Context.Response
+            : test.Context.Variables["resp"].Should().BeOfType<MockResponse>().Subject;
+        result.Headers["Content-Type"].Should().Equal(representationType);
+        result.Headers["Content-Length"].Should().Equal("321");
+        result.Body.As<byte[]>(preserveContent: true).Should().BeEmpty();
+    }
+
+    [TestMethod]
+    [DataRow("send")]
+    [DataRow("invoke")]
+    public void ShouldPreserveExplicitRequestBytesWhileNormalizingResponseText(string policy)
+    {
+        byte[] requestBytes = [0xE9, 0, 255];
+        var test = CreateTransportTest(policy, new BodyConfig { Content = requestBytes },
+            [new() { Name = "Content-Type", Values = ["application/octet-stream; charset=iso-8859-1"] }]);
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient(request =>
+        {
+            request.Content!.ReadAsByteArrayAsync().GetAwaiter().GetResult().Should().Equal(requestBytes);
+            request.Content.Headers.ContentLength.Should().Be(requestBytes.Length);
+            request.Content.Headers.ContentType!.CharSet.Should().Be("iso-8859-1");
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("\u00e9", Encoding.Latin1, "text/plain")
+            };
+        }));
+
+        RunTransport(test, policy);
+
+        var response = test.Context.Variables["resp"].Should().BeOfType<MockResponse>().Subject;
+        var contentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(response.Headers["Content-Type"].Single());
+        contentType.CharSet.Should().Be("utf-8");
+        response.Body.As<byte[]>(preserveContent: true).Should().Equal(0xC3, 0xA9);
+        requestBytes.Should().Equal(0xE9, 0, 255);
+    }
 }
