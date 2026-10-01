@@ -21,6 +21,7 @@ The toolkit is available from NuGet:
 #### Azure API Management policy toolkit documentation for users.
 * [Quick start](docs/QuickStart.md)
 * [Available policies](docs/AvailablePolicies.md)
+* [Gateway emulator policy coverage and limitations](docs/EmulatorPolicyChecklist.md)
 * [Solution structure recommendation](docs/SolutionStructureRecommendation.md)
 * [Steps for deploying policies created by the policy toolkit](docs/IntegratePolicySolution.md)
 * [Integrate policy solution with APIOps](docs/IntegratePolicySolutionWithApiOps.md)
@@ -28,3 +29,31 @@ The toolkit is available from NuGet:
 #### Azure API Management policy toolkit documentation for contributors.
 * [Contributor guide](CONTRIBUTING.md)
 * [Development environment setup](docs/DevEnvironmentSetup.md)
+
+## Gateway emulator
+
+The Testing package runs C# policy documents through an in-memory gateway emulator.
+Create a test document with `.AsTestDocument()`, configure policy callbacks or injected
+services, then run a section such as `RunInbound()` or a coordinated request with
+`RunAll()` / `PolicyPipeline.RunAll()`. Assert against the resulting gateway context.
+External services are modeled through injected test implementations, not live Azure calls.
+
+The [emulator checklist](docs/EmulatorPolicyChecklist.md) lists the 74 authored policy
+methods, their sections, behavioral tests, and verified limitations. This is not full
+APIM parity: for example, raw `InlinePolicy` XML is callback-only, `CrossDomain` does
+not serve legacy client routes, and parallel `Wait` modes fail explicitly unless
+mocked.
+
+For emulator contributions, run the two gates in
+[`emulator-gates.ps1`](emulator-gates.ps1) from the admission worktree:
+
+```powershell
+.\emulator-gates.ps1 -Gate Admission -OwnedFiles $ownedFiles -TestFilter $testFilter
+.\emulator-gates.ps1 -Gate Full
+```
+
+Set `$ownedFiles` to every path changed by the latest policy commit and `$testFilter`
+to select every changed policy test class. The admission gate checks the allowlist
+and targeted tests before the complete emulator test project; the full gate checks
+the policy coverage audit, reruns that project, and builds the solution. Neither gate
+runs BVT or E2E tests.
