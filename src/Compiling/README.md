@@ -49,6 +49,7 @@ indentation (true by default), and `--pf` / `--policy-format` selects `rawxml` o
 Documentation is available to help you learn how to use this package:
 
 - [Quickstart][qs].
+- [Expression helpers][eh].
 
 ## Examples
 
@@ -88,6 +89,8 @@ more information, see the [Code of Conduct FAQ][coc_faq] or contact
 [qs]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/QuickStart.md
 
 [of]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/OutputFormat.md
+
+[eh]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/ExpressionHelpers.md
 
 [ep]: https://github.com/Azure/azure-api-management-policy-toolkit/tree/main/example
 

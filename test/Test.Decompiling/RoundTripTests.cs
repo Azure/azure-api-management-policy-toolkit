@@ -201,6 +201,81 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void NamedValueTokenConcatenatedWithVariable_RoundTrips()
+    {
+        var xml = """<policies><inbound><set-variable name="url" value="@{var id = context.Request.Url.Path;return &quot;{{Base}}/&quot; + id;}" /></inbound></policies>""";
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    [DataRow("context.Variables.TryGetValue(&quot;x&quot;, out var v) &amp;&amp; (string)v == &quot;a&quot;",
+        DisplayName = "Out variable")]
+    [DataRow("context.Variables[&quot;x&quot;] is string s &amp;&amp; s.Length &gt; 0", DisplayName = "Pattern variable")]
+    [DataRow("context.Request.Headers.Keys.Any(a =&gt; int.TryParse(a, out var n) &amp;&amp; n &gt; 1) || context.Request.Headers.Keys.Any(b =&gt; int.TryParse(b, out var n) &amp;&amp; n &gt; 2)",
+        DisplayName = "Same out variable in sibling lambdas")]
+    public void ConditionWithDeclaration_RoundTrips(string condition)
+    {
+        var xml = $"""<policies><inbound><choose><when condition="@({condition})"><set-variable name="matched" value="true" /></when></choose></inbound></policies>""";
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("{{flag}}", DisplayName = "Named value as the whole condition")]
+    [DataRow("context.Variables.ContainsKey(&quot;{{v}}&quot;)", DisplayName = "Named value in a string argument")]
+    public void NamedValueTokenInCondition_RoundTrips(string condition)
+    {
+        var xml = $"""<policies><inbound><choose><when condition="@({condition})"><set-variable name="matched" value="true" /></when></choose></inbound></policies>""";
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("@(&quot;enabled=&quot; + {{flag}})", DisplayName = "After a string")]
+    [DataRow("@({{flag}} + &quot;x&quot;)", DisplayName = "Before a string")]
+    [DataRow("@(({{n}}) * 2)", DisplayName = "Parenthesized operand")]
+    [DataRow("@(-({{n}}))", DisplayName = "Parenthesized under a unary operator")]
+    [DataRow("@(({{n}}).ToString())", DisplayName = "Parenthesized receiver")]
+    [DataRow("@($&quot;a{({{n}})}b&quot;)", DisplayName = "Interpolation hole")]
+    public void NamedValueTokenUsedAsCode_RoundTrips(string value)
+    {
+        var xml = $"""<policies><inbound><set-variable name="value" value="{value}" /></inbound></policies>""";
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void NamedValueTokenAfterInterpolationBrace_CompilesToHoleWithNamedValue()
+    {
+        // API Management substitutes {{n}} one brace in, so $"{{{n}}}" is a hole around the named value's code.
+        var xml = """<policies><inbound><set-variable name="value" value="@($&quot;{{{n}}}&quot;)" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        var result = CompileCSharp(csharp);
+
+        result.Errors.Should().BeEmpty("the decompiled C# should compile.\nGenerated C#:\n{0}", csharp);
+        result.Document.Descendants("set-variable").Single().Attribute("value")!.Value.Should().Be("@($\"{({{n}})}\")");
+    }
+
+    [TestMethod]
+    [DataRow("@(&quot;{{BaseUrl}}&quot;.Trim('/'))", DisplayName = "Literal followed by a member access")]
+    [DataRow("@(@&quot;{{Root}}\\logs&quot;)", DisplayName = "Verbatim string")]
+    [DataRow("@($&quot;https://{{Host}}/{context.Request.Url.Path}&quot;)", DisplayName = "Interpolated string")]
+    [DataRow("@($@&quot;a{{x}}b&quot;)", DisplayName = "Verbatim interpolated string")]
+    [DataRow("@($&quot;{{\\&quot;k\\&quot;: \\&quot;{{s}}\\&quot;}}&quot;)", DisplayName = "Escaped braces in a JSON template")]
+    public void NamedValueTokenInStringLiteral_RoundTrips(string value)
+    {
+        var xml = $"""<policies><inbound><set-variable name="value" value="{value}" /></inbound></policies>""";
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("@{string s = {{k}}; return s.ToUpper();}")]
+    [DataRow("@(new string[] { {{k}} }.Length)")]
+    public void NamedValueTokenConvertedToString_RoundTrips(string value)
+    {
+        var xml = $"""<policies><inbound><set-variable name="value" value="{value}" /></inbound></policies>""";
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
     public void FullPolicySections_RoundTrips()
     {
         var xml = """

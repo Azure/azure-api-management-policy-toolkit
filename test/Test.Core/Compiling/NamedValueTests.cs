@@ -106,4 +106,52 @@ public class NamedValueTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    [DataRow("\"Bearer \" + context.NamedValue(\"api-token\")", "@(\"Bearer {{api-token}}\")",
+        DisplayName = "Should merge named value call into preceding string literal")]
+    [DataRow("context.NamedValue(\"host\") + \"/api\"", "@(\"{{host}}/api\")",
+        DisplayName = "Should merge named value call into following string literal")]
+    [DataRow("\"a\" + context.NamedValue(\"x\") + \"b\"", "@(\"a{{x}}b\")",
+        DisplayName = "Should merge named value call between string literals")]
+    [DataRow("\"a\" + context.NamedValue(\"x\") + context.NamedValue(\"y\")", "@(\"a{{x}}{{y}}\")",
+        DisplayName = "Should merge consecutive named value calls into preceding string literal")]
+    [DataRow("\"a\" + context.NamedValue(\"n\") * 2", "@(\"a\" + {{n}} * 2)",
+        DisplayName = "Should not merge named value call bound to a tighter operator")]
+    [DataRow("1 + context.NamedValue(\"n\") + \"b\"", "@(1 + {{n}} + \"b\")",
+        DisplayName = "Should not merge named value call added to a number first")]
+    [DataRow("context.NamedValue(\"count\") % 3", "@({{count}} % 3)",
+        DisplayName = "Should keep named value call used as code")]
+    [DataRow("\"enabled=\" + (context.NamedValue(\"flag\"))", "@(\"enabled=\" + {{flag}})",
+        DisplayName = "Should keep parenthesized named value call raw next to string")]
+    [DataRow("\"a\" + context.NamedValue(\"x\") + @\"\\p\"", "@(\"a{{x}}\" + @\"\\p\")",
+        DisplayName = "Should not merge regular and verbatim strings")]
+    [DataRow("@\"C:\\\" + context.NamedValue(\"dir\") + @\"\\file\"", "@(@\"C:\\{{dir}}\\file\")",
+        DisplayName = "Should keep verbatim string merged with named value call verbatim")]
+    [DataRow("$\"a\" + context.NamedValue(\"x\") + $\"b{context.RequestId}\"", "@($\"a{{x}}b{context.RequestId}\")",
+        DisplayName = "Should merge named value call into interpolated strings")]
+    [DataRow("\"a\" + context.NamedValue(\"x\") + $\"b{context.RequestId}\"", "@(\"a{{x}}\" + $\"b{context.RequestId}\")",
+        DisplayName = "Should not merge regular and interpolated strings")]
+    [DataRow("\"{{x}}\" + context.NamedValue(\"y\")", "@(\"{{x}}{{y}}\")",
+        DisplayName = "Should keep named value text inside existing literal")]
+    public void ShouldCompileNamedValueCallInExpression(string expression, string expectedValue)
+    {
+        var code =
+            $$"""
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context) {
+                    context.SetVariable("value", Value(context.ExpressionContext));
+                }
+
+                object Value(IExpressionContext context) => {{expression}};
+            }
+            """;
+
+        var result = code.CompileDocument();
+
+        result.Should().BeSuccessful();
+        result.Document.Descendants("set-variable").Single().Attribute("value")!.Value.Should().Be(expectedValue);
+    }
 }

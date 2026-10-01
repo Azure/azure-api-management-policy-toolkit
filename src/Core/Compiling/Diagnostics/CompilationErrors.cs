@@ -248,4 +248,92 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor RecursiveExpressionHelper = new(
+        "APIM2012",
+        "Recursive expression helper",
+        "Expression helper recursion is not supported: '{0}'",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor UnsupportedExpressionHelper = new(
+        "APIM2013",
+        "Unsupported expression helper",
+        "Expression helper '{0}' cannot be expanded safely",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor UnsupportedSourceConstant = new(
+        "APIM2014",
+        "Unsupported source constant",
+        "Source constant '{0}' cannot be emitted as a policy expression literal",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor InvalidDocumentName = new(
+        "APIM2015",
+        "Invalid policy document name",
+        "Document name must be a non-empty compile-time string constant or null",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor UnsupportedConditionExpression = new(
+        "APIM2016",
+        "Unsupported policy condition",
+        "Condition expression '{0}' is not supported; use boolean helper calls combined with !, &&, ||, and parentheses",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor ExpressionExpansionLimitExceeded = new(
+        "APIM2017",
+        "Expression expansion limit exceeded",
+        "Expression helper '{0}' exceeded the expansion limit",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor UnsupportedSourceReference = new(
+        "APIM2018",
+        "Unsupported source reference",
+        "Source member '{0}' cannot be emitted in a policy expression",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor UnsupportedLanguageFeature = new(
+        "APIM2019",
+        "Unsupported language feature",
+        "Policy expressions are compiled as C# 7.3 in API Management: {0}",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
 }

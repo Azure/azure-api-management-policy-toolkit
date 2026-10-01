@@ -98,7 +98,9 @@ The command will produce the policy documents and the folder structure will look
 └── ...
 ```
 
-Your CI/CD pipeline should also fail if the compilation of the policy documents fails.
+Your CI/CD pipeline should also fail if the compilation of the policy documents fails. A policy document with
+compilation errors isn't written to the output folder; the compiler prints its errors and the name of the document it
+skipped.
 
 ## Deploying the policy documents
 

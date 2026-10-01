@@ -45,22 +45,17 @@ public class IfStatementCompiler : ISyntaxCompiler
                 continue;
             }
 
-            if (currentIf.Condition is not InvocationExpressionSyntax condition)
+            var section = new XElement("when");
+            var innerContext = new DocumentCompilationContext(context, section);
+            _blockCompiler.Value.Compile(innerContext, block);
+            var condition = new PolicyExpressionCompiler(context).CompileCondition(currentIf.Condition);
+            if (string.IsNullOrEmpty(condition))
             {
-                context.Report(Diagnostic.Create(
-                    CompilationErrors.ExpressionNotSupported,
-                    currentIf.Condition.GetLocation(),
-                    currentIf.Condition.GetType().Name,
-                    nameof(InvocationExpressionSyntax)
-                ));
                 nextIf = currentIf.Else?.Statement as IfStatementSyntax;
                 continue;
             }
 
-            var section = new XElement("when");
-            var innerContext = new DocumentCompilationContext(context, section);
-            _blockCompiler.Value.Compile(innerContext, block);
-            section.Add(new XAttribute("condition", CompilerUtils.FindCode(condition, context)));
+            section.Add(new XAttribute("condition", condition));
             choose.Add(section);
 
             nextIf = currentIf.Else?.Statement as IfStatementSyntax;
