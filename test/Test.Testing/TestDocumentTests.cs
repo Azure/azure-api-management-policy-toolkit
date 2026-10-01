@@ -20,6 +20,103 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 public class TestDocumentTests
 {
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void TokenCorrection_BackendObservationPrecedesOutboundButAllCountersWaitForOuterCompletion(bool azure)
+    {
+        var context = SettlementTest.CreateContext();
+        var calls = context.Services.Resolve<RateLimitStore>()!;
+        var tokens = new TokenLimitCounterStore();
+        context.Services.Register(tokens);
+        var clock = context.Services.Resolve<TimeProvider>()!;
+        var config = new TokenLimitConfig
+        {
+            CounterKey = "runner", EstimatePromptToken = false, TokensPerMinute = 10,
+            TokensConsumedVariableName = "consumed", TokensConsumedHeaderName = "X-Tokens"
+        };
+        var final = "{\"answer\":\"caf\u00e9\"}";
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                if (azure) section.AzureOpenAiTokenLimit(config);
+                else section.LlmTokenLimit(config);
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+                SettlementTest.ApplyQuota(section);
+            },
+            BackendAction = _ => context.Response.Body.Content = """{"usage":{"prompt_tokens":4,"completion_tokens":2}}""",
+            OutboundAction = section =>
+            {
+                context.Variables["consumed"].Should().Be(6L);
+                section.SetHeader("X-Copied", [context.Variables["consumed"].ToString()!]);
+                section.SetBody(final);
+            }
+        }) { Context = context };
+        var requestId = context.RequestId;
+
+        test.RunRequest(request =>
+        {
+            request.RunAll();
+            request.RunRequest(_ => { });
+            context.Variables["consumed"].Should().Be(6L);
+            calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+            calls.GetBandwidth("quota-by-key:volume").Should().Be(0);
+            tokens.GetRateTokens("runner", clock.GetUtcNow()).Should().Be(0);
+        });
+
+        context.Response.Body.Content.Should().Be(final);
+        context.Response.Headers["X-Copied"].Should().Equal("6");
+        context.Response.Headers["X-Tokens"].Should().Equal("6");
+        context.RequestId.Should().Be(requestId);
+        calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        calls.GetBandwidth("quota-by-key:volume").Should().Be(Encoding.UTF8.GetByteCount(final));
+        tokens.GetRateTokens("runner", clock.GetUtcNow()).Should().Be(6);
+        Assert.ThrowsExactly<InvalidOperationException>(test.RunBackend);
+        test.RunRequest(_ => { });
+        tokens.GetRateTokens("runner", clock.GetUtcNow()).Should().Be(6);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void TokenCorrection_InboundTerminalSkipsUsageAndStillSettlesExistingDeferredLimits(bool azure)
+    {
+        var context = SettlementTest.CreateContext();
+        var calls = context.Services.Resolve<RateLimitStore>()!;
+        var tokens = new TokenLimitCounterStore();
+        context.Services.Register(tokens);
+        var config = new TokenLimitConfig
+        {
+            CounterKey = "runner", EstimatePromptToken = false, TokensPerMinute = 10,
+            TokensConsumedVariableName = "consumed", TokensConsumedHeaderName = "X-Tokens"
+        };
+        var test = new TestDocument(new ExecutionTestDocument
+        {
+            InboundAction = section =>
+            {
+                if (azure) section.AzureOpenAiTokenLimit(config);
+                else section.LlmTokenLimit(config);
+                section.RateLimitByKey(SettlementTest.DeferredRate());
+                section.ReturnResponse(new ReturnResponseConfig
+                {
+                    Status = new StatusConfig { Code = 204, Reason = "No Content" }
+                });
+            },
+            BackendAction = _ => Assert.Fail("Terminal inbound must skip backend."),
+            OutboundAction = _ => Assert.Fail("Terminal inbound must skip outbound.")
+        }) { Context = context };
+
+        test.RunAll();
+
+        context.Response.StatusCode.Should().Be(204);
+        context.ResponseTerminated.Should().BeTrue();
+        context.Response.Headers.Should().NotContainKey("X-Tokens");
+        context.Variables["consumed"].Should().Be(0L);
+        calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        tokens.GetRateTokens("runner", context.Services.Resolve<TimeProvider>()!.GetUtcNow()).Should().Be(0);
+    }
+
+    [TestMethod]
     public void ShouldUseBasicAuthenticationForRequestsFromInternalIp()
     {
         var document = new OperationDocument();

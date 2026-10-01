@@ -7,9 +7,22 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 [Section(nameof(IBackendContext))]
-internal class ForwardRequestHandler : PolicyHandlerOptionalParam<ForwardRequestConfig>
+internal class ForwardRequestHandler : PolicyHandlerOptionalParam<ForwardRequestConfig>, IPolicyHandler
 {
     public override string PolicyName => nameof(IBackendContext.ForwardRequest);
+
+    object? IPolicyHandler.Handle(GatewayContext context, object?[]? args)
+    {
+        var responseVersion = context.BackendResponseVersion;
+        var result = base.Handle(context, args);
+        if (context.BackendResponseVersion == responseVersion)
+        {
+            // The callback overrides transport, but its response has the same observation boundary.
+            context.ObserveBackendResponse();
+        }
+
+        return result;
+    }
 
     protected override void Handle(GatewayContext context, ForwardRequestConfig? config)
     {
@@ -28,6 +41,7 @@ internal class ForwardRequestHandler : PolicyHandlerOptionalParam<ForwardRequest
         request.VersionPolicy = versionPolicy;
         var response = HttpPolicyTransport.Send(context, client, request);
         ResponseUtilities.Copy(response, context.Response);
+        context.ObserveBackendResponse();
         if (config?.FailOnErrorStatusCode == true && response.StatusCode is >= 400 and <= 599)
         {
             throw new HttpRequestException($"ForwardRequest backend returned HTTP {response.StatusCode}.",

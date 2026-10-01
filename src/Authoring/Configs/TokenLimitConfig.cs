@@ -34,7 +34,7 @@ public record TokenLimitConfig
     public int? TokenQuota { get; init; }
 
     /// <summary>
-    /// Specifies the time period for the token quota. Valid values are "day", "week", and "month".
+    /// Specifies the fixed UTC token quota period: "Hourly", "Daily", "Weekly", "Monthly", or "Yearly".
     /// </summary>
     public string? TokenQuotaPeriod { get; init; }
 

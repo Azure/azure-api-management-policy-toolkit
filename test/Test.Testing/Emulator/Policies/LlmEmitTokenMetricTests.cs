@@ -102,6 +102,23 @@ public class LlmEmitTokenMetricTests
     }
 
     [TestMethod]
+    public void EmitTokenMetric_ResponseUsage_PreservesAlreadyConsumedBodyState()
+    {
+        var test = CreateTest(CreateConfig());
+        SetResponseUsage(test);
+        var body = test.Context.Response.Body;
+        var content = body.Content;
+        body.As<string>();
+
+        test.RunInbound();
+
+        test.Context.Response.Body.Should().BeSameAs(body);
+        body.Content.Should().Be(content);
+        body.Consumed.Should().BeTrue();
+        AssertMetrics(test, "API Management", StandardCounts(), DefaultDimensions(test));
+    }
+
+    [TestMethod]
     public void EmitTokenMetric_ProviderUsage_RecordsNamespaceDimensionsAndCategories()
     {
         var config = CreateConfig() with

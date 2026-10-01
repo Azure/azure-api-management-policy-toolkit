@@ -16,6 +16,10 @@ public class GatewayContext : MockExpressionContext
     private int _requestExecutionDepth;
     private Guid _requestExecutionId;
     private Guid? _completedLimiterRequestId;
+    private Guid? _backendResponseRequestId;
+    private Guid? _backendFailureRequestId;
+    private long _backendResponseVersion;
+    private long _terminalResponseVersion;
 
     internal readonly SectionContextProxy<IInboundContext> InboundProxy;
     internal readonly SectionContextProxy<IBackendContext> BackendProxy;
@@ -41,6 +45,10 @@ public class GatewayContext : MockExpressionContext
     internal Dictionary<string, IPolicyHandler>? CurrentSectionHandlers { get; set; }
 
     internal string? CurrentSectionName { get; set; }
+
+    internal bool BackendResponseReceived => _backendResponseRequestId == RequestId;
+    internal bool BackendExecutionFailed => _backendFailureRequestId == RequestId;
+    internal long BackendResponseVersion => _backendResponseVersion;
 
     /// <summary>
     /// Service registry for injecting custom service implementations (e.g., IHttpClient, ICache).
@@ -87,7 +95,60 @@ public class GatewayContext : MockExpressionContext
     {
         termination.TerminatesPipeline ??= policyName != nameof(IInboundContext.InvokeRequest);
         ResponseTerminated |= termination.TerminatesPipeline == true;
+        if (termination.TerminatesPipeline == true)
+        {
+            _terminalResponseVersion++;
+        }
+
+        if (policyName == nameof(IInboundContext.InvokeRequest))
+        {
+            ObserveBackendResponse();
+        }
     }
+
+    internal void ObserveBackendResponse()
+    {
+        var tokenLimits = Services.Resolve<TokenLimitService>();
+        tokenLimits?.BeginBackendExecution(this);
+        _backendResponseRequestId = RequestId;
+        _backendResponseVersion++;
+        tokenLimits?.ObserveBackendResponse(this);
+    }
+
+    internal void ExecuteBackend(Action backend) => ExecuteSection(() =>
+    {
+        Services.Resolve<TokenLimitService>()?.BeginBackendExecution(this);
+        var requestId = RequestId;
+        var terminalVersion = _terminalResponseVersion;
+        var responseVersion = _backendResponseVersion;
+        var response = Response;
+        var responseBody = Response.Body.Content;
+        var returned = false;
+        try
+        {
+            backend();
+            returned = true;
+        }
+        finally
+        {
+            if (!returned)
+            {
+                _backendFailureRequestId = requestId;
+            }
+        }
+
+        if (_requestExecutionDepth != 0)
+        {
+            EnsureRequestId();
+        }
+
+        var unusedTerminal = _terminalResponseVersion != terminalVersion
+            && !BackendResponseReceived && !BackendExecutionFailed;
+        var responseChanged = _backendResponseVersion == responseVersion
+            && _terminalResponseVersion == terminalVersion
+            && (!ReferenceEquals(response, Response) || responseBody != Response.Body.Content);
+        Services.Resolve<TokenLimitService>()?.ObserveBackendSectionResponse(this, unusedTerminal, responseChanged);
+    });
 
     internal void ExecuteRequest(Action request)
     {
@@ -112,6 +173,9 @@ public class GatewayContext : MockExpressionContext
                     return;
                 }
 
+                var tokenLimits = Services.Resolve<TokenLimitService>();
+                tokenLimits?.CompleteResponse(this);
+                EnsureRequestId();
                 this.CompleteLimiterResponse();
                 EnsureRequestId();
                 if (Services.Resolve<PolicyCounterService>() is { } counters)
@@ -122,6 +186,11 @@ public class GatewayContext : MockExpressionContext
                             "Limiter response completion left pending work. Complete it before changing RequestId.");
                     }
 
+                    _completedLimiterRequestId = RequestId;
+                }
+
+                if (tokenLimits?.HasCompletedResponse == true)
+                {
                     _completedLimiterRequestId = RequestId;
                 }
             }

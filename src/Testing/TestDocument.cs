@@ -26,7 +26,7 @@ public class TestDocument(IDocument document)
     }
 
     public void RunInbound() => this.Handle(Context.InboundProxy.Object, document.Inbound);
-    public void RunBackend() => this.Handle(Context.BackendProxy.Object, document.Backend);
+    public void RunBackend() => Context.ExecuteBackend(() => this.Handle(Context.BackendProxy.Object, document.Backend));
     public void RunOutbound() => this.Handle(Context.OutboundProxy.Object, document.Outbound);
     public void RunOnError() => this.Handle(Context.OnErrorProxy.Object, document.OnError);
 

@@ -83,26 +83,42 @@ public class PolicyPipeline
     /// <summary>Runs backend sections from Global → Operation.</summary>
     public void RunBackend()
     {
-        foreach (var scope in InboundOrder)
+        if (Context.ResponseTerminated || _policies.Count == 0)
         {
-            if (Context.ResponseTerminated) return;
-            if (_policies.TryGetValue(scope, out var doc))
-            {
-                Handle(Context.BackendProxy.Object, doc.Backend);
-            }
+            return;
         }
+
+        Context.ExecuteBackend(() =>
+        {
+            foreach (var scope in InboundOrder)
+            {
+                if (Context.ResponseTerminated) return;
+                if (_policies.TryGetValue(scope, out var doc))
+                {
+                    Handle(Context.BackendProxy.Object, doc.Backend);
+                }
+            }
+        });
     }
 
     /// <summary>Runs backend sections independently.</summary>
     public void RunBackendIndependent()
     {
-        foreach (var scope in InboundOrder)
+        if (_policies.Count == 0)
         {
-            if (_policies.TryGetValue(scope, out var doc))
-            {
-                Handle(Context.BackendProxy.Object, doc.Backend);
-            }
+            return;
         }
+
+        Context.ExecuteBackend(() =>
+        {
+            foreach (var scope in InboundOrder)
+            {
+                if (_policies.TryGetValue(scope, out var doc))
+                {
+                    Handle(Context.BackendProxy.Object, doc.Backend);
+                }
+            }
+        });
     }
 
     /// <summary>Runs outbound sections from Operation → Global.</summary>
@@ -199,8 +215,8 @@ public class PolicyPipeline
     public void RunBackendNested()
     {
         var scopes = InboundOrder.Where(s => _policies.ContainsKey(s)).ToList();
-        if (scopes.Count == 0) return;
-        RunNestedForSection(scopes, Context.BackendProxy, (doc, ctx) => doc.Backend(ctx));
+        if (scopes.Count == 0 || Context.ResponseTerminated) return;
+        Context.ExecuteBackend(() => RunNestedForSection(scopes, Context.BackendProxy, (doc, ctx) => doc.Backend(ctx)));
     }
 
     /// <summary>Runs outbound sections with nested Base() chaining.</summary>

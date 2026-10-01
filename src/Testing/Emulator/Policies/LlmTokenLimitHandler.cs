@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -12,7 +13,7 @@ internal class LlmTokenLimitHandler : PolicyHandler<TokenLimitConfig>
 
     protected override void Handle(GatewayContext context, TokenLimitConfig config)
     {
-        // No-op by default in emulator.
-        // LLM token limiting is not simulated in tests.
+        TokenLimitService.ValidateConfiguration(config);
+        TokenLimitService.For(context).Register(config, PolicyName);
     }
 }

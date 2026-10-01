@@ -11,6 +11,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
@@ -19,6 +20,194 @@ namespace Test.Emulator.Emulator.Policies;
 [TestClass]
 public class ForwardRequestTests
 {
+    [TestMethod]
+    [DataRow(200, false)]
+    [DataRow(503, true)]
+    public void TokenObservationAbsent_DoesNotCreateTokenServicesOrReadNonLlmPayloads(int status, bool failOnError)
+    {
+        var test = CreateTest(new ForwardRequestConfig { FailOnErrorStatusCode = failOnError });
+        test.Context.Services.Register<ILlmTokenUsageProvider>(new UnexpectedUsageProvider());
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient(_ => new HttpResponseMessage((HttpStatusCode)status)
+        {
+            Content = new StringContent("not LLM JSON")
+        }));
+
+        if (failOnError)
+        {
+            Assert.ThrowsExactly<PolicyException>(test.RunBackend).InnerException.Should().BeOfType<HttpRequestException>();
+        }
+        else
+        {
+            test.RunBackend();
+        }
+
+        test.Context.Response.StatusCode.Should().Be(status);
+        test.Context.Response.Body.Content.Should().Be("not LLM JSON");
+        test.Context.Services.Resolve<TokenLimitService>().Should().BeNull();
+        test.Context.Services.Resolve<TokenLimitCounterStore>().Should().BeNull();
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public void TokenObservationAtCopy_PublishesUsageBeforeContinuationOrFailOnError(bool azure, bool failOnError)
+    {
+        var tokens = new TokenLimitCounterStore();
+        var config = new TokenLimitConfig
+        {
+            CounterKey = "copy",
+            EstimatePromptToken = false,
+            TokensPerMinute = 10,
+            TokensConsumedVariableName = "consumed",
+            TokensConsumedHeaderName = "X-Tokens"
+        };
+        var test = new TestDocument(new CopyObservationDocument(config, azure, failOnError));
+        test.Context.Services.Register(tokens);
+        test.Context.Services.Register<IHttpClient>(new StubHttpClient(_ =>
+            new HttpResponseMessage(failOnError ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"usage":{"prompt_tokens":4,"completion_tokens":2}}""",
+                    Encoding.UTF8, "application/json")
+            }));
+        var headers = test.Context.Response.Headers;
+        test.RunInbound();
+
+        if (failOnError)
+        {
+            Assert.ThrowsExactly<PolicyException>(test.RunBackend).InnerException.Should().BeOfType<HttpRequestException>();
+        }
+        else
+        {
+            test.RunBackend();
+            test.Context.Variables["consumed-at-continuation"].Should().Be(6L);
+        }
+
+        test.Context.Variables["consumed"].Should().Be(6L);
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        test.Context.Response.Headers["X-Tokens"].Should().Equal("6");
+        tokens.GetRateTokens("copy", DateTimeOffset.UtcNow).Should().Be(0);
+        test.RunRequest(request => request.RunOnError());
+        tokens.GetRateTokens("copy", DateTimeOffset.UtcNow).Should().Be(6);
+        test.Context.Response.StatusCode.Should().Be(502);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void TokenObservationAtCallbackReturn_PreservesOverrideAndCapturesBeforePostprocessing(bool azure)
+    {
+        var tokens = new TokenLimitCounterStore();
+        var config = new TokenLimitConfig
+        {
+            CounterKey = "mock-copy",
+            EstimatePromptToken = false,
+            TokensPerMinute = 10,
+            TokensConsumedVariableName = "consumed",
+            TokensConsumedHeaderName = "X-Tokens"
+        };
+        var test = new TestDocument(new CallbackObservationDocument(config, azure));
+        test.Context.Services.Register(tokens).Register<ILlmTokenUsageProvider>(new UnexpectedUsageProvider());
+        var callbacks = 0;
+        test.SetupBackend().ForwardRequest((_, callbackConfig) => callbackConfig?.HttpVersion == "unselected")
+            .WithCallback((_, _) => Assert.Fail("The unmatched callback ran."));
+        test.SetupBackend().ForwardRequest((_, callbackConfig) => callbackConfig?.HttpVersion == "mock-only")
+            .WithCallback((context, _) =>
+            {
+                callbacks++;
+                context.Response.StatusCode = 503;
+                context.Response.Body.Content = """{"usage":{"prompt_tokens":4,"completion_tokens":2}}""";
+            });
+        var headers = test.Context.Response.Headers;
+
+        test.RunAll();
+
+        callbacks.Should().Be(1);
+        test.Context.Services.Resolve<IHttpClient>().Should().BeNull();
+        test.Context.Variables["consumed-at-continuation"].Should().Be(6L);
+        test.Context.Variables["consumed"].Should().Be(6L);
+        test.Context.Response.Headers.Should().BeSameAs(headers);
+        test.Context.Response.Headers["X-Tokens"].Should().Equal("6");
+        test.Context.Response.Body.Content.Should().Be("<formatted-after-callback />");
+        test.Context.Response.StatusCode.Should().Be(503);
+        tokens.GetRateTokens("mock-copy", DateTimeOffset.UtcNow).Should().Be(6);
+    }
+
+    [TestMethod]
+    [DataRow("<non-llm />")]
+    [DataRow("[]")]
+    public void TokenObservationAbsent_CallbackOverrideDoesNotRequireLlmUsageOrTransport(string body)
+    {
+        var test = CreateTest(new ForwardRequestConfig { HttpVersion = "mock-only", FailOnErrorStatusCode = true });
+        test.Context.Request.Body.Content = """{"stream":true}""";
+        test.Context.Services.Register<ILlmTokenUsageProvider>(new UnexpectedUsageProvider());
+        var callbacks = 0;
+        test.SetupBackend().ForwardRequest().WithCallback((context, _) =>
+        {
+            callbacks++;
+            context.Response.StatusCode = 503;
+            context.Response.Headers["Content-Type"] = ["text/event-stream"];
+            context.Response.Body.Content = body;
+        });
+
+        test.RunBackend();
+
+        callbacks.Should().Be(1);
+        test.Context.Response.StatusCode.Should().Be(503);
+        test.Context.Response.Body.Content.Should().Be(body);
+        test.Context.Variables["continued"].Should().Be(true);
+        test.Context.Services.Resolve<IHttpClient>().Should().BeNull();
+        test.Context.Services.Resolve<TokenLimitService>().Should().BeNull();
+        test.Context.Services.Resolve<TokenLimitCounterStore>().Should().BeNull();
+    }
+
+    private sealed class CallbackObservationDocument(TokenLimitConfig config, bool azure) : IDocument
+    {
+        public void Inbound(IInboundContext context)
+        {
+            if (azure) context.AzureOpenAiTokenLimit(config);
+            else context.LlmTokenLimit(config);
+        }
+
+        public void Backend(IBackendContext context)
+        {
+            context.ForwardRequest(new ForwardRequestConfig { HttpVersion = "mock-only", FailOnErrorStatusCode = true });
+            ((GatewayContext)context.ExpressionContext).Variables["consumed-at-continuation"] =
+                context.ExpressionContext.Variables["consumed"];
+            ((GatewayContext)context.ExpressionContext).Response.Body.Content = "<formatted-after-callback />";
+        }
+    }
+
+    private sealed class UnexpectedUsageProvider : ILlmTokenUsageProvider
+    {
+        public LlmTokenUsage? GetUsage(GatewayContext context) =>
+            throw new InvalidOperationException("ForwardRequest without a token policy must not query token usage.");
+    }
+
+    private sealed class CopyObservationDocument(TokenLimitConfig config, bool azure, bool failOnError) : IDocument
+    {
+        public void Inbound(IInboundContext context)
+        {
+            if (azure) context.AzureOpenAiTokenLimit(config);
+            else context.LlmTokenLimit(config);
+        }
+
+        public void Backend(IBackendContext context)
+        {
+            context.ForwardRequest(new ForwardRequestConfig { FailOnErrorStatusCode = failOnError });
+            ((GatewayContext)context.ExpressionContext).Variables["consumed-at-continuation"] =
+                context.ExpressionContext.Variables["consumed"];
+            ((GatewayContext)context.ExpressionContext).Response.Body.Content = """{"answer":"backend rewrite"}""";
+        }
+
+        public void OnError(IOnErrorContext context)
+        {
+            context.SetStatus(new StatusConfig { Code = 502, Reason = "Handled" });
+            context.SetBody("""{"error":"rewritten"}""");
+        }
+    }
+
     class SimpleForwardRequest : IDocument
     {
         public void Inbound(IInboundContext context) { }

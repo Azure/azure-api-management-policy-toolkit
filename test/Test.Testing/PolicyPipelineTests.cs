@@ -14,6 +14,126 @@ namespace Test.Emulator.Emulator.Policies;
 public class PolicyPipelineTests
 {
     [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public void TokenCorrection_BackendSnapshotSurvivesAllScopeFramesAndFinalResponseRewrites(bool nested, bool azure)
+    {
+        var calls = new RateLimitStore();
+        var tokens = new TokenLimitCounterStore();
+        var config = new TokenLimitConfig
+        {
+            CounterKey = "pipeline", EstimatePromptToken = false, TokensPerMinute = 10,
+            TokensConsumedVariableName = "consumed", TokensConsumedHeaderName = "X-Tokens"
+        };
+        var final = "{\"answer\":\"caf\u00e9\"}";
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context =>
+            {
+                SettlementTest.ConfigureContext(context, calls);
+                context.Services.Register(tokens);
+            })
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section => section.Base(),
+                BackendAction = section => section.Base(),
+                OutboundAction = section =>
+                {
+                    section.Base();
+                    section.ExpressionContext.Variables["consumed"].Should().Be(6L);
+                    section.SetBody(final);
+                }
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    if (azure) section.AzureOpenAiTokenLimit(config);
+                    else section.LlmTokenLimit(config);
+                    section.RateLimitByKey(SettlementTest.DeferredRate());
+                    SettlementTest.ApplyQuota(section);
+                },
+                BackendAction = section =>
+                    ((GatewayContext)section.ExpressionContext).Response.Body.Content =
+                        """{"usage":{"prompt_tokens":4,"completion_tokens":2}}""",
+                OutboundAction = section =>
+                {
+                    section.ExpressionContext.Variables["consumed"].Should().Be(6L);
+                    section.SetHeader("X-Copied", [section.ExpressionContext.Variables["consumed"].ToString()!]);
+                    section.Base();
+                }
+            }).Build();
+        var context = pipeline.Context;
+        var clock = context.Services.Resolve<TimeProvider>()!;
+        var requestId = context.RequestId;
+
+        pipeline.RunRequest(request =>
+        {
+            SettlementTest.RunAll(request, nested);
+            request.RunRequest(_ => { });
+            tokens.GetRateTokens("pipeline", clock.GetUtcNow()).Should().Be(0);
+            calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+        });
+
+        context.Response.Body.Content.Should().Be(final);
+        context.Response.Headers["X-Copied"].Should().Equal("6");
+        context.Response.Headers["X-Tokens"].Should().Equal("6");
+        context.RequestId.Should().Be(requestId);
+        tokens.GetRateTokens("pipeline", clock.GetUtcNow()).Should().Be(6);
+        calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        calls.GetBandwidth("quota-by-key:volume").Should().Be(System.Text.Encoding.UTF8.GetByteCount(final));
+        Assert.ThrowsExactly<InvalidOperationException>(() => ExecutionTest.RunSection(pipeline, "backend", nested));
+        pipeline.RunRequest(_ => { });
+        tokens.GetRateTokens("pipeline", clock.GetUtcNow()).Should().Be(6);
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public void TokenCorrection_InboundTerminalWithoutBackendDoesNotRequireUsage(bool nested, bool azure)
+    {
+        var tokens = new TokenLimitCounterStore();
+        var calls = new RateLimitStore();
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context =>
+            {
+                SettlementTest.ConfigureContext(context, calls);
+                context.Services.Register(tokens);
+            })
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument { InboundAction = section => section.Base() })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    var config = new TokenLimitConfig
+                    {
+                        CounterKey = "pipeline", EstimatePromptToken = false, TokensPerMinute = 10,
+                        TokensConsumedVariableName = "consumed", TokensConsumedHeaderName = "X-Tokens"
+                    };
+                    if (azure) section.AzureOpenAiTokenLimit(config);
+                    else section.LlmTokenLimit(config);
+                    section.RateLimitByKey(SettlementTest.DeferredRate());
+                    section.ReturnResponse(new ReturnResponseConfig
+                    {
+                        Status = new StatusConfig { Code = 204, Reason = "No Content" }
+                    });
+                },
+                BackendAction = _ => Assert.Fail("Backend must be skipped.")
+            }).Build();
+
+        SettlementTest.RunAll(pipeline, nested);
+
+        pipeline.Context.Response.StatusCode.Should().Be(204);
+        pipeline.Context.Response.Headers.Should().NotContainKey("X-Tokens");
+        pipeline.Context.Variables["consumed"].Should().Be(0L);
+        tokens.GetRateTokens("pipeline", pipeline.Context.Services.Resolve<TimeProvider>()!.GetUtcNow()).Should().Be(0);
+        calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
     [DataRow("inbound", "Global,Workspace,Product,Api,Operation")]
     [DataRow("backend", "Global,Workspace,Product,Api,Operation")]
     [DataRow("outbound", "Operation,Api,Product,Workspace,Global")]
