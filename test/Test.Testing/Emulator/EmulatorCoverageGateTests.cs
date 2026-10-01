@@ -89,6 +89,54 @@ public class EmulatorCoverageGateTests
     }
 
     [TestMethod]
+    [DataRow(nameof(IInboundContext))]
+    [DataRow(nameof(IOutboundContext))]
+    [DataRow(nameof(IBackendContext))]
+    [DataRow(nameof(IOnErrorContext))]
+    public void ShouldMatchSectionScopedWaitBranchesToTheFragmentSignature(string sectionName)
+    {
+        var section = s_pipelineSections.Single(type => type.Name == sectionName);
+        var branchType = typeof(Action<>).MakeGenericType(section).MakeArrayType();
+        var pipeline = section.GetMethod(nameof(IInboundContext.Wait), [typeof(string), branchType])!;
+        var fragment = typeof(IFragmentContext).GetMethod(nameof(IFragmentContext.Wait),
+            [typeof(string), typeof(Action<IFragmentContext>[])])!;
+
+        HaveSameSignature(pipeline, fragment).Should().BeTrue();
+        HaveSameSignature(fragment, pipeline).Should().BeTrue();
+    }
+
+    [TestMethod]
+    [DataRow(nameof(IInboundContext))]
+    [DataRow(nameof(IOutboundContext))]
+    [DataRow(nameof(IBackendContext))]
+    [DataRow(nameof(IOnErrorContext))]
+    public void ShouldKeepLegacyAndTypedWaitSignaturesDistinct(string sectionName)
+    {
+        var section = s_pipelineSections.Single(type => type.Name == sectionName);
+        var legacy = section.GetMethod(nameof(IInboundContext.Wait), [typeof(Action), typeof(string)])!;
+        var typedFragment = typeof(IFragmentContext).GetMethod(nameof(IFragmentContext.Wait),
+            [typeof(string), typeof(Action<IFragmentContext>[])])!;
+
+        HaveSameSignature(legacy, typedFragment).Should().BeFalse();
+        HaveSameSignature(typedFragment, legacy).Should().BeFalse();
+    }
+
+    [TestMethod]
+    [DataRow(typeof(Action<IInboundContext>[]), typeof(Action<IFragmentContext>[]))]
+    [DataRow(typeof(Action<IInboundContext>), typeof(Action<IFragmentContext>))]
+    [DataRow(typeof(IInboundContext[]), typeof(IFragmentContext[]))]
+    [DataRow(typeof(Action<IInboundContext>[,]), typeof(Action<IFragmentContext>[,]))]
+    public void ShouldNotNormalizeDifferentTypesOutsideTheirOwningSection(Type firstType, Type secondType)
+    {
+        var first = typeof(IParameterSignatureFixture<>).MakeGenericType(firstType)
+            .GetMethod(nameof(IParameterSignatureFixture<object>.Policy))!;
+        var second = typeof(IParameterSignatureFixture<>).MakeGenericType(secondType)
+            .GetMethod(nameof(IParameterSignatureFixture<object>.Policy))!;
+
+        HaveSameSignature(first, second).Should().BeFalse();
+    }
+
+    [TestMethod]
     public void ShouldDiscoverExactlyOneRuntimeHandlerForEveryAuthoredPipelinePolicy()
     {
         var pipelinePairs = GetAuthoredPipelinePairs();
@@ -402,6 +450,11 @@ public class EmulatorCoverageGateTests
     private sealed record PolicySection(Type Section, string PolicyName);
 
     private sealed record HandlerRegistration(string Section, string PolicyName, Type HandlerType);
+
+    private interface IParameterSignatureFixture<T>
+    {
+        void Policy(T parameter);
+    }
 
     private sealed class InlineCallbackDocument : IDocument
     {
