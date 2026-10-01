@@ -64,16 +64,17 @@ internal class CacheValueHandler : IPolicyHandler
         var completed = false;
         try
         {
-            var result = cache.GetOrCreateWithDynamicTtlAsync(
+            var result = context.ExecuteAsyncService<CacheValueResult, CacheValueFactoryResult>(dispatch =>
+                cache.GetOrCreateWithDynamicTtlAsync(
                 config.Key,
-                (_, _) =>
+                (_, cancellation) => dispatch(() =>
                 {
                     // A value block must produce its own value, not reuse an unrelated request variable.
                     context.Variables.Remove(config.VariableName);
                     section();
                     if (!context.Variables.TryGetValue(config.VariableName, out var value) || value is null)
                     {
-                        return Task.FromResult(CacheValueFactoryResult.DoNotUpdate());
+                        return CacheValueFactoryResult.DoNotUpdate();
                     }
 
                     var expiresAfterSeconds = config.ExpiresAfterEvaluator?.Invoke() ?? config.ExpiresAfter ?? 28800;
@@ -81,9 +82,9 @@ internal class CacheValueHandler : IPolicyHandler
                     var expiresAfter = TimeSpan.FromSeconds(expiresAfterSeconds);
                     var refreshAfter = TimeSpan.FromSeconds(refreshAfterSeconds);
                     CachePolicyServices.ValidateTtl(expiresAfter, refreshAfter);
-                    return Task.FromResult(new CacheValueFactoryResult(value, expiresAfter, refreshAfter));
-                },
-                forceRefresh).GetAwaiter().GetResult();
+                    return new CacheValueFactoryResult(value, expiresAfter, refreshAfter);
+                }, cancellation),
+                forceRefresh));
             ArgumentNullException.ThrowIfNull(result);
             CachePolicyServices.SetVariable(context, config.VariableName, result.Value ?? config.DefaultValue);
             completed = true;

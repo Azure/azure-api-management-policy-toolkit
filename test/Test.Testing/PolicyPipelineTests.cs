@@ -18,6 +18,149 @@ public class PolicyPipelineTests
     [DataRow(false, true)]
     [DataRow(true, false)]
     [DataRow(true, true)]
+    public async Task CacheRefresh_AsyncValueBlocksPreservePipelineTerminationAndFinalSettlement(
+        bool nested, bool terminal)
+    {
+        var calls = new RateLimitStore();
+        var tokens = new TokenLimitCounterStore();
+        var cache = CacheRefreshTestCache.Asynchronous(new CacheStore());
+        var visited = new List<string>();
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context =>
+            {
+                SettlementTest.ConfigureContext(context, calls);
+                context.Services.Register(tokens).Register<ICache>(cache);
+            })
+            .AddPolicy(PolicyScope.Global, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.Base();
+                    visited.Add("global-after");
+                },
+                BackendAction = section => section.Base(),
+                OutboundAction = section =>
+                {
+                    section.Base();
+                    section.SetBody("final");
+                }
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.LlmTokenLimit(new TokenLimitConfig
+                    {
+                        CounterKey = "cache-pipeline", EstimatePromptToken = false, TokensPerMinute = 10,
+                        TokensConsumedVariableName = "consumed", TokensConsumedHeaderName = "X-Tokens"
+                    });
+                    section.CacheValue(new CacheValueConfig { Key = "key", VariableName = "result" }, () =>
+                    {
+                        section.RateLimitByKey(SettlementTest.DeferredRate());
+                        SettlementTest.ApplyQuota(section);
+                        if (terminal)
+                        {
+                            section.ReturnResponse(new ReturnResponseConfig
+                            {
+                                Status = new StatusConfig { Code = 202, Reason = "Accepted" },
+                                Body = new BodyConfig { Content = "returned" }
+                            });
+                        }
+                        section.SetVariable("result", "computed");
+                    });
+                    visited.Add("operation-after");
+                },
+                BackendAction = section =>
+                {
+                    visited.Add("backend");
+                    calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+                    section.ForwardRequest();
+                },
+                OutboundAction = section =>
+                {
+                    visited.Add("outbound");
+                    calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+                    section.Base();
+                }
+            }).Build();
+        var setup = new TestDocument(new ExecutionTestDocument()) { Context = pipeline.Context };
+        setup.SetupBackend().ForwardRequest().WithCallback((context, _) =>
+            context.Response.Body.Content = """{"usage":{"prompt_tokens":4,"completion_tokens":2}}""");
+        var requestId = pipeline.Context.RequestId;
+
+        await CacheRefreshTestCache.OnOwnerThread(() => pipeline.RunRequest(request =>
+        {
+            SettlementTest.RunAll(request, nested);
+            calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(0);
+        })).WaitAsync(TimeSpan.FromSeconds(5));
+
+        pipeline.Context.RequestId.Should().Be(requestId);
+        calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        calls.GetBandwidth("quota-by-key:volume").Should().Be(terminal ? 8 : 5);
+        pipeline.Context.Response.Body.Content.Should().Be(terminal ? "returned" : "final");
+        pipeline.Context.ResponseTerminated.Should().Be(terminal);
+        tokens.GetRateTokens("cache-pipeline", pipeline.Context.Services.Resolve<TimeProvider>()!.GetUtcNow())
+            .Should().Be(terminal ? 0 : 6);
+        if (terminal)
+        {
+            pipeline.Context.Response.StatusCode.Should().Be(202);
+            pipeline.Context.Variables.Should().NotContainKey("result");
+            if (nested) visited.Should().BeEmpty();
+            else visited.Should().Equal("global-after");
+        }
+        else
+        {
+            pipeline.Context.Variables["result"].Should().Be("computed");
+            pipeline.Context.Response.Headers["X-Tokens"].Should().Equal("6");
+        }
+        pipeline.RunRequest(_ => { });
+        calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task CacheRefresh_RetainedFactoryCannotMutateAfterRequestCompletion()
+    {
+        Func<object?, CancellationToken, Task<CacheValueFactoryResult>>? retained = null;
+        var calls = new RateLimitStore();
+        var cache = new CacheRefreshTestCache(new CacheStore())
+        {
+            DynamicGet = (_, factory, _, _) =>
+            {
+                retained = factory;
+                return Task.FromResult(new CacheValueResult("cached", false, false));
+            }
+        };
+        var pipeline = PolicyPipelineBuilder.Create()
+            .ConfigureContext(context =>
+            {
+                SettlementTest.ConfigureContext(context, calls);
+                context.Services.Register<ICache>(cache);
+            })
+            .AddPolicy(PolicyScope.Operation, new ExecutionTestDocument
+            {
+                InboundAction = section =>
+                {
+                    section.RateLimitByKey(SettlementTest.DeferredRate());
+                    section.CacheValue(new CacheValueConfig { Key = "key", VariableName = "result" },
+                        () => section.SetVariable("result", "late"));
+                }
+            }).Build();
+        await CacheRefreshTestCache.OnOwnerThread(pipeline.RunAll).WaitAsync(TimeSpan.FromSeconds(5));
+        pipeline.Context.Variables["result"].Should().Be("cached");
+
+        Func<Task> late = async () => await retained!(null, CancellationToken.None);
+        await late.Should().ThrowAsync<InvalidOperationException>().WithMessage("*completed*");
+
+        pipeline.Context.Variables["result"].Should().Be("cached");
+        calls.GetCallCount("rate-limit-by-key:settlement").Should().Be(2);
+        pipeline.RunRequest(_ => { });
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
     public void TokenCorrection_BackendSnapshotSurvivesAllScopeFramesAndFinalResponseRewrites(bool nested, bool azure)
     {
         var calls = new RateLimitStore();

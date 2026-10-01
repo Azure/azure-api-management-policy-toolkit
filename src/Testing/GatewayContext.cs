@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Runtime.CompilerServices;
+
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
@@ -208,6 +210,41 @@ public class GatewayContext : MockExpressionContext
     internal void ExecuteSection(Action section)
     {
         ArgumentNullException.ThrowIfNull(section);
+        ExecuteSection(() =>
+        {
+            section();
+            return true;
+        });
+    }
+
+    // Keep the execution lock on its owning thread and pump only this operation's
+    // registered callbacks; unrelated tasks must still pass the normal entry guard.
+    internal TResult ExecuteAsyncService<TResult, TCallback>(
+        Func<Func<Func<TCallback>, CancellationToken, Task<TCallback>>, Task<TResult>> operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        return ExecuteSection(() =>
+        {
+            var dispatcher = new ExecutionThreadDispatcher(this);
+            try
+            {
+                var pending = Task.Run(() =>
+                {
+                    var task = operation(dispatcher.InvokeAsync);
+                    ArgumentNullException.ThrowIfNull(task);
+                    return task;
+                });
+                return dispatcher.WaitFor(pending);
+            }
+            finally
+            {
+                dispatcher.Close();
+            }
+        });
+    }
+
+    private TResult ExecuteSection<TResult>(Func<TResult> section)
+    {
         EnterExecution();
         try
         {
@@ -222,11 +259,12 @@ public class GatewayContext : MockExpressionContext
                     "Use a new RequestId before executing more sections.");
             }
 
-            section();
+            var result = section();
             if (_requestExecutionDepth != 0)
             {
                 EnsureRequestId();
             }
+            return result;
         }
         finally
         {
@@ -260,6 +298,114 @@ public class GatewayContext : MockExpressionContext
             throw new InvalidOperationException(
                 $"Deferred limiter work was added after RequestId '{RequestId}' completed. " +
                 "Use a new RequestId for a new request; late work cannot be settled onto a completed response.");
+        }
+    }
+
+    private sealed class ExecutionThreadDispatcher(GatewayContext context)
+    {
+        private readonly object _sync = new();
+        private readonly Queue<Action> _callbacks = new();
+        private readonly int _threadId = Environment.CurrentManagedThreadId;
+        private Task? _operation;
+        private bool _closed;
+
+        public async Task<T> InvokeAsync<T>(Func<T> callback, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            await this;
+            cancellationToken.ThrowIfCancellationRequested();
+            return context.ExecuteSection(callback);
+        }
+
+        public Awaiter GetAwaiter() => new(this);
+
+        public T WaitFor<T>(Task<T> pending)
+        {
+            lock (_sync)
+            {
+                _operation = pending;
+            }
+            _ = pending.ContinueWith(_ => Wake(), CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            while (true)
+            {
+                Action callback;
+                lock (_sync)
+                {
+                    while (!pending.IsCompleted && _callbacks.Count == 0)
+                    {
+                        Monitor.Wait(_sync);
+                    }
+                    if (pending.IsCompleted)
+                    {
+                        break;
+                    }
+                    callback = _callbacks.Dequeue();
+                }
+                callback();
+            }
+            return pending.GetAwaiter().GetResult();
+        }
+
+        public void Close()
+        {
+            Action[] remaining;
+            lock (_sync)
+            {
+                _closed = true;
+                remaining = _callbacks.ToArray();
+                _callbacks.Clear();
+                Monitor.PulseAll(_sync);
+            }
+            foreach (var callback in remaining)
+            {
+                callback();
+            }
+        }
+
+        private void Post(Action continuation)
+        {
+            lock (_sync)
+            {
+                if (!_closed && _operation?.IsCompleted != true)
+                {
+                    _callbacks.Enqueue(continuation);
+                    Monitor.PulseAll(_sync);
+                    return;
+                }
+            }
+            continuation();
+        }
+
+        private void Wake()
+        {
+            lock (_sync)
+            {
+                Monitor.PulseAll(_sync);
+            }
+        }
+
+        public readonly struct Awaiter(ExecutionThreadDispatcher dispatcher) : INotifyCompletion
+        {
+            public bool IsCompleted => Environment.CurrentManagedThreadId == dispatcher._threadId;
+
+            public void OnCompleted(Action continuation) => dispatcher.Post(continuation);
+
+            public void GetResult()
+            {
+                lock (dispatcher._sync)
+                {
+                    if (dispatcher._closed || dispatcher._operation?.IsCompleted == true)
+                    {
+                        throw new InvalidOperationException(
+                            "The asynchronous policy operation has completed; its callbacks can no longer execute.");
+                    }
+                    if (!IsCompleted)
+                    {
+                        throw new InvalidOperationException("Policy callbacks must execute on their owning thread.");
+                    }
+                }
+            }
         }
     }
 }

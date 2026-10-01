@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Test.Emulator.Emulator.Policies;
@@ -454,5 +456,351 @@ public class CacheValueBehaviorTests
         cancellation.Cancel();
         Func<Task> cancelled = () => cache.GetAsync("key", cancellation.Token);
         await cancelled.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [TestMethod]
+    [DataRow("inbound", "standalone")]
+    [DataRow("backend", "standalone")]
+    [DataRow("outbound", "standalone")]
+    [DataRow("on-error", "standalone")]
+    [DataRow("inbound", "request")]
+    [DataRow("backend", "request")]
+    [DataRow("outbound", "request")]
+    [DataRow("on-error", "request")]
+    [DataRow("inbound", "all")]
+    public async Task CacheValue_WaitingForACanceledSharedFactoryRunsItsChildrenOnTheRequestThread(
+        string section, string mode)
+    {
+        var clock = new CacheTestClock();
+        var shared = new CacheStore(clock);
+        var cache = new CacheRefreshTestCache(shared);
+        using var cancellation = new CancellationTokenSource();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = shared.GetOrCreateWithDynamicTtlAsync("key", async (_, ct) =>
+        {
+            await release.Task.WaitAsync(ct);
+            return new CacheValueFactoryResult("other", TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(4));
+        }, ct: cancellation.Token);
+        first.IsCompleted.Should().BeFalse();
+        var ownerThread = 0;
+        var factoryThread = 0;
+        var factoryCalls = 0;
+        var test = CacheTest.Value(context => context.Value(new CacheValueConfig
+        {
+            Key = "key", VariableName = "result", ExpiresAfter = 10
+        }, () =>
+        {
+            factoryThread = Environment.CurrentManagedThreadId;
+            factoryCalls++;
+            context.SetVariable("result", "computed");
+        }), clock, cache);
+        var requestId = test.Context.RequestId;
+        var request = CacheRefreshTestCache.OnOwnerThread(() =>
+        {
+            ownerThread = Environment.CurrentManagedThreadId;
+            switch (mode)
+            {
+                case "standalone": ExecutionTest.RunSection(test, section); break;
+                case "request": test.RunRequest(inner => ExecutionTest.RunSection(inner, section)); break;
+                case "all": test.RunAll(); break;
+                default: throw new ArgumentOutOfRangeException(nameof(mode));
+            }
+        });
+        try
+        {
+            await cache.Pending.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            cancellation.Cancel();
+            Func<Task> canceled = () => first;
+            await canceled.Should().ThrowAsync<OperationCanceledException>();
+            await request.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            cancellation.Cancel();
+            release.TrySetResult();
+        }
+
+        factoryCalls.Should().Be(1);
+        factoryThread.Should().Be(ownerThread);
+        test.Context.RequestId.Should().Be(requestId);
+        test.Context.Variables["result"].Should().Be("computed");
+        (await shared.GetAsync("key")).Should().Be("computed");
+    }
+
+    [TestMethod]
+    [DataRow("inbound")]
+    [DataRow("backend")]
+    [DataRow("outbound")]
+    [DataRow("on-error")]
+    public async Task CacheValue_CanceledAsyncFactoryRestoresVariablesWithoutExecutingChildren(string section)
+    {
+        var clock = new CacheTestClock();
+        var shared = new CacheStore(clock);
+        await shared.SetAsync("key", "cached", TimeSpan.FromSeconds(10));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var cache = new CacheRefreshTestCache(shared)
+        {
+            DynamicGet = async (_, factory, _, _) =>
+            {
+                await Task.Yield();
+                var value = await factory("cached", cancellation.Token);
+                return new CacheValueResult(value.Value, true, false);
+            }
+        };
+        var calls = 0;
+        var test = CacheTest.Value(context => context.Value(new CacheValueConfig
+        {
+            Key = "key", VariableName = "result", RefreshAfter = 0
+        }, () =>
+        {
+            calls++;
+            context.SetVariable("result", "replacement");
+        }), clock, cache);
+        test.Context.Variables["result"] = "original";
+
+        var error = await CacheRefreshTestCache.OnOwnerThread(() =>
+            Assert.ThrowsExactly<PolicyException>(() => ExecutionTest.RunSection(test, section)))
+            .WaitAsync(TimeSpan.FromSeconds(5));
+
+        error.Policy.Should().Be(nameof(IInboundContext.CacheValue));
+        error.Section.Should().Be(ExecutionTest.SectionName(section));
+        error.InnerException.Should().BeAssignableTo<OperationCanceledException>();
+        calls.Should().Be(0);
+        test.Context.Variables["result"].Should().Be("original");
+        (await shared.GetAsync("key")).Should().Be("cached");
+        var recovery = new TestDocument(new ExecutionTestDocument
+        {
+            OnErrorAction = context => context.SetVariable("recovered", true)
+        }) { Context = test.Context };
+        recovery.RunOnError();
+        test.Context.Variables["recovered"].Should().Be(true);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task CacheValue_AsyncFactoryAndEvaluatorFailuresRestoreStateAndAllowRetry(bool evaluator)
+    {
+        var clock = new CacheTestClock();
+        var shared = new CacheStore(clock);
+        await shared.SetAsync("key", "cached", TimeSpan.FromSeconds(10));
+        var cache = CacheRefreshTestCache.Asynchronous(shared);
+        var expected = new InvalidOperationException("async factory failure");
+        var fail = true;
+        var test = CacheTest.Value(context => context.Value(new CacheValueConfig
+        {
+            Key = "key", VariableName = "result", RefreshAfter = 0,
+            ExpiresAfterEvaluator = evaluator ? () => fail ? throw expected : 10 : null
+        }, () =>
+        {
+            context.SetVariable("result", "replacement");
+            if (fail && !evaluator)
+            {
+                throw expected;
+            }
+        }), clock, cache);
+        test.Context.Variables["result"] = "original";
+
+        var error = await CacheRefreshTestCache.OnOwnerThread(() =>
+            Assert.ThrowsExactly<PolicyException>(test.RunInbound)).WaitAsync(TimeSpan.FromSeconds(5));
+
+        error.Policy.Should().Be(nameof(IInboundContext.CacheValue));
+        error.InnerException.Should().BeSameAs(expected);
+        test.Context.Variables["result"].Should().Be("original");
+        (await shared.GetAsync("key")).Should().Be("cached");
+        fail = false;
+        await CacheRefreshTestCache.OnOwnerThread(test.RunInbound).WaitAsync(TimeSpan.FromSeconds(5));
+        test.Context.Variables["result"].Should().Be("replacement");
+        (await shared.GetAsync("key")).Should().Be("replacement");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task CacheValue_RealConcurrentCallerIsRejectedWhileTheRequestWaits(bool retainedProxy)
+    {
+        var clock = new CacheTestClock();
+        var shared = new CacheStore(clock);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cache = new CacheRefreshTestCache(shared)
+        {
+            DynamicGet = async (key, factory, force, ct) =>
+            {
+                entered.TrySetResult();
+                await release.Task.WaitAsync(ct);
+                return await shared.GetOrCreateWithDynamicTtlAsync(key, factory, force, ct);
+            }
+        };
+        Action? retained = null;
+        var test = CacheTest.Value(context =>
+        {
+            retained = () => context.SetVariable("escaped", true);
+            context.Value(new CacheValueConfig { Key = "key", VariableName = "result" },
+                () => context.SetVariable("result", "computed"));
+        }, clock, cache);
+        var request = CacheRefreshTestCache.OnOwnerThread(() => test.RunRequest(inner => inner.RunInbound()));
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var denied = await Task.Run(() => Assert.ThrowsExactly<InvalidOperationException>(() =>
+            {
+                if (retainedProxy) retained!();
+                else test.RunInbound();
+            })).WaitAsync(TimeSpan.FromSeconds(5));
+            denied.Message.Should().Contain("Concurrent");
+            test.Context.Variables.Should().NotContainKey("escaped").And.NotContainKey("result");
+        }
+        finally
+        {
+            release.TrySetResult();
+            await request.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        test.Context.Variables["result"].Should().Be("computed");
+        (await shared.GetAsync("key")).Should().Be("computed");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task CacheValue_SpawnedTasksDoNotInheritPermissionToExecutePolicies(bool startNew)
+    {
+        var clock = new CacheTestClock();
+        var shared = new CacheStore(clock);
+        var cache = CacheRefreshTestCache.Asynchronous(shared);
+        var test = CacheTest.Value(context => context.Value(new CacheValueConfig
+        {
+            Key = "key", VariableName = "result"
+        }, () =>
+        {
+            InvalidOperationException Attempt() => Assert.ThrowsExactly<InvalidOperationException>(
+                () => context.SetVariable("escaped", true));
+            var unrelated = startNew
+                ? Task.Factory.StartNew(Attempt, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default)
+                : Task.Run(Attempt);
+            unrelated.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult().Message.Should().Contain("Concurrent");
+            context.SetVariable("result", "computed");
+        }), clock, cache);
+
+        await CacheRefreshTestCache.OnOwnerThread(test.RunAll).WaitAsync(TimeSpan.FromSeconds(5));
+
+        test.Context.Variables.Should().NotContainKey("escaped");
+        test.Context.Variables["result"].Should().Be("computed");
+    }
+
+    [TestMethod]
+    public async Task CacheValue_AsyncNestedFactoriesPreserveOwnerAndServiceRecursionContext()
+    {
+        var clock = new CacheTestClock();
+        var shared = new CacheStore(clock);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var cache = CacheRefreshTestCache.Asynchronous(shared, cancellation.Token);
+        var recurse = true;
+        var test = CacheTest.Value(context => context.Value(new CacheValueConfig
+        {
+            Key = "outer", VariableName = "outer", RefreshAfter = 0
+        }, () =>
+        {
+            context.Value(new CacheValueConfig
+            {
+                Key = recurse ? "outer" : "inner", VariableName = "inner", RefreshAfter = 0
+            }, () => context.SetVariable("inner", "inner-value"));
+            context.SetVariable("outer", "outer-value");
+        }), clock, cache);
+
+        var error = await CacheRefreshTestCache.OnOwnerThread(() =>
+            Assert.ThrowsExactly<PolicyException>(test.RunInbound)).WaitAsync(TimeSpan.FromSeconds(5));
+
+        error.GetBaseException().Message.Should().Contain("recursively refresh its own key");
+        shared.InternalCache.Should().BeEmpty();
+        test.Context.Variables.Should().NotContainKey("outer").And.NotContainKey("inner");
+        recurse = false;
+        await CacheRefreshTestCache.OnOwnerThread(test.RunInbound).WaitAsync(TimeSpan.FromSeconds(5));
+        test.Context.Variables["outer"].Should().Be("outer-value");
+        test.Context.Variables["inner"].Should().Be("inner-value");
+        (await shared.GetAsync("outer")).Should().Be("outer-value");
+        (await shared.GetAsync("inner")).Should().Be("inner-value");
+    }
+
+    [TestMethod]
+    public async Task CacheValue_AsyncFactoryCannotAdvanceRequestIdBeforeItsChildPolicies()
+    {
+        var clock = new CacheTestClock();
+        var shared = new CacheStore(clock);
+        var cache = CacheRefreshTestCache.Asynchronous(shared);
+        TestDocument? test = null;
+        var changeId = true;
+        test = CacheTest.Value(context => context.Value(new CacheValueConfig
+        {
+            Key = "key", VariableName = "result"
+        }, () =>
+        {
+            if (changeId) test!.Context.RequestId = Guid.NewGuid();
+            context.SetVariable("result", "computed");
+        }), clock, cache);
+        var requestId = test.Context.RequestId;
+        test.Context.Variables["result"] = "original";
+
+        var error = await CacheRefreshTestCache.OnOwnerThread(() =>
+            Assert.ThrowsExactly<PolicyException>(() => test.RunRequest(inner => inner.RunInbound())))
+            .WaitAsync(TimeSpan.FromSeconds(5));
+
+        error.GetBaseException().Message.Should().Contain("RequestId must remain unchanged");
+        test.Context.Variables["result"].Should().Be("original");
+        shared.InternalCache.Should().BeEmpty();
+        test.Context.RequestId = requestId;
+        changeId = false;
+        await CacheRefreshTestCache.OnOwnerThread(() => test.RunRequest(inner => inner.RunInbound()))
+            .WaitAsync(TimeSpan.FromSeconds(5));
+        test.Context.Variables["result"].Should().Be("computed");
+    }
+}
+
+internal sealed class CacheRefreshTestCache(ICache inner) : ICache
+{
+    public TaskCompletionSource Pending { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public Func<string, Func<object?, CancellationToken, Task<CacheValueFactoryResult>>, bool,
+        CancellationToken, Task<CacheValueResult>>? DynamicGet { get; init; }
+
+    public static CacheRefreshTestCache Asynchronous(ICache inner, CancellationToken cancellationToken = default) =>
+        new(inner)
+        {
+            DynamicGet = async (key, factory, force, ct) =>
+            {
+                await Task.Yield();
+                return await inner.GetOrCreateWithDynamicTtlAsync(
+                    key, factory, force, cancellationToken.CanBeCanceled ? cancellationToken : ct).ConfigureAwait(false);
+            }
+        };
+
+    public static Task OnOwnerThread(Action action) =>
+        Task.Factory.StartNew(action, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+    public static Task<T> OnOwnerThread<T>(Func<T> action) =>
+        Task.Factory.StartNew(action, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+    public Task<object?> GetAsync(string key, CancellationToken ct = default) => inner.GetAsync(key, ct);
+
+    public Task SetAsync(string key, object value, TimeSpan ttl, CancellationToken ct = default) =>
+        inner.SetAsync(key, value, ttl, ct);
+
+    public Task RemoveAsync(string key, CancellationToken ct = default) => inner.RemoveAsync(key, ct);
+
+    public Task<CacheValueResult> GetOrCreateAsync(
+        string key, TimeSpan expiresAfter, TimeSpan? refreshAfter,
+        Func<object?, CancellationToken, Task<object?>> valueFactory, CancellationToken ct = default) =>
+        inner.GetOrCreateAsync(key, expiresAfter, refreshAfter, valueFactory, ct);
+
+    public Task<CacheValueResult> GetOrCreateWithDynamicTtlAsync(
+        string key, Func<object?, CancellationToken, Task<CacheValueFactoryResult>> valueFactory,
+        bool forceRefresh = false, CancellationToken ct = default)
+    {
+        var result = DynamicGet is { } get
+            ? get(key, valueFactory, forceRefresh, ct)
+            : inner.GetOrCreateWithDynamicTtlAsync(key, valueFactory, forceRefresh, ct);
+        if (!result.IsCompleted) Pending.TrySetResult();
+        return result;
     }
 }
