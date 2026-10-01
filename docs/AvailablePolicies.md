@@ -230,7 +230,9 @@ c.InvokeDaprBinding(new InvokeDaprBindingConfig
 c.PublishToDapr(new PublishToDaprConfig
 {
     Topic = "my-topic",
-    PubSubName = "pubsub"
+    Content = "my-content",
+    PubSubName = "pubsub",
+    Timeout = 10 // seconds, 1-240
 });
 ```
 

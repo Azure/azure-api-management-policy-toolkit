@@ -186,14 +186,6 @@ public interface IOnErrorContext : IHaveExpressionContext
     /// </param>
     void MockResponse(MockResponseConfig? config = null);
 
-    /// <summary>
-    /// Publishes a message to a Dapr topic.<br />
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/publish-to-dapr-policy">publish-to-dapr</a> policy.
-    /// </summary>
-    /// <param name="config">
-    /// Configuration specifying the topic, content, and other optional settings for the publish-to-dapr policy.
-    /// </param>
-    void PublishToDapr(PublishToDaprConfig config);
 
     /// <summary>
     /// Deletes header of specified name.<br />

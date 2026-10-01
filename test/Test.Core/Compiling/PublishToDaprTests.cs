@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
@@ -20,22 +22,6 @@ public class PublishToDaprTests
                     Content = "my-content"
                 });
             }
-            public void Outbound(IOutboundContext context) 
-            {
-                context.PublishToDapr(new PublishToDaprConfig
-                {
-                    Topic = "my-topic",
-                    Content = "my-content"
-                });
-            }
-            public void OnError(IOnErrorContext context) 
-            {
-                context.PublishToDapr(new PublishToDaprConfig
-                {
-                    Topic = "my-topic",
-                    Content = "my-content"
-                });
-            }
         }
         """,
         """
@@ -43,15 +29,9 @@ public class PublishToDaprTests
             <inbound>
                 <publish-to-dapr topic="my-topic">my-content</publish-to-dapr>
             </inbound>
-            <outbound>
-                <publish-to-dapr topic="my-topic">my-content</publish-to-dapr>
-            </outbound>
-            <on-error>
-                <publish-to-dapr topic="my-topic">my-content</publish-to-dapr>
-            </on-error>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-dapr policy with required properties in sections"
+        DisplayName = "Should compile publish-to-dapr policy with required properties in inbound"
     )]
     [DataRow(
         """
@@ -218,7 +198,7 @@ public class PublishToDaprTests
                 {
                     Topic = "my-topic",
                     Content = "my-content",
-                    Timeout = 5000
+                    Timeout = 30
                 });
             }
         }
@@ -226,7 +206,7 @@ public class PublishToDaprTests
         """
         <policies>
             <inbound>
-                <publish-to-dapr topic="my-topic" timeout="5000">my-content</publish-to-dapr>
+                <publish-to-dapr topic="my-topic" timeout="30">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
@@ -296,7 +276,7 @@ public class PublishToDaprTests
                     PubSubName = "my-pubsub",
                     IgnoreError = true,
                     ResponseVariableName = "daprResponse",
-                    Timeout = 5000,
+                    Timeout = 30,
                     Template = "liquid",
                     ContentType = "application/json"
                 });
@@ -306,7 +286,7 @@ public class PublishToDaprTests
         """
         <policies>
             <inbound>
-                <publish-to-dapr topic="my-topic" pubsub-name="my-pubsub" ignore-error="true" response-variable-name="daprResponse" timeout="5000" template="liquid" content-type="application/json">my-content</publish-to-dapr>
+                <publish-to-dapr topic="my-topic" pubsub-name="my-pubsub" ignore-error="true" response-variable-name="daprResponse" timeout="30" template="liquid" content-type="application/json">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
@@ -315,5 +295,68 @@ public class PublishToDaprTests
     public void ShouldCompilePublishToDaprPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow(1)]
+    [DataRow(240)]
+    public void ShouldAcceptTimeoutAtRangeBoundaries(int timeout)
+    {
+        var result = $$"""
+                       [Document]
+                       public class PolicyDocument : IDocument
+                       {
+                           public void Inbound(IInboundContext context)
+                           {
+                               context.PublishToDapr(new PublishToDaprConfig
+                               {
+                                   Topic = "my-topic",
+                                   Content = "my-content",
+                                   Timeout = {{timeout}}
+                               });
+                           }
+                       }
+                       """.CompileDocument();
+
+        result.Should().BeSuccessful();
+    }
+
+    [TestMethod]
+    [DataRow("0")]
+    [DataRow("241")]
+    [DataRow("5000")]
+    [DataRow("-1")]
+    [DataRow("Seconds")]
+    public void ShouldRejectTimeoutOutsideOfRange(string timeout)
+    {
+        var result = $$"""
+                       [Document]
+                       public class PolicyDocument : IDocument
+                       {
+                           private const int Seconds = 300;
+
+                           public void Inbound(IInboundContext context)
+                           {
+                               context.PublishToDapr(new PublishToDaprConfig
+                               {
+                                   Topic = "my-topic",
+                                   Content = "my-content",
+                                   Timeout = {{timeout}}
+                               });
+                           }
+                       }
+                       """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2020");
+    }
+
+    [TestMethod]
+    [DataRow(typeof(IOutboundContext))]
+    [DataRow(typeof(IOnErrorContext))]
+    [DataRow(typeof(IBackendContext))]
+    public void ShouldOnlyBeAvailableInInbound(Type section)
+    {
+        // API Management only accepts publish-to-dapr in the inbound section.
+        section.GetMethod(nameof(IInboundContext.PublishToDapr)).Should().BeNull();
     }
 }

@@ -347,4 +347,15 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor ValueOutOfRange = new(
+        "APIM2020",
+        "Value out of range",
+        "Value '{2}' of '{1}' in '{0}' policy must be between {3} and {4}",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
 }

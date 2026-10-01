@@ -38,7 +38,7 @@ public record PublishToDaprConfig
     public string? ResponseVariableName { get; init; }
 
     /// <summary>
-    /// Specifies the timeout in milliseconds for the publish operation.
+    /// Specifies the time in seconds to wait for the Dapr sidecar to respond. Valid values are 1 to 240.
     /// </summary>
     public int? Timeout { get; init; }
 

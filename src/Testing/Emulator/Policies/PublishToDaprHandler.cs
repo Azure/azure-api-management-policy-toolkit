@@ -5,11 +5,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
-[
-    Section(nameof(IInboundContext)),
-    Section(nameof(IOutboundContext)),
-    Section(nameof(IOnErrorContext))
-]
+[Section(nameof(IInboundContext))]
 internal class PublishToDaprHandler : PolicyHandler<PublishToDaprConfig>
 {
     public override string PolicyName => nameof(IInboundContext.PublishToDapr);
