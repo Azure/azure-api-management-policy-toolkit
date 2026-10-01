@@ -117,6 +117,7 @@ dotnet azure-apim-policy-compiler --s .\Contoso.Apis.Policies --o . --format tru
 The compiler is a dotnet tool whose command name is `azure-apim-policy-compiler`. The `--s` parameter is a source folder with policy documents.
 The `--o` parameter is an output folder for generated policy documents. The `--format` parameter is a flag which tells
 the compiler to format the generated document.
+Run `dotnet azure-apim-policy-compiler --help` to see all options, defaults, and accepted aliases.
 
 The `--policy-format` parameter (alias `--pf`) selects how policy expressions are encoded: `rawxml` (the default,
 expressions written verbatim) or `xml` (reserved characters XML-encoded for the standards-compliant content

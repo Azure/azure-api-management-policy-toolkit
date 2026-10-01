@@ -34,26 +34,32 @@ dotnet tool install Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling
 The command name is `azure-apim-policy-decompiler`.
 
 ```shell
-azure-apim-policy-decompiler generate --input .\policy.xml --output .\generated
+azure-apim-policy-decompiler --s .\policy.xml --o .\generated
 ```
 
 Process all XML files under a folder recursively:
 
 ```shell
-azure-apim-policy-decompiler generate --input-dir .\policies --pattern "*.xml" --output .\generated
+azure-apim-policy-decompiler --s .\policies --pattern "*.xml" --o .\generated
 ```
 
 Common options:
 
-- `--input` / `--input-dir`: one or more input files, or a directory to scan recursively
+- `--s` / `--source`: one input file or a directory to scan recursively
+- `--o` / `--out`: output directory (by default, files are written beside their inputs)
+- `--input` / `--input-dir`: existing options for one or more input files or a directory
 - `--pattern`: file pattern for directory scans (`*.xml` by default)
-- `--output`: output directory for generated C# files
+- `--output`: existing alias for the output directory
 - `--ext`: output file extension (`.cs` by default)
 - `--namespace`: base namespace for generated classes
 - `--scope`: document scope (`Operation` by default)
 - `--doc-id-root`: root path used to compute relative `DocumentId` values
 - `--document-suffix` / `--fragment-suffix`: name suffixes for generated class names
 - `--verbose`: print progress information while generating files
+
+Run `azure-apim-policy-decompiler --help` for all options and defaults. The existing
+`generate` subcommand remains available. The legacy `-s` alias still means `--scope`;
+use `--s` or `--source` for the input path.
 
 ## Example output
 
