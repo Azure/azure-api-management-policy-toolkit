@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
-using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
@@ -14,33 +14,23 @@ internal class QuotaByKeyHandler : PolicyHandler<QuotaByKeyConfig>
 
     protected override void Handle(GatewayContext context, QuotaByKeyConfig config)
     {
-        var limiter = context.Services.Resolve<IRateLimiter>();
-        if (limiter is not null)
-        {
-            var allowed = limiter.TryConsumeAsync(config.CounterKey, 1).GetAwaiter().GetResult();
-            if (!allowed)
-            {
-                ResponseUtilities.Overwrite(context.Response, 429, "Too Many Requests");
-                throw new FinishSectionProcessingException();
-            }
-
-            return;
-        }
-
+        ArgumentException.ThrowIfNullOrEmpty(config.CounterKey);
+        var incrementCount = config.IncrementCount ?? 1;
+        ArgumentOutOfRangeException.ThrowIfNegative(incrementCount);
         var incrementCondition = config.IncrementCondition ?? true;
-        var counterKey = $"quota:{config.CounterKey}";
-        var currentCount = context.RateLimitStore.GetCount(counterKey);
-
-        if (config.Calls is not null && currentCount >= config.Calls)
-        {
-            ResponseUtilities.Overwrite(context.Response, 403, "Quota Exceeded");
-            throw new FinishSectionProcessingException();
-        }
-
-        if (incrementCondition)
-        {
-            var incrementCount = config.IncrementCount ?? 1;
-            context.RateLimitStore.Increment(counterKey, incrementCount);
-        }
+        var start = PolicyCounterService.ParseFirstPeriodStart(config.FirstPeriodStart);
+        PolicyCounterLimit[] limits =
+        [
+            new($"quota-by-key:{config.CounterKey}", config.CounterKey, config.Calls,
+                (long?)config.Bandwidth * 1024, config.RenewalPeriod, false, start)
+        ];
+        var bandwidth = incrementCondition && config.Bandwidth is not null
+            ? PolicyCounterService.GetMessageLength(context.Request)
+            : 0;
+        var counters = PolicyCounterService.For(context);
+        var result = counters.ConsumeQuota(
+            limits, incrementCondition ? incrementCount : 0, bandwidth,
+            oncePerRequest: true, countRequest: incrementCondition);
+        counters.ApplyQuota(result);
     }
 }

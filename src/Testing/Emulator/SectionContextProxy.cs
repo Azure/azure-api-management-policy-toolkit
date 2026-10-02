@@ -1,7 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System.Reflection;
+
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator;
 
@@ -11,7 +13,7 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
 
     private Dictionary<string, IPolicyHandler> _handlers = null!;
 
-    private readonly string _sectionName = typeof(TSection).Name;
+    private string _sectionName = typeof(TSection).Name;
 
     public TSection Object => this as TSection ?? throw new InvalidOperationException();
 
@@ -28,33 +30,65 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
         ArgumentNullException.ThrowIfNull(targetMethod.DeclaringType);
+        WaitBranchExecution.Synchronize(_context);
 
-        // Handle WithId() by returning the proxy itself (id is ignored at runtime, it's compile-time only)
-        if (targetMethod.Name == "WithId")
+        // Policy IDs are compile-time metadata; chaining must retain this proxy.
+        if (targetMethod.Name == nameof(IInboundContext.WithId))
         {
             return Object;
         }
 
-        if (!_handlers.TryGetValue(targetMethod.Name, out var handler))
+        if (targetMethod.Name == $"get_{nameof(IHaveExpressionContext.ExpressionContext)}")
         {
-            throw new NotImplementedException(targetMethod.Name);
+            return _context;
         }
 
-        // Track current section handlers so IncludeFragmentHandler can create
-        // a fragment proxy with the correct handler set for the calling section.
+        object? result = null;
+        _context.ExecuteSection(() => result = InvokePolicy(targetMethod, args));
+        return result;
+    }
+
+    private object? InvokePolicy(MethodInfo targetMethod, object?[]? args)
+    {
+        var previousHandlers = _context.CurrentSectionHandlers;
+        var previousSectionName = _context.CurrentSectionName;
+        var previousMethod = _context.CurrentPolicyMethod;
         _context.CurrentSectionHandlers = _handlers;
+        _context.CurrentSectionName = _sectionName;
+        _context.CurrentPolicyMethod = targetMethod;
 
         try
         {
-            return handler.Handle(_context, args);
+            if (!_handlers.TryGetValue(targetMethod.Name, out var handler))
+            {
+                throw new NotImplementedException(targetMethod.Name);
+            }
+
+            var result = handler.Handle(_context, args);
+            WaitBranchExecution.ValidateAccess(_context);
+            return result;
         }
-        catch (FinishSectionProcessingException) { throw; }
+        catch (FinishSectionProcessingException termination)
+        {
+            _context.RecordTermination(termination, targetMethod.Name);
+            throw;
+        }
         catch (PolicyException) { throw; }
         catch (Exception e)
         {
             throw new PolicyException(e) { Policy = targetMethod.Name, Section = _sectionName, PolicyArgs = args };
         }
+        finally
+        {
+            WaitBranchExecution.Publish(_context);
+            _context.CurrentSectionHandlers = previousHandlers;
+            _context.CurrentSectionName = previousSectionName;
+            _context.CurrentPolicyMethod = previousMethod;
+        }
     }
+
+    internal void CopyHandlersFrom(SectionContextProxy<TSection> source) =>
+        _handlers = WaitHandlerSnapshot.Copy(source._handlers);
 
     internal THandler GetHandler<THandler>() where THandler : class, IPolicyHandler
     {
@@ -102,13 +136,15 @@ internal class SectionContextProxy<TSection> : DispatchProxy where TSection : cl
     /// </summary>
     internal static SectionContextProxy<TNewSection> CreateWithHandlers<TNewSection>(
         GatewayContext context,
-        Dictionary<string, IPolicyHandler> handlers) where TNewSection : class
+        Dictionary<string, IPolicyHandler> handlers,
+        string sectionName) where TNewSection : class
     {
         var proxy =
             (Create(typeof(TNewSection), typeof(SectionContextProxy<TNewSection>)) as
                 SectionContextProxy<TNewSection>)!;
         proxy._context = context;
         proxy._handlers = handlers;
+        proxy._sectionName = sectionName;
         return proxy;
     }
 }

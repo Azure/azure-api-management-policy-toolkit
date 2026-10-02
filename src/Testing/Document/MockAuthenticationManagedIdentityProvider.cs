@@ -19,6 +19,17 @@ public static class MockAuthenticationManagedIdentityProvider
         return new Setup(predicate, handler);
     }
 
+    public static Setup AuthenticationManagedIdentity(
+        this MockPoliciesProvider<IOutboundContext> mock) => AuthenticationManagedIdentity(mock, (_, _) => true);
+
+    public static Setup AuthenticationManagedIdentity(
+        this MockPoliciesProvider<IOutboundContext> mock,
+        Func<GatewayContext, ManagedIdentityAuthenticationConfig, bool> predicate)
+    {
+        var handler = mock.SectionContextProxy.GetHandler<AuthenticationManagedIdentityHandler>();
+        return new Setup(predicate, handler);
+    }
+
     public class Setup
     {
         private readonly Func<GatewayContext, ManagedIdentityAuthenticationConfig, bool> _predicate;

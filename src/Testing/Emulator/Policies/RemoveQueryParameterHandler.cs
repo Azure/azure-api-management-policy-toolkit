@@ -14,5 +14,11 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 internal class RemoveQueryParameterHandler : PolicyHandler<string>
 {
     public override string PolicyName => nameof(IInboundContext.RemoveQueryParameter);
-    protected override void Handle(GatewayContext context, string name) => context.Request.Url.Query.Remove(name);
+
+    protected override void Handle(GatewayContext context, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        context.Request.Url.Query.Remove(name);
+    }
 }

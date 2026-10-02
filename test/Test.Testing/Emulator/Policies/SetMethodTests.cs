@@ -14,27 +14,27 @@ public class SetMethodTests
     {
         public void Inbound(IInboundContext context)
         {
-            context.SetMethod("POST");
+            context.SetMethod("post");
         }
 
         public void Backend(IBackendContext context)
         {
-            context.SetMethod("PUT");
+            context.SetMethod("put");
         }
 
         public void Outbound(IOutboundContext context)
         {
-            context.SetMethod("DELETE");
+            context.SetMethod("delete");
         }
 
         public void OnError(IOnErrorContext context)
         {
-            context.SetMethod("PATCH");
+            context.SetMethod("patch");
         }
     }
 
     [TestMethod]
-    public void SetMethod_Inbound()
+    public void SetMethod_Inbound_NormalizesAndAssignsMethod()
     {
         var test = new SimpleSetMethod().AsTestDocument();
         test.Context.Request.Method = "GET";
@@ -45,7 +45,7 @@ public class SetMethodTests
     }
 
     [TestMethod]
-    public void SetMethod_Backend()
+    public void SetMethod_Backend_NormalizesAndAssignsMethod()
     {
         var test = new SimpleSetMethod().AsTestDocument();
         test.Context.Request.Method = "GET";
@@ -56,7 +56,7 @@ public class SetMethodTests
     }
 
     [TestMethod]
-    public void SetMethod_Outbound()
+    public void SetMethod_Outbound_NormalizesAndAssignsMethod()
     {
         var test = new SimpleSetMethod().AsTestDocument();
         test.Context.Request.Method = "GET";
@@ -67,7 +67,7 @@ public class SetMethodTests
     }
 
     [TestMethod]
-    public void SetMethod_OnError()
+    public void SetMethod_OnError_NormalizesAndAssignsMethod()
     {
         var test = new SimpleSetMethod().AsTestDocument();
         test.Context.Request.Method = "GET";
@@ -78,19 +78,18 @@ public class SetMethodTests
     }
 
     [TestMethod]
-    public void SetMethod_Callback()
+    public void SetMethod_Inbound_CallbackOverrideReplacesDefaultMethod()
     {
         var test = new SimpleSetMethod().AsTestDocument();
         test.Context.Request.Method = "GET";
-        var callbackExecuted = false;
-        test.SetupInbound().SetMethod().WithCallback((_, _) =>
+
+        test.SetupInbound().SetMethod((_, method) => method == "post").WithCallback((context, method) =>
         {
-            callbackExecuted = true;
+            context.Request.Method = method.ToUpperInvariant() == "POST" ? "OPTIONS" : method.ToUpperInvariant();
         });
 
         test.RunInbound();
 
-        callbackExecuted.Should().BeTrue();
-        test.Context.Request.Method.Should().Be("GET");
+        test.Context.Request.Method.Should().Be("OPTIONS");
     }
 }

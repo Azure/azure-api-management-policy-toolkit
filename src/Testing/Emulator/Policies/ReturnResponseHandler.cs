@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
@@ -17,7 +18,8 @@ internal class ReturnResponseHandler : IPolicyHandler
     public List<Tuple<
         Func<GatewayContext, ReturnResponseConfig, bool>,
         Action<GatewayContext, ReturnResponseConfig>
-    >> CallbackHooks { get; } = new();
+    >> CallbackHooks
+    { get; } = new();
 
     public string PolicyName => nameof(IInboundContext.ReturnResponse);
 
@@ -38,54 +40,87 @@ internal class ReturnResponseHandler : IPolicyHandler
         throw new FinishSectionProcessingException();
     }
 
-    private void Handle(GatewayContext context, ReturnResponseConfig config)
+    private static void Handle(GatewayContext context, ReturnResponseConfig config)
     {
-        var response = context.Response;
-        if (!string.IsNullOrWhiteSpace(config.ResponseVariableName))
+        var response = new MockResponse
         {
-            //copy variable
-            response = context.Variables[config.ResponseVariableName] as MockResponse ??
-                       throw new ArgumentException($"Variable {config.ResponseVariableName} should be response");
+            Headers = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        };
+        if (config.ResponseVariableName is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(config.ResponseVariableName);
+            if (!context.Variables.TryGetValue(config.ResponseVariableName, out var variable))
+            {
+                throw new KeyNotFoundException($"Response variable '{config.ResponseVariableName}' was not found.");
+            }
+            if (variable is not IResponse selectedResponse)
+            {
+                throw new ArgumentException($"Variable '{config.ResponseVariableName}' must contain a response.");
+            }
+
+            ResponseUtilities.Copy(selectedResponse, response);
         }
 
         if (config.Status is not null)
         {
+            if (config.Status.Code is < 100 or > 599)
+            {
+                throw new ArgumentOutOfRangeException(nameof(config.Status.Code), config.Status.Code,
+                    "HTTP response status codes must be between 100 and 599.");
+            }
+            ArgumentNullException.ThrowIfNull(config.Status.Reason);
             response.StatusCode = config.Status.Code;
             response.StatusReason = config.Status.Reason;
         }
 
         foreach (var header in config.Headers ?? [])
         {
-            switch (header.ExistsAction)
+            ArgumentNullException.ThrowIfNull(header);
+            ArgumentException.ThrowIfNullOrWhiteSpace(header.Name);
+            var action = header.ExistsAction ?? "override";
+            if (action is not ("override" or "append" or "skip" or "delete"))
             {
-                case "delete":
-                    response.Headers.Remove(header.Name);
-                    break;
+                throw new ArgumentException($"Unsupported header exists-action '{action}'.",
+                    nameof(header.ExistsAction));
+            }
+            if (action == "delete")
+            {
+                response.Headers.Remove(header.Name);
+                continue;
+            }
+
+            var values = header.Values;
+            ArgumentNullException.ThrowIfNull(values);
+            switch (action)
+            {
                 case "skip":
-                    if (!response.Headers.TryGetValue(header.Name, out _))
+                    if (!response.Headers.ContainsKey(header.Name))
                     {
-                        ArgumentNullException.ThrowIfNull(header.Values);
-                        response.Headers[header.Name] = header.Values;
+                        response.Headers[header.Name] = values.ToArray();
                     }
 
                     break;
                 case "append":
-                    ArgumentNullException.ThrowIfNull(header.Values);
                     response.Headers[header.Name] = response.Headers.TryGetValue(header.Name, out var v)
-                        ? v.Concat(header.Values).ToArray()
-                        : header.Values;
+                        ? v.Concat(values).ToArray()
+                        : values.ToArray();
                     break;
                 case "override":
-                default:
-                    ArgumentNullException.ThrowIfNull(header.Values);
-                    response.Headers[header.Name] = header.Values;
+                    response.Headers[header.Name] = values.ToArray();
                     break;
             }
         }
 
         if (config.Body is not null)
         {
+            if (config.Body.Template is not null)
+            {
+                throw new NotSupportedException(
+                    $"The return-response emulator does not support body template '{config.Body.Template}'.");
+            }
             response.Body.Content = config.Body.Content as string ?? config.Body.Content?.ToString();
         }
+
+        context.Response = response;
     }
 }

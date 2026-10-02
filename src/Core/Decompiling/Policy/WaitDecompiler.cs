@@ -13,19 +13,24 @@ public class WaitDecompiler : IPolicyDecompiler
     {
         var prefix = PolicyDecompilerContext.GetContextPrefix(element, contextVar);
         var waitFor = element.Attribute("for")?.Value;
+        var children = element.Elements().ToList();
+        if (children.Count == 0)
+        {
+            throw new ArgumentException("The wait policy requires at least one child policy.", nameof(element));
+        }
 
-        writer.AppendLine($"{prefix}Wait(() =>");
-        writer.AppendLine("{");
+        writer.AppendLine($"{prefix}Wait({(waitFor is null ? "null" : context.HandleValue(waitFor, "WaitFor"))},");
         writer.IncreaseIndent();
-        context.EmitPolicies(writer, element.Elements(), contextVar);
+        for (var i = 0; i < children.Count; i++)
+        {
+            var branch = context.GenerateUniqueMethodName("waitBranch");
+            writer.AppendLine($"{branch} =>");
+            writer.AppendLine("{");
+            writer.IncreaseIndent();
+            context.EmitPolicy(writer, children[i], branch);
+            writer.DecreaseIndent();
+            writer.AppendLine(i == children.Count - 1 ? "});" : "},");
+        }
         writer.DecreaseIndent();
-        if (waitFor != null)
-        {
-            writer.AppendLine($"}}, {context.HandleValue(waitFor, "WaitFor")});");
-        }
-        else
-        {
-            writer.AppendLine("});");
-        }
     }
 }

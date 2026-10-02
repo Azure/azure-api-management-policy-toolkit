@@ -11,10 +11,40 @@ public static class MockAppendQueryParameterProvider
     public static Setup AppendQueryParameter(this MockPoliciesProvider<IInboundContext> mock) =>
         AppendQueryParameter(mock, (_, _, _) => true);
 
+    public static Setup AppendQueryParameter(this MockPoliciesProvider<IBackendContext> mock) =>
+        AppendQueryParameter(mock, (_, _, _) => true);
+
+    public static Setup AppendQueryParameter(this MockPoliciesProvider<IOutboundContext> mock) =>
+        AppendQueryParameter(mock, (_, _, _) => true);
+
+    public static Setup AppendQueryParameter(this MockPoliciesProvider<IOnErrorContext> mock) =>
+        AppendQueryParameter(mock, (_, _, _) => true);
+
     public static Setup AppendQueryParameter(
         this MockPoliciesProvider<IInboundContext> mock,
         Func<GatewayContext, string, string[], bool> predicate
+    ) => AppendQueryParameter<IInboundContext>(mock, predicate);
+
+    public static Setup AppendQueryParameter(
+        this MockPoliciesProvider<IBackendContext> mock,
+        Func<GatewayContext, string, string[], bool> predicate
+    ) => AppendQueryParameter<IBackendContext>(mock, predicate);
+
+    public static Setup AppendQueryParameter(
+        this MockPoliciesProvider<IOutboundContext> mock,
+        Func<GatewayContext, string, string[], bool> predicate
+    ) => AppendQueryParameter<IOutboundContext>(mock, predicate);
+
+    public static Setup AppendQueryParameter(
+        this MockPoliciesProvider<IOnErrorContext> mock,
+        Func<GatewayContext, string, string[], bool> predicate
+    ) => AppendQueryParameter<IOnErrorContext>(mock, predicate);
+
+    private static Setup AppendQueryParameter<TContext>(
+        MockPoliciesProvider<TContext> mock,
+        Func<GatewayContext, string, string[], bool> predicate
     )
+        where TContext : class
     {
         var handler = mock.SectionContextProxy.GetHandler<AppendQueryParameterHandler>();
         return new Setup(predicate, handler);

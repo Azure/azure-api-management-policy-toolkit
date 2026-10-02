@@ -15,6 +15,11 @@ internal class SetQueryParameterIfNotExistHandler : PolicyHandler<string, string
 {
     public override string PolicyName => nameof(IInboundContext.SetQueryParameterIfNotExist);
 
-    protected override void Handle(GatewayContext context, string name, string[] values) =>
+    protected override void Handle(GatewayContext context, string name, string[] values)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(values);
+
         context.Request.Url.Query.TryAdd(name, values);
+    }
 }

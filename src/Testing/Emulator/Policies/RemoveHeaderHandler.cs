@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -17,6 +18,12 @@ internal class RemoveHeaderResponseHandler : RemoveHeaderHandler
 {
     protected override Dictionary<string, string[]> GetHeaders(GatewayContext context)
         => context.Response.Headers;
+
+    protected override void Handle(GatewayContext context, string name)
+    {
+        base.Handle(context, name);
+        PolicyResponseHeaderOverlay.ForgetHeader(context, name);
+    }
 }
 
 internal abstract class RemoveHeaderHandler : PolicyHandler<string>
@@ -25,12 +32,17 @@ internal abstract class RemoveHeaderHandler : PolicyHandler<string>
 
     protected override void Handle(GatewayContext context, string name)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
         var headers = GetHeaders(context);
-        var existingKey = headers.Keys.FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
-        if (existingKey is not null)
+        var matchingKeys = headers.Keys
+            .Where(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        foreach (var key in matchingKeys)
         {
-            headers.Remove(existingKey);
+            headers.Remove(key);
         }
+        WaitBranchExecution.RecordHeaderMutation(context, headers, name, removeCaseVariants: true);
     }
 
     protected abstract Dictionary<string, string[]> GetHeaders(GatewayContext context);

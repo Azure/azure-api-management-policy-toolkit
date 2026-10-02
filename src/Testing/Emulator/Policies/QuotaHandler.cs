@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
-using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Data;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
@@ -14,29 +14,63 @@ internal class QuotaHandler : PolicyHandler<QuotaConfig>
 
     protected override void Handle(GatewayContext context, QuotaConfig config)
     {
-        var limiter = context.Services.Resolve<IRateLimiter>();
-        if (limiter is not null)
+        if (context.Subscription is null)
         {
-            var key = $"quota:{context.Subscription?.Id ?? "anonymous"}";
-            var allowed = limiter.TryConsumeAsync(key, 1).GetAwaiter().GetResult();
-            if (!allowed)
-            {
-                ResponseUtilities.Overwrite(context.Response, 403, "Quota Exceeded");
-                throw new FinishSectionProcessingException();
-            }
-
             return;
         }
 
-        var subscriptionKey = $"quota:sub:{context.Subscription.Id}";
-        var currentCount = context.RateLimitStore.GetCount(subscriptionKey);
+        var limits = GetLimitsToCheck(context, config);
+        var bandwidth = limits.Any(limit => limit.Bandwidth is not null)
+            ? PolicyCounterService.GetMessageLength(context.Request)
+            : 0;
+        var counters = PolicyCounterService.For(context);
+        var result = counters.ConsumeQuota(limits, 1, bandwidth);
+        counters.ApplyQuota(result);
+    }
 
-        if (config.Calls is not null && currentCount >= config.Calls)
+    private static List<PolicyCounterLimit> GetLimitsToCheck(GatewayContext context, QuotaConfig config)
+    {
+        var key = $"quota:sub:{context.Subscription.Id}";
+        var limiterKey = $"quota:{context.Subscription.Id}";
+        var start = PolicyCounterService.SubscriptionStart(context);
+        var limits = new List<PolicyCounterLimit>
         {
-            ResponseUtilities.Overwrite(context.Response, 403, "Quota Exceeded");
-            throw new FinishSectionProcessingException();
+            new(key, limiterKey, config.Calls, (long?)config.Bandwidth * 1024, config.RenewalPeriod, false, start,
+                SubscriptionScoped: true)
+        };
+        if (config.Apis is null)
+        {
+            return limits;
         }
 
-        context.RateLimitStore.Increment(subscriptionKey);
+        foreach (var api in config.Apis)
+        {
+            if (!PolicyCounterService.MatchesEntity(api.Id, api.Name, context.Api.Id, context.Api.Name))
+            {
+                continue;
+            }
+
+            var identifier = api.Id ?? api.Name!;
+            var apiKey = $"{key}:api:{identifier}";
+            var apiLimiterKey = $"{limiterKey}:api:{identifier}";
+            limits.Add(new PolicyCounterLimit(
+                apiKey, apiLimiterKey, api.Calls, (long?)api.Bandwidth * 1024, config.RenewalPeriod, false, start,
+                SubscriptionScoped: true));
+            foreach (var operation in api.Operations ?? [])
+            {
+                if (!PolicyCounterService.MatchesEntity(operation.Id, operation.Name, context.Operation.Id, context.Operation.Name))
+                {
+                    continue;
+                }
+
+                var operationIdentifier = operation.Id ?? operation.Name!;
+                limits.Add(new PolicyCounterLimit(
+                    $"{apiKey}:op:{operationIdentifier}", $"{apiLimiterKey}:op:{operationIdentifier}",
+                    operation.Calls, (long?)operation.Bandwidth * 1024, config.RenewalPeriod, false, start,
+                    SubscriptionScoped: true));
+            }
+        }
+
+        return limits;
     }
 }

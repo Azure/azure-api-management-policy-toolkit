@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -17,9 +18,6 @@ internal class SetBackendServiceHandler : PolicyHandler<SetBackendServiceConfig>
 
     protected override void Handle(GatewayContext context, SetBackendServiceConfig config)
     {
-        if (config.BaseUrl is not null)
-        {
-            context.BackendUrl = config.BaseUrl;
-        }
+        context.BackendUrl = BackendResolver.Resolve(context, config).OriginalString;
     }
 }

@@ -8,8 +8,20 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
 public static class MockRedirectContentUrlsProvider
 {
+    public static Setup RedirectContentUrls(this MockPoliciesProvider<IInboundContext> mock) =>
+        RedirectContentUrls(mock, _ => true);
+
     public static Setup RedirectContentUrls(this MockPoliciesProvider<IOutboundContext> mock) =>
         RedirectContentUrls(mock, _ => true);
+
+    public static Setup RedirectContentUrls(
+        this MockPoliciesProvider<IInboundContext> mock,
+        Func<GatewayContext, bool> predicate
+    )
+    {
+        var handler = mock.SectionContextProxy.GetHandler<RedirectContentUrlsHandler>();
+        return new Setup(predicate, handler);
+    }
 
     public static Setup RedirectContentUrls(
         this MockPoliciesProvider<IOutboundContext> mock,

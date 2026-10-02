@@ -13,9 +13,24 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class MockBody : IMessageBody
 {
-    public string? Content { get; set; }
+    private string? _content;
+    private long _contentWriteVersion;
+
+    public string? Content
+    {
+        get => _content;
+        set
+        {
+            _content = value;
+            Interlocked.Increment(ref _contentWriteVersion);
+        }
+    }
+
+    internal long ContentWriteVersion => Volatile.Read(ref _contentWriteVersion);
 
     public bool Consumed { get; private set; } = false;
+
+    internal MockBody CopyForWait() => new() { Content = Content, Consumed = Consumed };
 
     public T As<T>(bool preserveContent = false)
     {

@@ -25,7 +25,7 @@ public record QuotaByKeyConfig
     public int? Calls { get; init; }
 
     /// <summary>
-    /// Specifies the maximum bandwidth allowed within the renewal period, in bytes.
+    /// Specifies the maximum bandwidth allowed within the renewal period, in kilobytes (1024 bytes per kilobyte).
     /// </summary>
     public int? Bandwidth { get; init; }
 

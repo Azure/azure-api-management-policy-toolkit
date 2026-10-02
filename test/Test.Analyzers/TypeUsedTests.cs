@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Basic.Reference.Assemblies;
-
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers.Test;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
@@ -176,6 +174,8 @@ public class TypeUsedTests
     [TestMethod]
     public async Task ShouldAllowExpressionHelperFromReferencedAssembly()
     {
+        var references = await BaseAnalyzerTest<TypeUsedAnalyzer>.FrameworkReferences
+            .ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
         var library = CSharpCompilation.Create(
             "Library",
             [
@@ -193,7 +193,7 @@ public class TypeUsedTests
                     }
                     """)
             ],
-            [.. Net80.References.All, MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location)],
+            [.. references, MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         using var image = new MemoryStream();
         Assert.IsTrue(library.Emit(image).Success);
@@ -257,6 +257,8 @@ public class TypeUsedTests
     [TestMethod]
     public async Task ShouldAllowExpressionLibraryMembersFromReferencedAssembly()
     {
+        var references = await BaseAnalyzerTest<TypeUsedAnalyzer>.FrameworkReferences
+            .ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
         var library = CSharpCompilation.Create(
             "Library",
             [
@@ -275,7 +277,7 @@ public class TypeUsedTests
                     }
                     """)
             ],
-            [.. Net80.References.All, MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location)],
+            [.. references, MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         using var image = new MemoryStream();
         Assert.IsTrue(library.Emit(image).Success);

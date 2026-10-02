@@ -11,6 +11,9 @@ public static class MockSetHeaderIfNotExistProvider
     public static Setup SetHeaderIfNotExist(this MockPoliciesProvider<IInboundContext> mock) =>
         SetHeaderIfNotExist(mock, (_, _, _) => true);
 
+    public static Setup SetHeaderIfNotExist(this MockPoliciesProvider<IBackendContext> mock) =>
+        SetHeaderIfNotExist(mock, (_, _, _) => true);
+
     public static Setup SetHeaderIfNotExist(this MockPoliciesProvider<IOutboundContext> mock) =>
         SetHeaderIfNotExist(mock, (_, _, _) => true);
 
@@ -21,6 +24,11 @@ public static class MockSetHeaderIfNotExistProvider
         this MockPoliciesProvider<IInboundContext> mock,
         Func<GatewayContext, string, string[], bool> predicate
     ) => SetHeaderIfNotExist<IInboundContext, SetHeaderIfNotExistRequestHandler>(mock, predicate);
+
+    public static Setup SetHeaderIfNotExist(
+        this MockPoliciesProvider<IBackendContext> mock,
+        Func<GatewayContext, string, string[], bool> predicate
+    ) => SetHeaderIfNotExist<IBackendContext, SetHeaderIfNotExistRequestHandler>(mock, predicate);
 
     public static Setup SetHeaderIfNotExist(
         this MockPoliciesProvider<IOutboundContext> mock,

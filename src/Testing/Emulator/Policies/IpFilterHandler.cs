@@ -1,10 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Net;
+using System.Text;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
-using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -25,47 +26,62 @@ internal class IpFilterHandler : PolicyHandler<IpFilterConfig>
 
     protected override void Handle(GatewayContext context, IpFilterConfig config)
     {
-        if (!IPAddress.TryParse(context.Request.IpAddress, out var clientIp))
+        var allow = string.Equals(config.Action, "allow", StringComparison.OrdinalIgnoreCase);
+        if (!allow && !string.Equals(config.Action, "forbid", StringComparison.OrdinalIgnoreCase))
         {
-            if ("allow".Equals(config.Action, StringComparison.InvariantCultureIgnoreCase))
-            {
-                DenyAccess(context, config);
-            }
-
-            OnIpAllowed.Find(tuple => tuple.Item1(context, config))?.Item2(context, config);
-            return;
+            throw new ArgumentException("The IP filter action must be 'allow' or 'forbid'.", nameof(config.Action));
         }
 
-        var directMatch = (config.Addresses ?? [])
-            .Any(address => clientIp.CompareTo(IPAddress.Parse(address)) == 0);
-        var rangeMatch = (config.AddressRanges ?? [])
-            .Any(range => clientIp.CompareTo(IPAddress.Parse(range.From)) >= 0
-                          && clientIp.CompareTo(IPAddress.Parse(range.To)) <= 0);
-        var match = directMatch || rangeMatch;
+        var addresses = (config.Addresses ?? [])
+            .Select(address => ParseAddress(address, nameof(config.Addresses))).ToArray();
+        var ranges = (config.AddressRanges ?? []).Select(range =>
+        {
+            ArgumentNullException.ThrowIfNull(range);
+            var from = ParseAddress(range.From, nameof(range.From));
+            var to = ParseAddress(range.To, nameof(range.To));
+            if (from.AddressFamily != to.AddressFamily)
+            {
+                throw new ArgumentException("IP address range endpoints must use compatible address families.",
+                    nameof(config.AddressRanges));
+            }
+            if (from.CompareTo(to) > 0)
+            {
+                throw new ArgumentException("An IP address range must start at or before its ending address.",
+                    nameof(config.AddressRanges));
+            }
 
-        if ("allow".Equals(config.Action, StringComparison.InvariantCultureIgnoreCase))
+            return (From: from, To: to);
+        }).ToArray();
+        if (addresses.Length == 0 && ranges.Length == 0)
         {
-            if (!match)
-            {
-                DenyAccess(context, config);
-            }
+            throw new ArgumentException("The IP filter requires at least one address or address range.",
+                nameof(config));
         }
-        else if ("forbid".Equals(config.Action, StringComparison.InvariantCultureIgnoreCase))
+
+        var clientIp = ParseAddress(context.Request.IpAddress, nameof(context.Request.IpAddress));
+        var match = addresses.Any(address => clientIp.Equals(address)) ||
+                    ranges.Any(range => clientIp.AddressFamily == range.From.AddressFamily &&
+                                        clientIp.CompareTo(range.From) >= 0 &&
+                                        clientIp.CompareTo(range.To) <= 0);
+        if (allow != match)
         {
-            if (match)
-            {
-                DenyAccess(context, config);
-            }
-        }
-        else
-        {
-            throw new NotSupportedException("Specified filter action is not supported.");
+            DenyAccess(context, config);
         }
 
         OnIpAllowed.Find(tuple => tuple.Item1(context, config))?.Item2(context, config);
     }
 
-    void DenyAccess(GatewayContext context, IpFilterConfig config)
+    private static IPAddress ParseAddress(string address, string parameterName)
+    {
+        if (!IPAddress.TryParse(address, out var parsed))
+        {
+            throw new ArgumentException($"'{address}' is not a valid IP address.", parameterName);
+        }
+
+        return parsed.IsIPv4MappedToIPv6 ? parsed.MapToIPv4() : parsed;
+    }
+
+    private void DenyAccess(GatewayContext context, IpFilterConfig config)
     {
         ResponseUtilities.Overwrite(context.Response, 403, "Forbidden");
         context.Response.Headers["Content-Type"] = ["application/json"];
@@ -75,9 +91,21 @@ internal class IpFilterHandler : PolicyHandler<IpFilterConfig>
                                          "message": "Forbidden"
                                        }
                                        """;
+        context.Response.Headers["Content-Length"] =
+            [Encoding.UTF8.GetByteCount(context.Response.Body.Content).ToString(CultureInfo.InvariantCulture)];
 
-        OnIpDenied.Find(tuple => tuple.Item1(context, config))?.Item2(context, config);
+        try
+        {
+            OnIpDenied.Find(tuple => tuple.Item1(context, config))?.Item2(context, config);
+        }
+        catch (FinishSectionProcessingException termination)
+        {
+            termination.TerminatesPipeline = true;
+            context.RecordTermination(termination);
+            throw;
+        }
 
+        context.ResponseTerminated = true;
         throw new FinishSectionProcessingException();
     }
 }

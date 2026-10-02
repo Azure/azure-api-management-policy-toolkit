@@ -133,6 +133,131 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void Wait_WithChooseAndBranchExpressions_RoundTrips()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait for="any">
+                        <send-request response-variable-name="primary" />
+                        <choose>
+                            <when condition="@(context.Variables.ContainsKey(&quot;use-cache&quot;))">
+                                <cache-lookup-value key="lookup" variable-name="value" />
+                                <send-request response-variable-name="fallback" />
+                            </when>
+                            <otherwise>
+                                <send-request response-variable-name="backup" />
+                            </otherwise>
+                        </choose>
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        csharp.Should().Contain("Wait(\"any\",")
+            .And.MatchRegex(@"Condition\d+\(waitBranch\d+\.ExpressionContext\)");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void Wait_BindsModeToOuterContextAndChildExpressionsToBranch()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait for="@(context.Variables.ContainsKey(&quot;race&quot;) ? &quot;any&quot; : &quot;all&quot;)">
+                        <send-request response-variable-name="response">
+                            <set-url>@(context.Request.Url.ToString())</set-url>
+                        </send-request>
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        csharp.Should().MatchRegex(@"Wait\(WaitFor\d+\(context\.ExpressionContext\),")
+            .And.MatchRegex(@"RequestUrl\d+\(waitBranch\d+\.ExpressionContext\)");
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    public void Wait_RestoresSectionContextForFollowingPolicies()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait>
+                        <cache-lookup-value key="key" variable-name="cached" />
+                    </wait>
+                    <send-request response-variable-name="later">
+                        <set-url>@(context.Request.Url.ToString())</set-url>
+                    </send-request>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        csharp.Should().MatchRegex(@"RequestUrl\d+\(context\.ExpressionContext\)");
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    public void Wait_PreservesParentAndBranchPolicyIds()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait id="wait-id" for="all">
+                        <send-request id="first" response-variable-name="response" />
+                        <cache-lookup-value id="second" key="key" variable-name="cached" />
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    [DataRow("inbound")]
+    [DataRow("backend")]
+    [DataRow("outbound")]
+    [DataRow("on-error")]
+    public void Wait_WithDefaultModeInEachSection_RoundTrips(string section)
+    {
+        var xml = $"""
+            <policies>
+                <{section}>
+                    <wait>
+                        <send-request response-variable-name="response" />
+                    </wait>
+                </{section}>
+            </policies>
+            """;
+
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void Wait_InFragment_RoundTrips()
+    {
+        var xml = """
+            <fragment>
+                <wait for="all">
+                    <cache-lookup-value key="key" variable-name="cached" />
+                </wait>
+            </fragment>
+            """;
+
+        var csharp = s_decompiler.DecompileFragment(xml, "wait-fragment", "RoundTripFragment", "RoundTripTest");
+        var result = CompileCSharp(csharp);
+        result.Errors.Should().BeEmpty("the generated fragment should compile:\n{0}", csharp);
+        result.Document.Should().NotBeNull("the generated fragment should produce XML:\n{0}", csharp);
+        SerializeXElement(result.Document).Should().Be(NormalizeXml(xml));
+    }
+
+    [TestMethod]
     public void SetBackendService_RoundTrips()
     {
         var xml = """<policies><backend><set-backend-service base-url="https://api.example.com" /></backend></policies>""";

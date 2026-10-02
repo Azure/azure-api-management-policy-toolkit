@@ -33,5 +33,5 @@ public static class TestDocumentExtensions
         document.Context.LoggerStore;
 
     public static RateLimitStore SetupRateLimitStore(this TestDocument document) =>
-        document.Context.RateLimitStore;
+        document.Context.Services.Resolve<RateLimitStore>() ?? document.Context.RateLimitStore;
 }

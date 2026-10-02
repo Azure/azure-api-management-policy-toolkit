@@ -6,6 +6,11 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
 
+/// <summary>
+/// Configures retry-policy callbacks. Default execution retries only after successful
+/// child execution and a true condition; unhandled errors and termination propagate.
+/// Delays use a registered IRetryScheduler service, or a deterministic virtual scheduler.
+/// </summary>
 public static class MockRetryProvider
 {
     public static Setup Retry<T>(this MockPoliciesProvider<T> mock) where T : class =>
@@ -16,6 +21,8 @@ public static class MockRetryProvider
         Func<GatewayContext, RetryConfig, Action, bool> predicate
     ) where T : class
     {
+        ArgumentNullException.ThrowIfNull(mock);
+        ArgumentNullException.ThrowIfNull(predicate);
         var handler = mock.SectionContextProxy.GetHandler<RetryHandler>();
         return new Setup(predicate, handler);
     }
@@ -33,7 +40,10 @@ public static class MockRetryProvider
             _handler = handler;
         }
 
-        public void WithCallback(Action<GatewayContext, RetryConfig, Action> callback) =>
-            _handler.CallbackSetup.Add((_predicate, callback).ToTuple());
+        public void WithCallback(Action<GatewayContext, RetryConfig, Action> callback)
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            _handler.CallbackHooks.Add((_predicate, callback).ToTuple());
+        }
     }
 }

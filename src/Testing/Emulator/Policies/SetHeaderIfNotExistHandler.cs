@@ -21,8 +21,17 @@ internal abstract class SetHeaderIfNotExistHandler : PolicyHandler<string, strin
 {
     public override string PolicyName => nameof(IInboundContext.SetHeaderIfNotExist);
 
-    protected override void Handle(GatewayContext context, string name, string[] values) =>
-        GetHeaders(context).TryAdd(name, values);
+    protected override void Handle(GatewayContext context, string name, string[] values)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(values);
+
+        var headers = GetHeaders(context);
+        if (headers.TryAdd(name, values))
+        {
+            WaitBranchExecution.RecordHeaderMutation(context, headers, name);
+        }
+    }
 
     protected abstract Dictionary<string, string[]> GetHeaders(GatewayContext context);
 }

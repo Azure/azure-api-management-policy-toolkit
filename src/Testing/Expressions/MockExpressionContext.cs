@@ -47,6 +47,10 @@ public class MockExpressionContext : IExpressionContext
     public MockProduct Product { get; set; } = new MockProduct();
     IProduct IExpressionContext.Product => Product;
 
+    /// <summary>
+    /// Trace sink shared by parallel Wait branches and asynchronous transport cleanup.
+    /// The callback must be thread-safe and must not mutate gateway state.
+    /// </summary>
     public Action<string> Trace { get; set; } = (message) => { };
 
     private Dictionary<string, string> _namedValues = new();
@@ -56,6 +60,8 @@ public class MockExpressionContext : IExpressionContext
         foreach (var kvp in values)
             _namedValues[kvp.Key] = kvp.Value;
     }
+
+    internal void CopyNamedValuesTo(MockExpressionContext target) => target.SetNamedValues(_namedValues);
 
     public dynamic NamedValue(string name)
     {

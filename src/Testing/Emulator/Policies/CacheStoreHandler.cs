@@ -10,9 +10,10 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 internal class CacheStoreHandler : IPolicyHandler
 {
     public List<Tuple<
-        Func<GatewayContext, uint, bool, bool>,
-        Action<GatewayContext, uint, bool>
-    >> CallbackHooks { get; } = new();
+        Func<GatewayContext, int, bool?, bool>,
+        Action<GatewayContext, int, bool?>
+    >> CallbackHooks
+    { get; } = new();
 
     public string PolicyName => nameof(IOutboundContext.CacheStore);
 
@@ -33,60 +34,68 @@ internal class CacheStoreHandler : IPolicyHandler
         return null;
     }
 
-    protected void Handle(GatewayContext context, uint duration, bool cacheResponse)
+    protected void Handle(GatewayContext context, int duration, bool? cacheResponse)
     {
-        if (!cacheResponse)
+        ArgumentOutOfRangeException.ThrowIfNegative(duration);
+        if (cacheResponse == false
+            || (cacheResponse is null && context.Response.StatusCode != 200)
+            || !string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        var cache = context.Services.Resolve<ICache>();
-        if (cache is not null)
+        if (!context.Variables.TryGetValue(CacheLookupHandler.LookupStateVariable, out var lookup)
+            || lookup is not CacheLookupHandler.LookupState state)
         {
-            var cacheKey = context.Request.Url.ToString();
-            cache.SetAsync(
-                cacheKey,
-                new CachedResponse
-                {
-                    StatusCode = context.Response.StatusCode,
-                    StatusReason = context.Response.StatusReason,
-                    Body = context.Response.Body.Content,
-                    Headers = new Dictionary<string, string[]>(context.Response.Headers)
-                },
-                TimeSpan.FromSeconds(duration)).GetAwaiter().GetResult();
-            return;
+            throw new InvalidOperationException("CacheStore requires a corresponding CacheLookup in the inbound section.");
         }
-
-        var store = context.CacheStore.GetCache("prefer-external");
-        if (store is null)
+        if (!state.Cacheable)
         {
             return;
         }
 
-        var cacheStoreKey = context.Request.Url.ToString();
-        store[cacheStoreKey] = new Data.CacheValue(context.Response, (int)duration);
+        var cache = CachePolicyServices.ResolveRequired(context, state.CachingType);
+        var ttl = TimeSpan.FromSeconds(duration);
+        var cacheControl = CacheLookupHandler.GetCacheControl(state.DownstreamCachingType, state.MustRevalidate, ttl);
+        var snapshot = new CachedResponse
+        {
+            StatusCode = context.Response.StatusCode,
+            StatusReason = context.Response.StatusReason,
+            Body = context.Response.Body.Content,
+            Headers = context.Response.Headers.ToDictionary(
+                header => header.Key, header => header.Value.ToArray(), context.Response.Headers.Comparer),
+            ExpiresAt = CachePolicyServices.GetTimeProvider(context, cache).GetUtcNow() + ttl
+        };
+        CachePolicyServices.SetCacheControl(snapshot.Headers, cacheControl);
+        PolicyServiceAwaiter.Wait(context, cache.SetAsync(state.Key, snapshot, ttl,
+            HttpPolicyTransport.GetCancellationToken(context)));
+        CachePolicyServices.SetCacheControl(context.Response.Headers, cacheControl);
     }
 
-    private static (uint, bool) ExtractParameters(object?[]? args)
+    private static (int, bool?) ExtractParameters(object?[]? args)
     {
         if (args is not { Length: 1 or 2 })
         {
             throw new ArgumentException("Expected 1 or 2 arguments", nameof(args));
         }
 
-        if (args[0] is not uint duration)
+        if (args[0] is not int duration)
         {
-            throw new ArgumentException($"Expected {typeof(uint).Name} as first argument", nameof(args));
+            throw new ArgumentException($"Expected {typeof(int).Name} as first argument", nameof(args));
         }
 
         if (args.Length != 2)
         {
-            return (duration, true);
+            return (duration, null);
         }
 
-        if (args[0] is not bool cacheValue)
+        if (args[1] is null)
         {
-            throw new ArgumentException($"Expected {typeof(bool).Name} as second argument", nameof(args));
+            return (duration, null);
+        }
+        if (args[1] is not bool cacheValue)
+        {
+            throw new ArgumentException($"Expected {typeof(bool).Name} or null as second argument", nameof(args));
         }
 
         return (duration, cacheValue);

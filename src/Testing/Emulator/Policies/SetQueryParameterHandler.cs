@@ -15,6 +15,11 @@ internal class SetQueryParameterHandler : PolicyHandler<string, string[]>
 {
     public override string PolicyName => nameof(IInboundContext.SetQueryParameter);
 
-    protected override void Handle(GatewayContext context, string name, string[] value) =>
+    protected override void Handle(GatewayContext context, string name, string[] value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(value);
+
         context.Request.Url.Query[name] = value;
+    }
 }

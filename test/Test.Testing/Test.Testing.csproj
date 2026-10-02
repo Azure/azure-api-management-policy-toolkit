@@ -15,5 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Testing\Testing.csproj" />
+    <ProjectReference Include="..\..\src\Core\Core.csproj" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <Compile Remove="Emulator\Policies\WaitTests.CompiledExecution.cs" Condition="'$(TargetFramework)' != 'net10.0'" />
   </ItemGroup>
 </Project>

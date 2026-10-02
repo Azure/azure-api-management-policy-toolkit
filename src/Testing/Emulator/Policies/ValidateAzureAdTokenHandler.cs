@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
@@ -12,7 +14,23 @@ internal class ValidateAzureAdTokenHandler : PolicyHandler<ValidateAzureAdTokenC
 
     protected override void Handle(GatewayContext context, ValidateAzureAdTokenConfig config)
     {
-        // No-op by default in emulator.
-        // Azure AD token validation is not simulated in tests.
+        if (config.OutputTokenVariableName is not null)
+        {
+            context.Variables.Remove(config.OutputTokenVariableName);
+        }
+
+        try
+        {
+            var token = IdentityTokenValidator.Validate(context, config);
+            if (config.OutputTokenVariableName is not null)
+            {
+                context.Variables[config.OutputTokenVariableName] = token;
+            }
+        }
+        catch (SecurityTokenException error)
+        {
+            ValidateJwtHandler.RejectToken(context, "validate-azure-ad-token", config.FailedValidationHttpCode,
+                config.FailedValidationErrorMessage, error);
+        }
     }
 }

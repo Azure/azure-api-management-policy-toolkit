@@ -26,9 +26,11 @@ public class PolicyPipeline
     /// Registers a fragment instance so that IncludeFragment calls with the given ID
     /// resolve to this instance instead of scanning assemblies via reflection.
     /// </summary>
+    /// <exception cref="ArgumentException">The fragment ID is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">The fragment ID or instance is null.</exception>
     public PolicyPipeline RegisterFragment(string fragmentId, IFragment fragment)
     {
-        Context.FragmentRegistry[fragmentId] = fragment;
+        Context.RegisterFragment(fragmentId, fragment);
         return this;
     }
 
@@ -65,7 +67,7 @@ public class PolicyPipeline
     /// Runs inbound sections independently with scope-level isolation. Each scope runs
     /// regardless of whether a previous scope called ReturnResponse or threw an exception.
     /// Base() is a no-op. This matches legacy test harness behavior where scopes don't
-    /// affect each other.
+    /// affect each other. Isolated failures are reported through the context's Trace callback.
     /// </summary>
     public void RunInboundIndependent()
     {
@@ -73,7 +75,7 @@ public class PolicyPipeline
         {
             if (_policies.TryGetValue(scope, out var doc))
             {
-                HandleIsolated(Context.InboundProxy.Object, doc.Inbound);
+                HandleIsolated(scope, Context.InboundProxy.Object, doc.Inbound);
             }
         }
     }
@@ -81,26 +83,42 @@ public class PolicyPipeline
     /// <summary>Runs backend sections from Global → Operation.</summary>
     public void RunBackend()
     {
-        foreach (var scope in InboundOrder)
+        if (Context.ResponseTerminated || _policies.Count == 0)
         {
-            if (Context.ResponseTerminated) return;
-            if (_policies.TryGetValue(scope, out var doc))
-            {
-                Handle(Context.BackendProxy.Object, doc.Backend);
-            }
+            return;
         }
+
+        Context.ExecuteBackend(() =>
+        {
+            foreach (var scope in InboundOrder)
+            {
+                if (Context.ResponseTerminated) return;
+                if (_policies.TryGetValue(scope, out var doc))
+                {
+                    Handle(Context.BackendProxy.Object, doc.Backend);
+                }
+            }
+        });
     }
 
     /// <summary>Runs backend sections independently.</summary>
     public void RunBackendIndependent()
     {
-        foreach (var scope in InboundOrder)
+        if (_policies.Count == 0)
         {
-            if (_policies.TryGetValue(scope, out var doc))
-            {
-                Handle(Context.BackendProxy.Object, doc.Backend);
-            }
+            return;
         }
+
+        Context.ExecuteBackend(() =>
+        {
+            foreach (var scope in InboundOrder)
+            {
+                if (_policies.TryGetValue(scope, out var doc))
+                {
+                    Handle(Context.BackendProxy.Object, doc.Backend);
+                }
+            }
+        });
     }
 
     /// <summary>Runs outbound sections from Operation → Global.</summary>
@@ -133,6 +151,7 @@ public class PolicyPipeline
     {
         foreach (var scope in OutboundOrder)
         {
+            if (Context.ResponseTerminated) return;
             if (_policies.TryGetValue(scope, out var doc))
             {
                 Handle(Context.OnErrorProxy.Object, doc.OnError);
@@ -140,20 +159,43 @@ public class PolicyPipeline
         }
     }
 
-    /// <summary>Runs inbound, backend, and outbound sections in order.</summary>
-    public void RunAll()
+    /// <summary>
+    /// Runs inbound, backend, and outbound sections in order and settles deferred
+    /// limiter work after the final response. Execution errors propagate without settlement.
+    /// </summary>
+    public void RunAll() => RunRequest(request =>
     {
-        RunInbound();
-        if (!Context.ResponseTerminated) RunBackend();
-        if (!Context.ResponseTerminated) RunOutbound();
-    }
+        request.RunInbound();
+        if (!Context.ResponseTerminated) request.RunBackend();
+        if (!Context.ResponseTerminated) request.RunOutbound();
+    });
 
-    /// <summary>Runs inbound, backend, and outbound sections using nested Base() chaining.</summary>
-    public void RunAllNested()
+    /// <summary>
+    /// Runs inbound, backend, and outbound using nested Base() chaining and settles
+    /// deferred limiter work after all scope frames and hooks have been restored.
+    /// </summary>
+    public void RunAllNested() => RunRequest(request =>
     {
-        RunInboundNested();
-        if (!Context.ResponseTerminated) RunBackendNested();
-        if (!Context.ResponseTerminated) RunOutboundNested();
+        request.RunInboundNested();
+        if (!Context.ResponseTerminated) request.RunBackendNested();
+        if (!Context.ResponseTerminated) request.RunOutboundNested();
+    });
+
+    /// <summary>
+    /// Executes a synchronous logical request. Include any flat or nested on-error
+    /// processing, independent sections, and final response postprocessing in the
+    /// callback. Nested boundaries settle only after the successful outermost return.
+    /// Individual section methods do not perform automatic settlement.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The request callback is null.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// RequestId changes during execution, completed limiter work is extended,
+    /// or the same context is used concurrently.
+    /// </exception>
+    public void RunRequest(Action<PolicyPipeline> request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        Context.ExecuteRequest(() => request(this));
     }
 
     /// <summary>
@@ -173,8 +215,8 @@ public class PolicyPipeline
     public void RunBackendNested()
     {
         var scopes = InboundOrder.Where(s => _policies.ContainsKey(s)).ToList();
-        if (scopes.Count == 0) return;
-        RunNestedForSection(scopes, Context.BackendProxy, (doc, ctx) => doc.Backend(ctx));
+        if (scopes.Count == 0 || Context.ResponseTerminated) return;
+        Context.ExecuteBackend(() => RunNestedForSection(scopes, Context.BackendProxy, (doc, ctx) => doc.Backend(ctx)));
     }
 
     /// <summary>Runs outbound sections with nested Base() chaining.</summary>
@@ -194,6 +236,19 @@ public class PolicyPipeline
     }
 
     private void RunNestedForSection<T>(
+        List<PolicyScope> scopes,
+        SectionContextProxy<T> proxy,
+        Action<IDocument, T> runSection) where T : class
+    {
+        if (Context.ResponseTerminated)
+        {
+            return;
+        }
+
+        Context.ExecuteSection(() => RunNestedForSectionCore(scopes, proxy, runSection));
+    }
+
+    private void RunNestedForSectionCore<T>(
         List<PolicyScope> scopes,
         SectionContextProxy<T> proxy,
         Action<IDocument, T> runSection) where T : class
@@ -222,7 +277,10 @@ public class PolicyPipeline
             {
                 runSection(doc, proxy.Object);
             }
-            catch (FinishSectionProcessingException) { }
+            catch (FinishSectionProcessingException termination)
+            {
+                Context.RecordTermination(termination);
+            }
             finally
             {
                 baseHandler.CallbackHooks.Clear();
@@ -233,29 +291,34 @@ public class PolicyPipeline
         RunNested(0);
     }
 
-    private static void Handle<T>(T context, Action<T> section)
+    private void Handle<T>(T context, Action<T> section)
+        => Context.ExecuteSection(() => HandleSection(context, section));
+
+    private void HandleSection<T>(T context, Action<T> section)
     {
         try
         {
             section(context);
         }
-        catch (FinishSectionProcessingException)
+        catch (FinishSectionProcessingException termination)
         {
+            Context.RecordTermination(termination);
         }
     }
 
     /// <summary>
-    /// Handles a section with full exception isolation — all exceptions are caught
-    /// and swallowed so that subsequent scopes can still run.
+    /// Handles an inbound section with legacy exception isolation. Failures are traced
+    /// so that subsequent scopes can still run without silently discarding errors.
     /// </summary>
-    private static void HandleIsolated<T>(T context, Action<T> section)
+    private void HandleIsolated<T>(PolicyScope scope, T context, Action<T> section) => Context.ExecuteSection(() =>
     {
         try
         {
-            section(context);
+            HandleSection(context, section);
         }
-        catch
+        catch (Exception error)
         {
+            Context.Trace($"Independent inbound execution failed at scope '{scope}': {error}");
         }
-    }
+    });
 }

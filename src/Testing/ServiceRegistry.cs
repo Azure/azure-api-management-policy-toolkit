@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Services;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 
 /// <summary>
@@ -55,12 +57,33 @@ public class ServiceRegistry
     /// <summary>
     /// Copies all registered services to another ServiceRegistry.
     /// Existing registrations in the target are NOT overwritten.
+    /// The registry is independent, but service instances remain shared. Services used
+    /// by typed Wait branches must support concurrent calls.
     /// </summary>
     public void CopyTo(ServiceRegistry target)
     {
         foreach (var kvp in _services)
         {
             target._services.TryAdd(kvp.Key, kvp.Value);
+        }
+    }
+
+    internal void CopyForWait(GatewayContext target)
+    {
+        foreach (var registration in _services)
+        {
+            var service = registration.Value switch
+            {
+                HttpTransportState => null,
+                PolicyCounterService counters => counters.ForkForWait(target),
+                TokenLimitService tokens => tokens.ForkForWait(target),
+                PolicyResponseHeaderOverlay => null,
+                _ => registration.Value
+            };
+            if (service is not null)
+            {
+                target.Services._services.TryAdd(registration.Key, service);
+            }
         }
     }
 }

@@ -336,4 +336,15 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
+
+    public static readonly DiagnosticDescriptor InvalidWaitBranch = new(
+        "APIM2020",
+        "Invalid wait branch",
+        "Invalid branch for 'wait' policy: {0}",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Each wait branch must compile to one permitted immediate child and use its branch-scoped context.",
+        helpLinkUri: "https://learn.microsoft.com/en-us/azure/api-management/wait-policy",
+        customTags: ["APIM", "ApiManagement"]);
 }

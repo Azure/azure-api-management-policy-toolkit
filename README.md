@@ -22,6 +22,7 @@ The toolkit is available from NuGet:
 * [Quick start](docs/QuickStart.md)
 * [Expression helpers](docs/ExpressionHelpers.md)
 * [Available policies](docs/AvailablePolicies.md)
+* [Gateway emulator policy coverage and limitations](docs/EmulatorPolicyChecklist.md)
 * [Solution structure recommendation](docs/SolutionStructureRecommendation.md)
 * [Steps for deploying policies created by the policy toolkit](docs/IntegratePolicySolution.md)
 * [Integrate policy solution with APIOps](docs/IntegratePolicySolutionWithApiOps.md)
@@ -29,3 +30,61 @@ The toolkit is available from NuGet:
 #### Azure API Management policy toolkit documentation for contributors.
 * [Contributor guide](CONTRIBUTING.md)
 * [Development environment setup](docs/DevEnvironmentSetup.md)
+
+## Gateway emulator
+
+The Testing package runs C# policy documents through an in-memory gateway emulator.
+Create a test document with `.AsTestDocument()`, configure policy callbacks or injected
+services, then run a section such as `RunInbound()` or a coordinated request with
+`RunAll()` / `PolicyPipeline.RunAll()`. Assert against the resulting gateway context.
+External services are modeled through injected test implementations, not live Azure calls.
+
+The [emulator checklist](docs/EmulatorPolicyChecklist.md) lists the 74 authored policy
+methods, their sections, behavioral tests, and verified limitations. This is not full
+APIM parity: for example, raw `InlinePolicy` XML is callback-only, `CrossDomain` does
+not serve legacy client routes, and parallel `Wait` publishes message changes at
+policy boundaries rather than sharing live gateway message objects between branches.
+Use the section-typed `Wait` overload for parallel child policies:
+
+```csharp
+public void Inbound(IInboundContext context)
+{
+    context.Wait("all",
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            Url = "https://api.example.com/first",
+            ResponseVariableName = "first"
+        }),
+        branch => branch.SendRequest(new SendRequestConfig
+        {
+            Url = "https://api.example.com/second",
+            ResponseVariableName = "second"
+        }));
+}
+```
+
+Each action must contain one direct `SendRequest` or `CacheLookupValue`, or one
+`if`/`else if`/`else` chain that compiles to a single `choose` child. The analyzer
+reports APIM105/APIM106 for invalid branches and captured outer contexts; the
+compiler enforces the same boundaries with APIM2020. A `choose` branch can run
+any policy the emulator already supports in that section. Configure injected
+services for external calls;
+those services and policy callbacks must be safe for concurrent use.
+Context-returning helpers must provably derive from the supplied branch context;
+captured or unproven factories are rejected. The previous `Wait(Action, string?)`
+overload is obsolete but still compiles; its emulator behavior remains
+explicit-mock-only.
+
+For emulator contributions, run the two gates in
+[`emulator-gates.ps1`](emulator-gates.ps1) from the admission worktree:
+
+```powershell
+.\emulator-gates.ps1 -Gate Admission -OwnedFiles $ownedFiles -TestFilter $testFilter
+.\emulator-gates.ps1 -Gate Full
+```
+
+Set `$ownedFiles` to every path changed by the latest policy commit and `$testFilter`
+to select every changed policy test class. The admission gate checks the allowlist
+and targeted tests before the complete emulator test project; the full gate checks
+the policy coverage audit, reruns that project, and builds the solution. Neither gate
+runs BVT or E2E tests.

@@ -11,6 +11,9 @@ public static class MockSetBodyProvider
     public static Setup SetBody(this MockPoliciesProvider<IInboundContext> mock) =>
         SetBody(mock, (_, _, _) => true);
 
+    public static Setup SetBody(this MockPoliciesProvider<IBackendContext> mock) =>
+        SetBody(mock, (_, _, _) => true);
+
     public static Setup SetBody(this MockPoliciesProvider<IOutboundContext> mock) =>
         SetBody(mock, (_, _, _) => true);
 
@@ -19,6 +22,15 @@ public static class MockSetBodyProvider
 
     public static Setup SetBody(
         this MockPoliciesProvider<IInboundContext> mock,
+        Func<GatewayContext, string, SetBodyConfig?, bool> predicate
+    )
+    {
+        var handler = mock.SectionContextProxy.GetHandler<SetBodyRequestHandler>();
+        return new Setup(predicate, handler);
+    }
+
+    public static Setup SetBody(
+        this MockPoliciesProvider<IBackendContext> mock,
         Func<GatewayContext, string, SetBodyConfig?, bool> predicate
     )
     {

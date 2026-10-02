@@ -12,10 +12,12 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers.Test;
 public class BaseAnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, MSTestVerifier>
     where TAnalyzer : DiagnosticAnalyzer, new()
 {
+    internal static ReferenceAssemblies FrameworkReferences { get; } = new("net10.0",
+        new PackageIdentity("Microsoft.NETCore.App.Ref", "10.0.0"), Path.Combine("ref", "net10.0"));
+
     public BaseAnalyzerTest(string source, params DiagnosticResult[] diags)
     {
-        ReferenceAssemblies = new ReferenceAssemblies("net10.0",
-            new PackageIdentity("Microsoft.NETCore.App.Ref", "10.0.0"), Path.Combine("ref", "net10.0"));
+        ReferenceAssemblies = FrameworkReferences;
         TestState.AdditionalReferences.Add(
             MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location));
         TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Expression<>).Assembly.Location));
