@@ -23,6 +23,12 @@ public class RazorCodeFormatterTests
     [DataRow(
         "<element>@(context.Request.IpAddress.StartsWith(\"10.0.0.\")?\"a\".ToString():\"b\")</element>",
         "<element>@(context.Request.IpAddress.StartsWith(\"10.0.0.\") ? \"a\".ToString() : \"b\")</element>")]
+    [DataRow(
+        "<element att1=\"@({{port}}+1)\" />",
+        "<element att1=\"@({{port}} + 1)\" />")]
+    [DataRow(
+        "<element>@($\"{context.User.Id}-{({{api-key}})}\")</element>",
+        "<element>@($\"{context.User.Id}-{({{api-key}})}\")</element>")]
     public void ShouldFormatOneLineCode(string notFormatted, string formatted)
     {
         var result = RazorCodeFormatter.Format(notFormatted);
@@ -84,6 +90,12 @@ public class RazorCodeFormatterTests
         }
         }" />
         """)]
+    [DataRow("<element>@{return {{port}}+1;}</element>",
+        """
+        <element>@{
+        return {{port}} + 1;
+        }</element>
+        """)]
     public void ShouldFormatMultiLineCode(string notFormatted, string formatted)
     {
         var result = RazorCodeFormatter.Format(notFormatted.ReplaceLineEndings());
@@ -107,6 +119,10 @@ public class RazorCodeFormatterTests
         "<element>@{var a=1;}</element>",
         "@{var a = 1;}",
         "<element>{0}</element>")]
+    [DataRow(
+        "<element att1=\"@({{port}}+1)\" />",
+        "@({{port}} + 1)",
+        "<element att1=\"{0}\" />")]
     public void ShouldReplaceCodeWithMarkers(string code, string expression, string expected)
     {
         var result = RazorCodeFormatter.ToCleanXml(code, out var markerToCode);

@@ -1,15 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
-using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
@@ -18,6 +19,21 @@ public static class CompilerUtils
 {
     public static string ProcessParameter(this ExpressionSyntax expression, IDocumentCompilationContext context)
     {
+        var semanticModel = context.Compilation.ContainsSyntaxTree(expression.SyntaxTree)
+            ? CachedModel(context.Compilation, expression.SyntaxTree)
+            : null;
+        var constantValue = semanticModel?.GetConstantValue(expression) ?? default;
+        if (semanticModel is not null && constantValue.HasValue &&
+            semanticModel.GetTypeInfo(expression).Type is { TypeKind: not TypeKind.Enum })
+        {
+            return constantValue.Value switch
+            {
+                bool value => value ? "true" : "false",
+                IFormattable value => value.ToString(null, CultureInfo.InvariantCulture),
+                _ => constantValue.Value?.ToString() ?? string.Empty
+            };
+        }
+
         switch (expression)
         {
             case LiteralExpressionSyntax syntax:
@@ -51,103 +67,13 @@ public static class CompilerUtils
 
     public static string FindCode(this InvocationExpressionSyntax syntax, IDocumentCompilationContext context)
     {
-        Compilation compilation = context.Compilation;
-
-        MethodDeclarationSyntax? expressionMethod = null;
-
-        // Try semantic resolution first (works when all types are available)
-        if (compilation.SyntaxTrees.Contains(syntax.SyntaxTree))
-        {
-            SemanticModel semanticModel = compilation.GetSemanticModel(syntax.SyntaxTree);
-            var symbolInfo = semanticModel.GetSymbolInfo(syntax.Expression);
-            var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.SingleOrDefault(s => s is IMethodSymbol);
-
-            if (symbol is IMethodSymbol methodSymbol)
-            {
-                expressionMethod = methodSymbol.DeclaringSyntaxReferences
-                    .Select(r => r.GetSyntax())
-                    .OfType<MethodDeclarationSyntax>()
-                    .FirstOrDefault();
-            }
-        }
-
-        // Fall back to syntax-based lookup when semantic resolution fails
-        // (e.g., expression methods reference types not in the compilation)
-        if (expressionMethod is null)
-        {
-            var methodName = syntax.Expression switch
-            {
-                IdentifierNameSyntax id => id.Identifier.ValueText,
-                MemberAccessExpressionSyntax ma => ma.Name.Identifier.ValueText,
-                _ => null
-            };
-
-            if (methodName != null)
-            {
-                expressionMethod = context.SyntaxRoot
-                    .DescendantNodes()
-                    .OfType<MethodDeclarationSyntax>()
-                    .FirstOrDefault(m => m.Identifier.ValueText == methodName);
-            }
-        }
-
-        if (expressionMethod is null)
-        {
-            var name = syntax.Expression switch
-            {
-                IdentifierNameSyntax id => id.Identifier.ValueText,
-                MemberAccessExpressionSyntax ma => ma.Name.Identifier.ValueText,
-                _ => syntax.Expression.ToString()
-            };
-            context.Report(Diagnostic.Create(
-                CompilationErrors.CannotFindMethodCode,
-                syntax.GetLocation(),
-                name
-            ));
-            return "";
-        }
-
-        // Check for [NamedValue("...")] attribute
-        var namedValueAttr = expressionMethod.AttributeLists
-            .SelectMany(al => al.Attributes)
-            .FirstOrDefault(a => a.Name.ToString() is "NamedValue" or "NamedValueAttribute");
-        if (namedValueAttr?.ArgumentList?.Arguments.Count > 0)
-        {
-            var arg = namedValueAttr.ArgumentList.Arguments[0].Expression;
-            var value = arg is LiteralExpressionSyntax literal
-                ? literal.Token.ValueText
-                : arg.ToString().Trim('"');
-            // Auto-detect: if value contains {{ it's a template, emit as-is; otherwise wrap in {{}}
-            return value.Contains("{{") ? value : $"{{{{{value}}}}}";
-        }
-
-        if (compilation.SyntaxTrees.Contains(expressionMethod.SyntaxTree))
-        {
-            var methodModel = compilation.GetSemanticModel(expressionMethod.SyntaxTree);
-            expressionMethod = (MethodDeclarationSyntax)new ConstFoldingRewriter(methodModel).Visit(expressionMethod);
-        }
-
-        expressionMethod = Normalize(expressionMethod);
-
-        if (expressionMethod.Body != null)
-        {
-            return ReplaceNamedValueCalls($"@{expressionMethod.Body.ToFullString().Trim()}");
-        }
-        else if (expressionMethod.ExpressionBody != null)
-        {
-            return ReplaceNamedValueCalls(
-                $"@({expressionMethod.ExpressionBody.Expression.ToFullString().Trim()})");
-        }
-        else
-        {
-            throw new InvalidOperationException("Invalid expression");
-        }
+        return new PolicyExpressionCompiler(context).CompileInvocation(syntax);
     }
 
     public static string FindCode(this MemberAccessExpressionSyntax syntax, IDocumentCompilationContext context)
     {
         Compilation compilation = context.Compilation;
-        SemanticModel semanticModel = compilation.GetSemanticModel(syntax.SyntaxTree);
+        SemanticModel semanticModel = CachedModel(compilation, syntax.SyntaxTree);
         var symbolInfo = semanticModel.GetSymbolInfo(syntax);
         var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.SingleOrDefault(s => s is IFieldSymbol);
 
@@ -350,6 +276,13 @@ public static class CompilerUtils
         [NotNullWhen(true)] out IReadOnlyDictionary<string, InitializerValue>? values)
     {
         values = null;
+        if (syntax is InvocationExpressionSyntax invocation &&
+            TryResolveConfigFactory(invocation, context, out var factoryConfig, out var factoryContext))
+        {
+            syntax = factoryConfig;
+            context = factoryContext;
+        }
+
         if (syntax is not ObjectCreationExpressionSyntax config)
         {
             context.Report(Diagnostic.Create(
@@ -377,34 +310,94 @@ public static class CompilerUtils
         return true;
     }
 
+    // A config factory is a source method returning a single object creation expression,
+    // whose parameters (if any) are policy section contexts. Its body is compiled in place.
+    private static bool TryResolveConfigFactory(
+        InvocationExpressionSyntax invocation,
+        IDocumentCompilationContext context,
+        [NotNullWhen(true)] out ObjectCreationExpressionSyntax? config,
+        out IDocumentCompilationContext factoryContext)
+    {
+        var model = CachedModel(context.Compilation, invocation.SyntaxTree);
+        var declaration = model.GetSymbolInfo(invocation).Symbol is IMethodSymbol method &&
+                          method.Parameters.All(parameter => PolicyExpressionCompiler.IsAuthoringSectionContext(parameter.Type))
+            ? method.DeclaringSyntaxReferences
+                .Select(reference => reference.GetSyntax())
+                .OfType<MethodDeclarationSyntax>()
+                .FirstOrDefault()
+            : null;
+
+        // A factory in a referenced project is bound with that project's compilation.
+        factoryContext = context;
+        if (declaration is not null && !context.Compilation.ContainsSyntaxTree(declaration.SyntaxTree))
+        {
+            var owner = FindCompilation(context.Compilation, declaration.SyntaxTree);
+            factoryContext = owner is null ? context : new ReferencedCompilationContext(context, owner);
+            declaration = owner is null ? null : declaration;
+        }
+
+        config = declaration switch
+        {
+            { ExpressionBody.Expression: ObjectCreationExpressionSyntax expression } => expression,
+            { Body.Statements: [ReturnStatementSyntax { Expression: ObjectCreationExpressionSyntax expression }] } =>
+                expression,
+            _ => null
+        };
+        return config is not null;
+    }
+
     public static T Normalize<T>(T node) where T : SyntaxNode
     {
         var unformatted = (T)new TriviaRemoverRewriter().Visit(node);
         return unformatted.NormalizeWhitespace("", "\n");
     }
 
-    private static readonly Regex NamedValueCallPattern = new(
-        @"context\s*(?:\.\s*ExpressionContext\s*)?\.\s*NamedValue\s*\(\s*""([^""]*)""\s*\)",
-        RegexOptions.Compiled);
+    // Semantic models are reused across the expressions of a compilation so binding work isn't repeated.
+    private static readonly ConditionalWeakTable<Compilation, ConcurrentDictionary<SyntaxTree, SemanticModel>>
+        SemanticModels = new();
 
-    private static readonly Regex ConcatArtifactPattern = new(
-        @"""\s*\+\s*(\{\{[^}]+\}\})\s*\+\s*(?:\$@?|@\$?)?""",
-        RegexOptions.Compiled);
+    internal static SemanticModel CachedModel(Compilation compilation, SyntaxTree tree) =>
+        SemanticModels.GetOrCreateValue(compilation).GetOrAdd(tree, key => compilation.GetSemanticModel(key));
 
-    /// <summary>
-    /// Replaces context.NamedValue("name") calls in expression code with {{name}} tokens.
-    /// Then cleans up concatenation artifacts from the decompiler's string-breaking approach.
-    /// </summary>
-    internal static string ReplaceNamedValueCalls(string expressionCode)
+    // A syntax tree from a referenced project belongs to that project's compilation.
+    internal static Compilation? FindCompilation(Compilation compilation, SyntaxTree tree) =>
+        FindCompilation(compilation, tree, new HashSet<Compilation>());
+
+    private static Compilation? FindCompilation(Compilation compilation, SyntaxTree tree, HashSet<Compilation> visited)
     {
-        var result = NamedValueCallPattern.Replace(expressionCode, m => $"{{{{{m.Groups[1].Value}}}}}");
-        // Clean up decompiler artifacts: "prefix" + {{token}} + "suffix" → "prefix{{token}}suffix"
-        // Handles all string types: regular "", interpolated $"", verbatim @"", interpolated verbatim $@""/@$""
-        while (ConcatArtifactPattern.IsMatch(result))
+        if (!visited.Add(compilation))
         {
-            result = ConcatArtifactPattern.Replace(result, "$1");
+            return null;
         }
-        return result;
+
+        if (compilation.ContainsSyntaxTree(tree))
+        {
+            return compilation;
+        }
+
+        return compilation.References
+            .OfType<CompilationReference>()
+            .Select(reference => FindCompilation(reference.Compilation, tree, visited))
+            .FirstOrDefault(found => found is not null);
+    }
+}
+
+// A compilation context whose semantic questions are answered by the compilation that declares a config factory.
+internal sealed class ReferencedCompilationContext(IDocumentCompilationContext inner, Compilation compilation)
+    : IDocumentCompilationContext
+{
+    public void AddPolicy(XNode element) => inner.AddPolicy(element);
+    public void Report(Diagnostic diagnostic) => inner.Report(diagnostic);
+    public Compilation Compilation => compilation;
+    public SyntaxNode SyntaxRoot => inner.SyntaxRoot;
+    public IList<Diagnostic> Diagnostics => inner.Diagnostics;
+    public XElement RootElement => inner.RootElement;
+    public XElement CurrentElement => inner.CurrentElement;
+
+    public string? PendingPolicyId
+    {
+        get => inner.PendingPolicyId;
+        set => inner.PendingPolicyId = value;
     }
 }
 

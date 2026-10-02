@@ -270,6 +270,9 @@ public class PolicyDecompilerContext
         bool inBlockComment = false;
         bool inChar = false;
         int interpolatedBraceDepth = 0;
+        // A literal broken around a token is parenthesized so a following member access applies to all of it.
+        int stringStart = 0;
+        bool stringBroken = false;
 
         while (i < body.Length)
         {
@@ -313,13 +316,13 @@ public class PolicyDecompilerContext
 
                 if (c == '"')
                 {
-                    inVerbatim = i > 0 && body[i - 1] == '@';
+                    inVerbatim = (i > 0 && body[i - 1] == '@') || (i > 1 && body[i - 1] == '$' && body[i - 2] == '@');
                     inInterpolated = (i > 0 && body[i - 1] == '$')
-                        || (i > 1 && ((body[i - 1] == '@' && body[i - 2] == '$') || (body[i - 1] == '$' && body[i - 2] == '@')));
-                    if (inInterpolated && !inVerbatim && i > 0 && body[i - 1] == '@' && i > 1 && body[i - 2] == '$')
-                        inVerbatim = true;
+                        || (i > 1 && body[i - 1] == '@' && body[i - 2] == '$');
                     inString = true;
                     interpolatedBraceDepth = 0;
+                    stringStart = result.Length - (inInterpolated ? 1 : 0) - (inVerbatim ? 1 : 0);
+                    stringBroken = false;
                     result.Append(c); i++; continue;
                 }
 
@@ -328,7 +331,8 @@ public class PolicyDecompilerContext
                     var match = NamedValueTokenPattern.Match(body, i);
                     if (match.Success && match.Index == i && IsValidTokenName(match.Groups[1].Value))
                     {
-                        result.Append($"context.NamedValue(\"{match.Groups[1].Value}\")");
+                        // Parenthesized: a token used as code must not be merged into an adjacent string literal.
+                        result.Append($"(context.NamedValue(\"{match.Groups[1].Value}\"))");
                         i += match.Length; continue;
                     }
                 }
@@ -342,17 +346,47 @@ public class PolicyDecompilerContext
                     result.Append(c); result.Append(body[++i]); i++; continue;
                 }
 
-                if (inInterpolated && !inVerbatim)
+                if (inInterpolated)
                 {
-                    if (c == '{' && (i + 1 >= body.Length || body[i + 1] != '{'))
+                    var doubled = i + 1 < body.Length && body[i + 1] == c;
+                    // API Management substitutes {{name}} as text wherever it's found, so in {{{name}}} it takes the
+                    // token after the first brace, which then opens a hole around the named value's code.
+                    var opensHoleAroundToken = interpolatedBraceDepth == 0 && c == '{' && IsTokenAt(i + 1);
+                    if (interpolatedBraceDepth == 0 && (c == '{' || c == '}') && doubled && !IsTokenAt(i) &&
+                        !opensHoleAroundToken)
+                    {
+                        // An escaped brace in the string text.
+                        result.Append(c).Append(c); i += 2; continue;
+                    }
+                    if (c == '{' && !(doubled && IsTokenAt(i)))
                     {
                         interpolatedBraceDepth++;
                         result.Append(c); i++; continue;
                     }
-                    if (c == '}' && (i + 1 >= body.Length || body[i + 1] != '}') && interpolatedBraceDepth > 0)
+                    if (c == '}' && interpolatedBraceDepth > 0)
                     {
                         interpolatedBraceDepth--;
                         result.Append(c); i++; continue;
+                    }
+                    if (interpolatedBraceDepth > 0 && (c == '"' || c == '\''))
+                    {
+                        // A literal inside an interpolation hole is copied as written.
+                        var verbatimLiteral = c == '"' && body[i - 1] == '@';
+                        result.Append(c); i++;
+                        while (i < body.Length)
+                        {
+                            if (verbatimLiteral && body[i] == '"' && i + 1 < body.Length && body[i + 1] == '"')
+                            {
+                                result.Append("\"\""); i += 2; continue;
+                            }
+                            if (!verbatimLiteral && body[i] == '\\' && i + 1 < body.Length)
+                            {
+                                result.Append(body[i]).Append(body[i + 1]); i += 2; continue;
+                            }
+                            result.Append(body[i]);
+                            if (body[i++] == c) break;
+                        }
+                        continue;
                     }
                 }
 
@@ -363,24 +397,31 @@ public class PolicyDecompilerContext
                         result.Append("\"\""); i += 2; continue;
                     }
                     result.Append(c);
+                    if (stringBroken)
+                    {
+                        result.Insert(stringStart, '(').Append(')');
+                    }
+
                     inString = false; inVerbatim = false; inInterpolated = false;
                     i++; continue;
                 }
 
-                if (c == '{' && i + 1 < body.Length && body[i + 1] == '{')
+                if (c == '{' && StringTokenPattern.Match(body, i) is { Success: true } token &&
+                    IsValidTokenName(token.Groups[1].Value))
                 {
-                    var end = body.IndexOf("}}", i + 2, StringComparison.Ordinal);
-                    if (end > 0)
+                    var name = token.Groups[1].Value;
+                    if (interpolatedBraceDepth > 0)
                     {
-                        var name = body.Substring(i + 2, end - i - 2).Trim();
-                        if (IsValidTokenName(name))
-                        {
-                            var strPrefix = inInterpolated ? "$" : "";
-                            var verbPrefix = inVerbatim ? "@" : "";
-                            result.Append($"\" + context.NamedValue(\"{name}\") + {strPrefix}{verbPrefix}\"");
-                            i = end + 2; continue;
-                        }
+                        // Inside an interpolation hole the token is code.
+                        result.Append($"(context.NamedValue(\"{name}\"))");
+                        i += token.Length; continue;
                     }
+
+                    var strPrefix = inInterpolated ? "$" : "";
+                    var verbPrefix = inVerbatim ? "@" : "";
+                    result.Append($"\" + context.NamedValue(\"{name}\") + {strPrefix}{verbPrefix}\"");
+                    stringBroken = true;
+                    i += token.Length; continue;
                 }
 
                 result.Append(c); i++;
@@ -388,6 +429,9 @@ public class PolicyDecompilerContext
         }
 
         return result.ToString();
+
+        bool IsTokenAt(int at) =>
+            StringTokenPattern.Match(body, at) is { Success: true } token && IsValidTokenName(token.Groups[1].Value);
     }
 
     public static bool IsValidTokenName(string name)
@@ -396,6 +440,11 @@ public class PolicyDecompilerContext
         if (name.Contains('\\') || name.Contains('{') || name.Contains('}') || name.Contains(':')) return false;
         return name.Any(char.IsLetter);
     }
+
+    // A {{name}} token in a string, starting at the match position; names have API Management's name characters.
+    private static readonly Regex StringTokenPattern = new(
+        @"\G\{\{\s*([A-Za-z0-9_.\-]+)\s*\}\}",
+        RegexOptions.Compiled);
 
     public static readonly Regex NamedValueTokenPattern = new(
         @"\{\{([A-Za-z][A-Za-z0-9_.\-]*)\}\}",

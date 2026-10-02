@@ -240,8 +240,84 @@ public class RateLimitTests
         """,
         DisplayName = "Should compile rate limit policy with operations in api"
     )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.RateLimit(Limit());
+            }
+            static RateLimitConfig Limit() => new RateLimitConfig()
+                {
+                    Calls = 100,
+                    RenewalPeriod = 10
+                };
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <rate-limit calls="100" renewal-period="10" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile rate limit policy from expression-bodied config factory"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.RateLimit(Limits.Default());
+            }
+        }
+
+        public static class Limits
+        {
+            public static RateLimitConfig Default()
+            {
+                return new RateLimitConfig()
+                {
+                    Calls = 100,
+                    RenewalPeriod = 10
+                };
+            }
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <rate-limit calls="100" renewal-period="10" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile rate limit policy from cross-class block-bodied config factory"
+    )]
     public void ShouldCompileRateLimitPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldReportConfigFactoryWithNonContextParameter()
+    {
+        var result = """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context) {
+                    context.RateLimit(Limit(100));
+                }
+                static RateLimitConfig Limit(int calls) => new RateLimitConfig()
+                    {
+                        Calls = calls,
+                        RenewalPeriod = 10
+                    };
+            }
+            """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2002");
     }
 }

@@ -203,16 +203,20 @@ Let's unpack the code above it:
   `otherwise` element.
 * `IsCompanyIP` is a method which checks if request comes from company IP addresses, and it is mapped to a policy
   expression
-* Every method, other than section method are treated as expressions. They need to accept one parameter of type
-  `IExpressionContext`
-  with name `context`. Type is available in `Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions` namespace.
+* Every method, other than section method are treated as expressions. They take a parameter of type
+  `IExpressionContext`, which is passed as `context.ExpressionContext`. Type is available in
+  `Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions` namespace.
 * `IExpressionContext` type contains the same properties as `context` object in policy expressions.
 * `AuthenticationBasic` method is mapped to `authentication-basic` policy.
 * `AuthenticationManagedIdentity` method is mapped to `authentication-managed-identity` policy.
 * `SetHeader` method is mapped to `set-header` policy with override.
 
 Expressions are methods in the class. They may be static or instance methods, and they can be private or public.
-They need to accept one parameter of type `IExpressionContext` with name `context`.
+They take a parameter of type `IExpressionContext`, which can have any name, and they can take other arguments too,
+such as a header name.
+
+Expressions can call other helper methods, including helpers shared from another project, and use named values. See
+[Expression helpers](ExpressionHelpers.md) for what the compiler supports.
 
 To use an expression you just need to call that method in the place were you want to use it. In our example, we call
 `IsCompanyIP` method in the `if` statement, and we call `GetUserId` method in the `SetHeader` method in value parameter.
@@ -229,7 +233,7 @@ context.SomePolicy(new Config()
 Cool! We have a more complex policy document. Now let's compile it to a policy document.
 
 ```shell
-dotnet azure-apim-policy-compiler --s .\source\ --o . --format true
+dotnet azure-apim-policy-compiler --s .\Contoso.Apis.Policies --o . --format true
 ```
 
 Content of the generated file should be:
@@ -306,7 +310,7 @@ Let's unpack the code above:
 * `MockExpressionContext` is a class which is used to mock request context. It is available in
   `Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions` namespace. It implements `IExpressionContext`
   interface and exposes helper properties to set up request context.
-* `context.MockRequest.IpAddress = "10.0.0.12"` is setting a IpAddress for request.
+* `context.Request.IpAddress = "10.0.0.12"` is setting a IpAddress for request.
 
 To check that the expression works as expected, run the test by executing the following command.
 Command can be executed in the test project folder or solution folder.

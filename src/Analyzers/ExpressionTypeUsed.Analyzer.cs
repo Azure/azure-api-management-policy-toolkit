@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Analyzers;
@@ -173,6 +174,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
 
         #region Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
 
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.DictionaryExtensions",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IApi",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IExpressionContext",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IContextApi",
@@ -290,13 +292,44 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        // The member access of a method call is reported through the invocation itself.
+        if (node.Parent is InvocationExpressionSyntax invocation && invocation.Expression == node)
+        {
+            return;
+        }
+
         var nodeSymbol = context.SemanticModel.GetSymbolInfo(node).Symbol;
         if (nodeSymbol == null)
         {
             return;
         }
 
+        // Members of an expression helper library ([Expression] on the class) are analysed in their own project, so
+        // calls to its methods and uses of its constants are allowed, from source or a referenced assembly.
+        if (nodeSymbol.IsExpressionLibraryMember() &&
+            (nodeSymbol is IMethodSymbol && node is InvocationExpressionSyntax ||
+             nodeSymbol is IFieldSymbol { IsConst: true, Type.TypeKind: not TypeKind.Enum }))
+        {
+            return;
+        }
+
+        // Calls to [Expression] helpers (also from a referenced assembly) are expanded by the compiler, and source
+        // constants are folded into literals, except values of source enums, which don't exist in API Management. A
+        // helper passed as a method group isn't expanded.
+        if (nodeSymbol is IMethodSymbol && node is InvocationExpressionSyntax && nodeSymbol.HasExpressionAttribute() ||
+            !nodeSymbol.DeclaringSyntaxReferences.IsDefaultOrEmpty &&
+            nodeSymbol is IFieldSymbol { IsConst: true, ContainingType.TypeKind: not TypeKind.Enum } field &&
+            !(field.Type.TypeKind == TypeKind.Enum && !field.Type.DeclaringSyntaxReferences.IsDefaultOrEmpty))
+        {
+            return;
+        }
+
         var symbol = nodeSymbol.ContainingType;
+        if (symbol == null)
+        {
+            return;
+        }
+
         var typeName = (symbol.IsGenericType ? symbol.OriginalDefinition : symbol)?.ToFullyQualifiedString() ?? "";
         if (AllowedTypes.Contains(typeName))
         {
