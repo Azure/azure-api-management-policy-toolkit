@@ -65,9 +65,10 @@ public void Inbound(IInboundContext context)
 
 Each action must contain one direct `SendRequest` or `CacheLookupValue`, or one
 `if`/`else if`/`else` chain that compiles to a single `choose` child. The analyzer
-reports invalid branch shapes and captured outer contexts; the compiler
-enforces the same boundaries. A `choose` branch can run any policy the emulator
-already supports in that section. Configure injected services for external calls;
+reports APIM105/APIM106 for invalid branches and captured outer contexts; the
+compiler enforces the same boundaries with APIM2020. A `choose` branch can run
+any policy the emulator already supports in that section. Configure injected
+services for external calls;
 those services and policy callbacks must be safe for concurrent use.
 Context-returning helpers must provably derive from the supplied branch context;
 captured or unproven factories are rejected. The previous `Wait(Action, string?)`
