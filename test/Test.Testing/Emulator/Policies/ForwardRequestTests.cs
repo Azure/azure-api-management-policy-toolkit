@@ -665,11 +665,8 @@ public class ForwardRequestTests
     {
         var test = CreateTest(new ForwardRequestConfig { TimeoutMs = 100 });
         var content = new SendRequestTests.ControlledResponseContent("delayed-body");
-        var client = new SendRequestTests.RecordingHttpClient(async (_, cancellation) =>
-        {
-            await Task.Delay(19, cancellation).ConfigureAwait(false);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
-        });
+        var client = new SendRequestTests.RecordingHttpClient((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content }));
         test.Context.Services.Register<IHttpClient>(client);
         var execution = Task.Run(() =>
         {

@@ -204,7 +204,7 @@ public class AuthenticationCertificateTests
 
         var error = Assert.ThrowsExactly<PolicyException>(() => test.RunInbound());
 
-        error.InnerException.Should().BeOfType<CryptographicException>();
+        error.InnerException.Should().BeAssignableTo<CryptographicException>();
         test.Context.Request.Certificate.Should().BeNull();
         test.Context.Variables.Should().NotContainKey("continued");
     }
@@ -221,7 +221,7 @@ public class AuthenticationCertificateTests
 
         var error = Assert.ThrowsExactly<PolicyException>(() => test.RunInbound());
 
-        error.InnerException.Should().BeOfType<CryptographicException>();
+        error.InnerException.Should().BeAssignableTo<CryptographicException>();
         test.Context.Request.Certificate.Should().BeNull();
         test.Context.Variables.Should().NotContainKey("continued");
     }

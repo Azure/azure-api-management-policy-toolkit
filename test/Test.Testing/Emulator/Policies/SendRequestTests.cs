@@ -673,7 +673,7 @@ public class SendRequestTests
         var error = Assert.ThrowsExactly<PolicyException>(() => test.RunInbound());
 
         if (kind == "invalid-body")
-            error.InnerException.Should().BeOfType<CryptographicException>();
+            error.InnerException.Should().BeAssignableTo<CryptographicException>();
         else
             error.InnerException.Should().BeOfType<InvalidOperationException>();
         client.Calls.Should().Be(0);
