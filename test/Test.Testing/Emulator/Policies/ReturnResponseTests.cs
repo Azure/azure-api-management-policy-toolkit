@@ -777,7 +777,7 @@ public class ReturnResponseTests
     public void ReturnResponse_CallbackErrorsSurfaceWithoutTerminating(string section)
     {
         var test = new ConfiguredReturnResponse(new ReturnResponseConfig()).AsTestDocument();
-        void Callback(GatewayContext context, ReturnResponseConfig config) =>
+        static void Callback(GatewayContext context, ReturnResponseConfig config) =>
             throw new InvalidOperationException("callback failure");
         test.SetupInbound().ReturnResponse((_, _) => true).WithCallback(Callback);
         test.SetupBackend().ReturnResponse((_, _) => true).WithCallback(Callback);

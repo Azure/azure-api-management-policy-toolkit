@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text;
+
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
-
-using System.Text;
 
 namespace Test.Emulator.Emulator.Policies;
 

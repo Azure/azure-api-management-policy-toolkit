@@ -289,7 +289,7 @@ public class BaseTests
     public void Base_CallbackErrorsKeepThePolicyAndSectionDiagnostics(string section)
     {
         var test = new SimpleBase().AsTestDocument();
-        void Callback(GatewayContext context) => throw new InvalidOperationException("base callback failure");
+        static void Callback(GatewayContext context) => throw new InvalidOperationException("base callback failure");
         test.SetupInbound().Base().WithCallback(Callback);
         test.SetupBackend().Base().WithCallback(Callback);
         test.SetupOutbound().Base().WithCallback(Callback);

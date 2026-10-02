@@ -1314,7 +1314,7 @@ public class PolicyPipelineTests
     internal static void SetupInvokeRequest(GatewayContext context)
     {
         var setup = new TestDocument(new ExecutionTestDocument()) { Context = context };
-        void Callback(GatewayContext gateway, InvokeRequestConfig config)
+        static void Callback(GatewayContext gateway, InvokeRequestConfig config)
         {
             gateway.Response.StatusCode = 203;
             gateway.Response.Body.Content = "invoked";

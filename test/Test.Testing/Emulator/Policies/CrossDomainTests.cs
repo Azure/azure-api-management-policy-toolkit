@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Xml;
+
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Document;
