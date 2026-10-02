@@ -83,8 +83,9 @@ public class DirectoryRoundTripTests
     [ClassInitialize]
     public static void ClassInit(TestContext context)
     {
+        context.Properties.TryGetValue("PolicyDirectory", out var policyDirectory);
         var dir = Environment.GetEnvironmentVariable("APIM_POLICY_DIR")
-                  ?? context.Properties["PolicyDirectory"]?.ToString();
+                  ?? policyDirectory?.ToString();
 
         // Resolve relative paths against the current working directory
         if (!string.IsNullOrEmpty(dir))
