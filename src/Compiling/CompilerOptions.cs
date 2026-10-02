@@ -4,8 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Xml;
 
-using Microsoft.Extensions.Configuration;
-
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public class CompilerOptions
@@ -21,29 +19,17 @@ public class CompilerOptions
         OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Fragment, Indent = Format
     };
 
-    public CompilerOptions(IConfigurationRoot configuration)
+    public CompilerOptions(string sourcePath, string outputPath, string fileExtension, bool format, string policyFormat)
     {
-        SourcePath = configuration["s"] ??
-                     configuration["source"] ??
-                     throw new NullReferenceException("Source path not provided");
-        SourcePath = Path.GetFullPath(SourcePath);
-        OutputPath = configuration["o"] ??
-                     configuration["out"] ??
-                     throw new NullReferenceException("Output path not provided");
-        OutputPath = Path.GetFullPath(OutputPath);
-
-        FileExtension = configuration["ext"] ?? "xml";
-        Format = bool.TryParse(configuration["format"] ?? "true", out var fmt) && fmt;
-        RawXml = ParseRawXml(configuration["policy-format"] ?? configuration["pf"]);
+        SourcePath = Path.GetFullPath(sourcePath);
+        OutputPath = Path.GetFullPath(outputPath);
+        FileExtension = fileExtension;
+        Format = format;
+        RawXml = ParseRawXml(policyFormat);
     }
 
-    private static bool ParseRawXml(string? policyFormat)
+    private static bool ParseRawXml(string policyFormat)
     {
-        if (string.IsNullOrEmpty(policyFormat))
-        {
-            return true;
-        }
-
         if (policyFormat.Equals("rawxml", StringComparison.OrdinalIgnoreCase))
         {
             return true;

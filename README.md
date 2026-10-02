@@ -20,6 +20,7 @@ The toolkit is available from NuGet:
 
 #### Azure API Management policy toolkit documentation for users.
 * [Quick start](docs/QuickStart.md)
+* [Expression helpers](docs/ExpressionHelpers.md)
 * [Available policies](docs/AvailablePolicies.md)
 * [Gateway emulator policy coverage and limitations](docs/EmulatorPolicyChecklist.md)
 * [Solution structure recommendation](docs/SolutionStructureRecommendation.md)

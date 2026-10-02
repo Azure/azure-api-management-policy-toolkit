@@ -666,9 +666,9 @@ public class WaitTests
 
     [TestMethod]
     [DataRow("\"all\"", "APIM2007", "branches", DisplayName = "Reject Wait without branches")]
-    [DataRow("(string?)null, branches: null", "APIM2012", "individual lambdas", DisplayName = "Reject null branch array")]
-    [DataRow("null, SendBranch", "APIM2012", "individual lambdas", DisplayName = "Reject branch method group")]
-    [DataRow("null, Branches", "APIM2012", "individual lambdas", DisplayName = "Reject branch array reference")]
+    [DataRow("(string?)null, branches: null", "APIM2020", "individual lambdas", DisplayName = "Reject null branch array")]
+    [DataRow("null, SendBranch", "APIM2020", "individual lambdas", DisplayName = "Reject branch method group")]
+    [DataRow("null, Branches", "APIM2020", "individual lambdas", DisplayName = "Reject branch array reference")]
     [DataRow(
         """
         null, new Action<IInboundContext>[]
@@ -676,7 +676,7 @@ public class WaitTests
             branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
         }
         """,
-        "APIM2012", "individual lambdas", DisplayName = "Reject explicit branch array")]
+        "APIM2020", "individual lambdas", DisplayName = "Reject explicit branch array")]
     [DataRow(
         """
         null, new[]
@@ -685,24 +685,24 @@ public class WaitTests
                 branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
         }
         """,
-        "APIM2012", "individual lambdas", DisplayName = "Reject implicit branch array")]
+        "APIM2020", "individual lambdas", DisplayName = "Reject implicit branch array")]
     [DataRow(
         """
         null, [branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })]
         """,
-        "APIM2012", "individual lambdas", DisplayName = "Reject branch collection expression")]
+        "APIM2020", "individual lambdas", DisplayName = "Reject branch collection expression")]
     [DataRow(
         "null, Array.Empty<Action<IInboundContext>>()",
-        "APIM2012", "individual lambdas", DisplayName = "Reject branch array factory")]
+        "APIM2020", "individual lambdas", DisplayName = "Reject branch array factory")]
     [DataRow(
         "null, new Action<IInboundContext>(SendBranch)",
-        "APIM2012", "individual lambdas", DisplayName = "Reject branch delegate construction")]
+        "APIM2020", "individual lambdas", DisplayName = "Reject branch delegate construction")]
     [DataRow(
         """
         null, (Action<IInboundContext>)(branch =>
             branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
         """,
-        "APIM2012", "individual lambdas", DisplayName = "Reject cast branch argument")]
+        "APIM2020", "individual lambdas", DisplayName = "Reject cast branch argument")]
     [DataRow(
         """
         branches: branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
@@ -843,7 +843,7 @@ public class WaitTests
     {
         var result = CompileBranchDocument(CreateInboundDocument($"context.Wait(null, {branch})"), verifyCSharp: false);
 
-        AssertRejectedWait(result, "APIM2012", reason);
+        AssertRejectedWait(result, "APIM2020", reason);
     }
 
     [TestMethod]
@@ -857,7 +857,7 @@ public class WaitTests
         """
         branch => { if (true) { branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }); } }
         """,
-        "APIM9992", "InvocationExpressionSyntax", DisplayName = "Propagate choose condition compiler error")]
+        "APIM2016", "TrueLiteralExpression", DisplayName = "Propagate choose condition compiler error")]
     [DataRow(
         """
         branch => { if (ConditionExp(branch.ExpressionContext)) branch.SendRequest(new SendRequestConfig
@@ -1401,7 +1401,7 @@ public class WaitTests
     {
         var code = CreateInboundDocument($"context.Wait(null, {branch})");
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer section context");
     }
 
     [TestMethod]
@@ -1430,7 +1430,7 @@ public class WaitTests
             }
             """;
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer section context");
     }
 
     [TestMethod]
@@ -1455,7 +1455,7 @@ public class WaitTests
             }
             """;
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer section context");
     }
 
     [TestMethod]
@@ -1482,7 +1482,7 @@ public class WaitTests
             }
             """;
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer section context");
     }
 
     [TestMethod]
@@ -1507,7 +1507,7 @@ public class WaitTests
             }
             """;
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer section context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer section context");
     }
 
     [TestMethod]
@@ -1529,7 +1529,7 @@ public class WaitTests
             }
             """;
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "branch context parameter");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "branch context parameter");
     }
 
     [TestMethod]
@@ -1588,7 +1588,7 @@ public class WaitTests
     {
         var code = CreateInboundDocument($"context.Wait(null, {branch})");
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", reason);
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", reason);
     }
 
     [TestMethod]
@@ -1689,7 +1689,7 @@ public class WaitTests
     public void ShouldRejectCapturedExpressionContextField(string branch)
     {
         AssertRejectedWait(CompileBranchDocument(CreateExpressionContextDocument(branch)),
-            "APIM2012", "outer expression context");
+            "APIM2020", "outer expression context");
     }
 
     [TestMethod]
@@ -1714,7 +1714,7 @@ public class WaitTests
             }
             """;
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer expression context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer expression context");
     }
 
     [TestMethod]
@@ -1743,7 +1743,7 @@ public class WaitTests
             }
             """;
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer expression context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer expression context");
     }
 
     [TestMethod]
@@ -1764,7 +1764,7 @@ public class WaitTests
             }
             """);
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer expression context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer expression context");
     }
 
     [TestMethod]
@@ -1798,7 +1798,7 @@ public class WaitTests
             }
             """;
 
-        AssertRejectedWait(CompileBranchDocument(code), "APIM2012", "outer expression context");
+        AssertRejectedWait(CompileBranchDocument(code), "APIM2020", "outer expression context");
     }
 
     [TestMethod]
@@ -2071,7 +2071,7 @@ public class WaitTests
     public void ShouldRejectUnprovenWaitContextFactory(string branch)
     {
         AssertRejectedWait(CompileBranchDocument(CreateContextFactoryDocument(branch)),
-            "APIM2012", "branch context parameter");
+            "APIM2020", "branch context parameter");
     }
 
     [TestMethod]
@@ -2451,7 +2451,7 @@ public class WaitTests
     public void ShouldRejectUnsafeWaitContextComposition(string branch)
     {
         AssertRejectedWait(CompileBranchDocument(CreateComposedContextDocument(branch)),
-            "APIM2012", "branch context parameter");
+            "APIM2020", "branch context parameter");
     }
 
     private static string CreateComposedContextDocument(string branch) => $$"""

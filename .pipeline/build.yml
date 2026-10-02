@@ -73,16 +73,16 @@ extends:
                     Write-Host "##vso[build.updatebuildnumber]$packageVersion"
 
               - task: UseDotNet@2
-                displayName: 'Setup .NET 8 SDK'
+                displayName: 'Setup .NET 10 SDK'
                 inputs:
                   packageType: 'sdk'
-                  version: '8.x'
+                  version: '10.x'
 
-              - task: NuGetCommand@2
-                displayName: 'NuGet restore main solution'
+              - task: DotNetCoreCLI@2
+                displayName: 'Restore main solution'
                 inputs:
-                  command: restore
-                  restoreSolution: '$(mainProjectPath)'
+                  command: 'restore'
+                  projects: '$(mainProjectPath)'
                   feedsToUse: select
                   vstsFeed: 'ApiManagement'
                   includeNuGetOrg: false

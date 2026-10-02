@@ -159,7 +159,7 @@ public class BaseTests
 
         var scopes = scopeOrder.Split(',');
         calls.Should().Equal(scopes.Select(scope => $"{scope}:{section}:before")
-            .Concat(scopes.Reverse().Select(scope => $"{scope}:{section}:after")));
+            .Concat(scopes.AsEnumerable().Reverse().Select(scope => $"{scope}:{section}:after")));
         pipeline.Context.ResponseTerminated.Should().BeFalse();
     }
 

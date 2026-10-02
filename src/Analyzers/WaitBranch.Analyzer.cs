@@ -37,7 +37,8 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
             context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
             method.Name != "Wait" ||
             !IsSectionContext(method.ContainingType) ||
-            method.Parameters is not [_, { IsParams: true, Type: IArrayTypeSymbol array }] ||
+            method.Parameters.Length != 2 ||
+            method.Parameters[1] is not { IsParams: true, Type: IArrayTypeSymbol array } ||
             array.ElementType is not INamedTypeSymbol { Name: "Action", Arity: 1 } action ||
             action.ContainingNamespace.ToDisplayString() != "System" ||
             !SymbolEqualityComparer.Default.Equals(action.TypeArguments[0], method.ContainingType))
@@ -294,9 +295,11 @@ public sealed class WaitBranchAnalyzer : DiagnosticAnalyzer
         ExpressionSyntax? returnedExpression = declaration switch
         {
             MethodDeclarationSyntax { ExpressionBody: { } body } => body.Expression,
-            MethodDeclarationSyntax { Body.Statements: [ReturnStatementSyntax { Expression: { } expression }] } => expression,
+            MethodDeclarationSyntax { Body: { } block } when block.Statements.Count == 1 &&
+                block.Statements[0] is ReturnStatementSyntax { Expression: { } expression } => expression,
             LocalFunctionStatementSyntax { ExpressionBody: { } body } => body.Expression,
-            LocalFunctionStatementSyntax { Body.Statements: [ReturnStatementSyntax { Expression: { } expression }] } => expression,
+            LocalFunctionStatementSyntax { Body: { } block } when block.Statements.Count == 1 &&
+                block.Statements[0] is ReturnStatementSyntax { Expression: { } expression } => expression,
             _ => null
         };
         if (returnedExpression is null || !model.Compilation.SyntaxTrees.Contains(returnedExpression.SyntaxTree))

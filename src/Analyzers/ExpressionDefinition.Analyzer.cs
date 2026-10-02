@@ -26,7 +26,7 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
             SyntaxKind.ParenthesizedLambdaExpression);
     }
 
-    private readonly static IReadOnlySet<string> AllowedExpressionReturnTypes = new HashSet<string>()
+    private readonly static IReadOnlyCollection<string> AllowedExpressionReturnTypes = new HashSet<string>()
     {
         "System.Boolean",
         "System.Byte",

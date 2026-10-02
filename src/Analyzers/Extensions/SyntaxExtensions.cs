@@ -30,11 +30,34 @@ public static class SyntaxExtensions
         return syntax.ContainsAttributeOfType(model, ExpressionAttribute);
     }
 
+    public static bool HasExpressionAttribute(this ISymbol symbol)
+    {
+        return symbol.GetAttributes()
+            .Any(attribute => attribute.AttributeClass?.ToFullyQualifiedString() == ExpressionAttribute);
+    }
+
+    // A node inside an [Expression] method, or inside any method of an expression helper library (by symbol, so
+    // every part of a partial class is included).
     public static bool IsPartOfPolicyExpressionMethod(this SyntaxNode syntax, SemanticModel model)
     {
         return syntax.Ancestors()
             .OfType<MethodDeclarationSyntax>()
-            .Any(c => c.AttributeLists.ContainsExpressionAttribute(model));
+            .Any(method => method.AttributeLists.ContainsExpressionAttribute(model) ||
+                           model.GetDeclaredSymbol(method)?.IsExpressionLibraryMember() == true);
+    }
+
+    // A member of a class marked [Expression] (an expression helper library), from source or metadata.
+    public static bool IsExpressionLibraryMember(this ISymbol symbol)
+    {
+        for (var type = symbol.ContainingType; type is not null; type = type.ContainingType)
+        {
+            if (type.HasExpressionAttribute())
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static bool IsPartOfPolicyExpressionDelegate(this SyntaxNode syntaxNode, SemanticModel model)
@@ -46,7 +69,7 @@ public static class SyntaxExtensions
 
     private static readonly Regex ExpressionDelegateTypeMatcher =
         new Regex(
-            @"Mielek\.Azure\.ApiManagement\.PolicyToolkit\.Authoring\.Expression<.*?>",
+            @"Microsoft\.Azure\.ApiManagement\.PolicyToolkit\.Authoring\.Expression<.*?>",
             RegexOptions.Compiled);
 
     public static bool IsExpressionLambda(this LambdaExpressionSyntax syntaxNode, SemanticModel model)
