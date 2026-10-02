@@ -5,7 +5,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
-[Section(nameof(IOutboundContext))]
+[Section(nameof(IInboundContext)), Section(nameof(IOutboundContext))]
 internal class RedirectContentUrlsHandler : IPolicyHandler
 {
     public List<Tuple<

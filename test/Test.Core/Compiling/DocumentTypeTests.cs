@@ -137,6 +137,21 @@ public class DocumentTypeTests
         """,
         DisplayName = "Should resolve concatenated constant document name"
     )]
+    [DataRow(
+        """
+        [Document(nameof(shared) + "-fragment", Type = DocumentType.Fragment)]
+        public class NamedPolicyFragment : IFragment
+        {
+            private const string shared = "unused";
+
+            public void Fragment(IFragmentContext context)
+            {
+                context.Base();
+            }
+        }
+        """,
+        DisplayName = "Should resolve nameof document name"
+    )]
     public void ShouldResolveConstantDocumentName(string code)
     {
         var result = code.CompileDocument();
@@ -174,5 +189,53 @@ public class DocumentTypeTests
         var result = document.CompileDocument();
 
         result.Errors.Should().ContainSingle(error => error.Id == "APIM2015");
+    }
+
+    [TestMethod]
+    public void ShouldReadDocumentTypeFromTheAttributeNotTheClassName()
+    {
+        // The type was matched by looking for "Fragment" anywhere in the attribute's arguments.
+        var result = """
+                     [Document("MyFragmentThing", Type = DocumentType.Policy)]
+                     public class MyFragmentThing : IDocument
+                     {
+                         public void Inbound(IInboundContext context) { context.Base(); }
+                     }
+                     """.CompileDocument();
+
+        result.Should().BeSuccessful();
+        result.Document.Name.LocalName.Should().Be("policies");
+    }
+
+    [TestMethod]
+    public void ShouldReadDocumentTypeThroughAnAlias()
+    {
+        var result = """
+                     using Kind = Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.DocumentType;
+
+                     [Document("f", Type = Kind.Fragment)]
+                     public class F : IFragment
+                     {
+                         public void Fragment(IFragmentContext context) { context.SetHeader("a", "b"); }
+                     }
+                     """.CompileDocument();
+
+        result.Should().BeSuccessful();
+        result.Document.Name.LocalName.Should().Be("fragment");
+    }
+
+    [TestMethod]
+    public void ShouldReadDocumentTypeFromTheImplementedInterface()
+    {
+        var result = """
+                     [Document("f")]
+                     public class F : IFragment
+                     {
+                         public void Fragment(IFragmentContext context) { context.SetHeader("a", "b"); }
+                     }
+                     """.CompileDocument();
+
+        result.Should().BeSuccessful();
+        result.Document.Name.LocalName.Should().Be("fragment");
     }
 }

@@ -19,6 +19,11 @@ Notes:
   policy (with `when` / `otherwise`).
 - `InlinePolicy(string)` allows inserting arbitrary XML when a policy isn't implemented as a first-class API.
 - The decompiler uses `InlinePolicy` as a fallback for any XML element it does not have a specific handler for.
+- Some documents are rejected at compile time because API Management rejects the XML when a policy is saved. These
+  are errors, not warnings, so a document that compiles can be deployed:
+  - `cache-value` requires both `ExpiresAfter` and `RefreshAfter`; the gateway reports the missing attribute.
+  - The `Backend` section takes a single policy, counting `Base()`. Wrap several in `choose` or `retry`, or move
+    them to another section.
 
 ## Implemented policies
 
@@ -214,7 +219,7 @@ c.SendServiceBusMessage(new SendServiceBusMessageConfig
 });
 
 // Invoke Dapr binding
-c.InvokeDarpBinding(new InvokeDarpBindingConfig
+c.InvokeDaprBinding(new InvokeDaprBindingConfig
 {
     Name = "my-binding",
     Operation = "create",
@@ -222,10 +227,12 @@ c.InvokeDarpBinding(new InvokeDarpBindingConfig
 });
 
 // Publish to Dapr topic
-c.PublishToDarp(new PublishToDarpConfig
+c.PublishToDapr(new PublishToDaprConfig
 {
     Topic = "my-topic",
-    PubSubName = "pubsub"
+    Content = "my-content",
+    PubSubName = "pubsub",
+    Timeout = 10 // seconds, 1-240
 });
 ```
 

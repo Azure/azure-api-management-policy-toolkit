@@ -1,7 +1,7 @@
 <policies>
 	<inbound>
 		<base />
-		<cache-value key="my-cache-key" variable-name="cachedResult" expires-after="600" caching-type="prefer-external">
+		<cache-value key="my-cache-key" variable-name="cachedResult" expires-after="600" refresh-after="300" caching-type="prefer-external">
 			<value>
 				<set-variable name="temp" value="computed" />
 			</value>

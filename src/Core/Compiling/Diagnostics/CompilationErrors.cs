@@ -106,6 +106,17 @@ public static class CompilationErrors
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
 
+    public readonly static DiagnosticDescriptor BackendAllowsOnePolicy = new(
+        "APIM9990",
+        "Backend section allows only one policy",
+        "API Management allows only one policy in the backend section, but it has {0}. Wrap them in a policy such as choose or retry.",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
     public readonly static DiagnosticDescriptor ArgumentCountMissMatchForPolicy = new(
         "APIM2001",
         "Argument count miss match for policy",
@@ -330,6 +341,17 @@ public static class CompilationErrors
         "APIM2019",
         "Unsupported language feature",
         "Policy expressions are compiled as C# 7.3 in API Management: {0}",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor ValueOutOfRange = new(
+        "APIM2020",
+        "Value out of range",
+        "Value '{2}' of '{1}' in '{0}' policy must be between {3} and {4}",
         "PolicyDocumentCompilation",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,

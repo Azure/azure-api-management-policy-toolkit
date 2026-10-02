@@ -110,6 +110,10 @@ Code samples for using the toolkit can be found in the following locations
 
 ## Troubleshooting
 
+- Decompiled C# that doesn't compile. The compiler rejects documents whose XML API Management wouldn't accept when
+  the policy is saved, and the decompiler reads such XML as it finds it. A `cache-value` missing `expires-after` or
+  `refresh-after`, or a `backend` section with more than one policy (`<base />` counts), decompiles into C# that
+  reports APIM2006 or APIM9990. Such a file could never have been deployed; fix the policy, then decompile it again.
 - File an issue via [GitHub Issues][ghi].
 - For questions, suggestions, or discussions, please use [GitHub Discussions][ghd]
 

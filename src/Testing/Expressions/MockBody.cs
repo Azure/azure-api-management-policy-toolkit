@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System.Text;
@@ -13,12 +13,24 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
 public class MockBody : IMessageBody
 {
-    public string? Content { get; set; }
+    private string? _content;
+
+    // Setting new content (for example by set-body) makes the body readable again.
+    public string? Content
+    {
+        get => _content;
+        set
+        {
+            _content = value;
+            Consumed = false;
+        }
+    }
 
     public bool Consumed { get; private set; } = false;
 
     public T As<T>(bool preserveContent = false)
     {
+        ThrowIfConsumed();
         var content = Content ?? string.Empty;
 
         Consumed = !preserveContent;
@@ -30,7 +42,8 @@ public class MockBody : IMessageBody
         if (typeof(T) == typeof(JToken)) return (T)(object)JToken.Parse(content);
         if (typeof(T) == typeof(XNode))
         {
-            using var reader = new XmlTextReader(content);
+            using var reader = XmlReader.Create(new StringReader(content));
+            reader.MoveToContent();
             return (T)(object)XNode.ReadFrom(reader);
         }
 
@@ -42,6 +55,39 @@ public class MockBody : IMessageBody
 
     public IDictionary<string, IList<string>> AsFormUrlEncodedContent(bool preserveContent = false)
     {
-        throw new NotImplementedException();
+        ThrowIfConsumed();
+        var content = Content ?? string.Empty;
+
+        Consumed = !preserveContent;
+
+        var result = new Dictionary<string, IList<string>>();
+        foreach (var pair in content.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            var key = Decode(parts[0]);
+            var value = parts.Length > 1 ? Decode(parts[1]) : string.Empty;
+            if (!result.TryGetValue(key, out var values))
+            {
+                values = new List<string>();
+                result[key] = values;
+            }
+
+            values.Add(value);
+        }
+
+        return result;
     }
+
+    // API Management makes the body unavailable after a read without preserveContent; reading it again throws a
+    // NullReferenceException ("Object reference not set to an instance of an object."), so the emulator does too.
+    // Read it with preserveContent: true to access it again.
+    private void ThrowIfConsumed()
+    {
+        if (Consumed)
+        {
+            throw new NullReferenceException();
+        }
+    }
+
+    private static string Decode(string value) => Uri.UnescapeDataString(value.Replace('+', ' '));
 }

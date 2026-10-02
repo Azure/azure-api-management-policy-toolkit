@@ -36,7 +36,7 @@ public class BasicAuthCredentialsParserTests
         // Assert
         result.Should().NotBeNull();
         result!.Password.Should().Be("password");
-        result!.Username.Should().Be("username");
+        result!.UserId.Should().Be("username");
     }
 
     [TestMethod]
@@ -52,7 +52,7 @@ public class BasicAuthCredentialsParserTests
         // Assert
         result.Should().NotBeNull();
         result!.Password.Should().Be("password");
-        result!.Username.Should().Be("user:name");
+        result!.UserId.Should().Be("user:name");
     }
 
     [TestMethod]
@@ -68,6 +68,6 @@ public class BasicAuthCredentialsParserTests
         // Assert
         result.Should().NotBeNull();
         result!.Password.Should().Be("password");
-        result!.Username.Should().Be("¡usernameÿ");
+        result!.UserId.Should().Be("¡usernameÿ");
     }
 }

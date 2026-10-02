@@ -25,6 +25,7 @@ public record CacheValueConfig
     /// Duration in seconds after which the cached value expires.
     /// Policy expressions are allowed.
     /// </summary>
+    /// <remarks>Required by API Management; the compiler reports a missing value.</remarks>
     [ExpressionAllowed]
     public int? ExpiresAfter { get; init; }
 
@@ -33,6 +34,7 @@ public record CacheValueConfig
     /// Must be less than ExpiresAfter for stampede protection.
     /// Policy expressions are allowed.
     /// </summary>
+    /// <remarks>Required by API Management; the compiler reports a missing value.</remarks>
     [ExpressionAllowed]
     public int? RefreshAfter { get; init; }
 

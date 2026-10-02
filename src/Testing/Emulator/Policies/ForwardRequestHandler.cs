@@ -32,7 +32,7 @@ internal class ForwardRequestHandler : PolicyHandlerOptionalParam<ForwardRequest
         }
 
         // Copy body
-        var bodyContent = context.Request.Body?.As<string>(preserveContent: true);
+        var bodyContent = context.Request.Body is { Consumed: false } body ? body.As<string>(preserveContent: true) : null;
         if (!string.IsNullOrEmpty(bodyContent))
         {
             request.Content = new StringContent(bodyContent);

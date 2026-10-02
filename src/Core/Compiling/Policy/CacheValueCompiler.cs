@@ -84,8 +84,24 @@ public class CacheValueCompiler : IMethodPolicyHandler
             return;
         }
 
-        element.AddAttribute(config, nameof(CacheValueConfig.ExpiresAfter), "expires-after");
-        element.AddAttribute(config, nameof(CacheValueConfig.RefreshAfter), "refresh-after");
+        // API Management requires both durations.
+        foreach (var (property, attribute) in new[]
+                 {
+                     (nameof(CacheValueConfig.ExpiresAfter), "expires-after"),
+                     (nameof(CacheValueConfig.RefreshAfter), "refresh-after")
+                 })
+        {
+            if (!element.AddAttribute(config, property, attribute))
+            {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.RequiredParameterNotDefined,
+                    node.GetLocation(),
+                    "cache-value",
+                    property
+                ));
+                return;
+            }
+        }
         element.AddAttribute(config, nameof(CacheValueConfig.DefaultValue), "default-value");
         element.AddAttribute(config, nameof(CacheValueConfig.CachingType), "caching-type");
 

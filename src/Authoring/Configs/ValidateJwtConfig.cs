@@ -109,6 +109,12 @@ public record OpenIdConfig
     /// Specifies the URL of the OpenID Connect configuration.
     /// </summary>
     public required string Url { get; init; }
+
+    /// <summary>
+    /// Specifies whether the gateway must be able to reach the OpenID configuration. Policy expressions are allowed.
+    /// </summary>
+    [ExpressionAllowed]
+    public bool? ValidateConnectivity { get; init; }
 }
 
 /// <summary>

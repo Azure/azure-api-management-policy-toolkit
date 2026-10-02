@@ -42,7 +42,7 @@ public class AuthenticationBasicTests
         authHeader.Should().NotBeNullOrEmpty().And.StartWith("Basic ");
         authHeader.TryParseBasic(out var credentials).Should().BeTrue();
         credentials.Should().NotBeNull();
-        credentials!.Username.Should().Be("test");
+        credentials!.UserId.Should().Be("test");
         credentials.Password.Should().Be("tset");
     }
 

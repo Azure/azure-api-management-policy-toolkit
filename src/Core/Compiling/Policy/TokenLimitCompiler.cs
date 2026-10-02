@@ -49,13 +49,13 @@ public abstract class BaseTokenLimitCompiler : IMethodPolicyHandler
             return;
         }
 
-        if (!element.AddAttribute(values, nameof(TokenLimitConfig.EstimatePromptToken), "estimate-prompt-token"))
+        if (!element.AddAttribute(values, nameof(TokenLimitConfig.EstimatePromptTokens), "estimate-prompt-tokens"))
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,
                 node.GetLocation(),
                 _policyName,
-                nameof(TokenLimitConfig.EstimatePromptToken)
+                nameof(TokenLimitConfig.EstimatePromptTokens)
             ));
             return;
         }

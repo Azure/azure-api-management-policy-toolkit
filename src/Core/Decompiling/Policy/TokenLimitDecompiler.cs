@@ -28,7 +28,7 @@ public abstract class BaseTokenLimitDecompiler : IPolicyDecompiler
         var props = new List<string>();
 
         context.AddRequiredExprStringProp(props, element, "counter-key", "CounterKey");
-        context.AddRequiredBoolExprProp(props, element, "estimate-prompt-token", "EstimatePromptToken");
+        context.AddRequiredBoolExprProp(props, element, "estimate-prompt-tokens", "EstimatePromptTokens");
         context.AddOptionalIntProp(props, element, "tokens-per-minute", "TokensPerMinute");
         context.AddOptionalIntProp(props, element, "token-quota", "TokenQuota");
         context.AddOptionalStringProp(props, element, "token-quota-period", "TokenQuotaPeriod");

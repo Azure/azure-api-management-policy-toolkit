@@ -37,7 +37,7 @@ internal class SendOneWayRequestHandler : PolicyHandler<SendOneWayRequestConfig>
                 request.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }
 
-            var bodyContent = context.Request.Body?.As<string>(preserveContent: true);
+            var bodyContent = context.Request.Body is { Consumed: false } body ? body.As<string>(preserveContent: true) : null;
             if (!string.IsNullOrEmpty(bodyContent) && config.Body is null)
             {
                 request.Content = new StringContent(bodyContent);

@@ -1,7 +1,7 @@
 <policies>
 	<inbound>
 		<base />
-		<llm-token-limit counter-key="my-key" estimate-prompt-token="false" token-quota="50000" token-quota-period="day" retry-after-header-name="x-retry-after" />
+		<llm-token-limit counter-key="my-key" estimate-prompt-tokens="false" token-quota="50000" token-quota-period="day" retry-after-header-name="x-retry-after" />
 	</inbound>
 	<backend>
 		<base />

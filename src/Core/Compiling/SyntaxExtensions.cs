@@ -83,10 +83,24 @@ public static class SyntaxExtensions
 
     public static DocumentType ExtractDocumentType(this ClassDeclarationSyntax document, SemanticModel model)
     {
+        // The Type argument of [Document], read as a constant so aliases and qualified names work.
         var attributeSyntax = document.AttributeLists.GetFirstAttributeOfType<DocumentAttribute>(model);
-        var fragmentArgument = attributeSyntax?.ArgumentList?.Arguments
-            .FirstOrDefault(arg => arg.Expression.ToString().Contains(nameof(DocumentType.Fragment)));
-        return fragmentArgument != null ? DocumentType.Fragment : DocumentType.Policy;
+        var typeArgument = attributeSyntax?.ArgumentList?.Arguments
+            .FirstOrDefault(argument => argument.NameEquals?.Name.Identifier.ValueText == nameof(DocumentAttribute.Type));
+        if (typeArgument is not null &&
+            model.GetConstantValue(typeArgument.Expression) is { HasValue: true, Value: int value } &&
+            Enum.IsDefined(typeof(DocumentType), value))
+        {
+            return (DocumentType)value;
+        }
+
+        // Without a Type argument, the document interface the class implements decides.
+        return model.GetDeclaredSymbol(document) is INamedTypeSymbol symbol &&
+               symbol.AllInterfaces.Any(implemented =>
+                   implemented.Name == nameof(IFragment) &&
+                   implemented.ContainingNamespace?.ToDisplayString() == typeof(IDocument).Namespace)
+            ? DocumentType.Fragment
+            : DocumentType.Policy;
     }
 
     public static IEnumerable<ClassDeclarationSyntax> GetDocumentAttributedClasses(this SyntaxNode syntax,

@@ -179,7 +179,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <param name="config">
     /// Configuration specifying the Dapr binding name, operation, metadata, and other settings.
     /// </param>
-    void InvokeDarpBinding(InvokeDarpBindingConfig config);
+    void InvokeDaprBinding(InvokeDaprBindingConfig config);
 
     /// <summary>
     /// Converts a response containing JSON to JSONP format.<br />
@@ -213,6 +213,16 @@ public interface IOutboundContext : IHaveExpressionContext
     void LimitConcurrency(LimitConcurrencyConfig config, Action section);
 
     /// <summary>
+    /// Evaluates the content safety of a response using a Language Model (LLM) service.<br/>
+    /// This policy can be used to ensure that responses adhere to specified safety standards.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-content-safety-policy">llm-content-safety</a> policy.
+    /// </summary>
+    /// <param name="config">
+    /// Configuration specifying the backend service ID, optional shield prompt setting, content safety categories, and block lists.
+    /// </param>
+    void LlmContentSafety(LlmContentSafetyConfig config);
+
+    /// <summary>
     /// Stores the current LLM request and response in the semantic cache for future lookup.<br/>
     /// This policy must be placed in the outbound section to capture both the request and response.<br/>
     /// When stored, the entries can later be found by the llm-semantic-cache-lookup policy.<br/>
@@ -244,14 +254,6 @@ public interface IOutboundContext : IHaveExpressionContext
     /// </param>
     void MockResponse(MockResponseConfig? config = null);
 
-    /// <summary>
-    /// Publishes a message to a Dapr topic.<br />
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/publish-to-dapr-policy">publish-to-dapr</a> policy.
-    /// </summary>
-    /// <param name="config">
-    /// Configuration specifying the topic, content, and other optional settings for the publish-to-dapr policy.
-    /// </param>
-    void PublishToDarp(PublishToDarpConfig config);
 
     /// <summary>
     /// Redirects URLs in the response content to a specified hostname and scheme.<br/>

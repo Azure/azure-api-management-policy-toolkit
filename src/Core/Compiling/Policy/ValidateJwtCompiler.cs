@@ -98,6 +98,8 @@ public class ValidateJwtCompiler : IMethodPolicyHandler
                 continue;
             }
 
+            openIdElement.AddAttribute(openIdConfigValues, nameof(OpenIdConfig.ValidateConnectivity),
+                "validate-connectivity");
             openIdElements.Add(openIdElement);
         }
 

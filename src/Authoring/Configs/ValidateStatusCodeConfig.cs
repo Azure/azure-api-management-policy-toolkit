@@ -18,7 +18,7 @@ public record ValidateStatusCodeConfig
     /// <summary>
     /// Optional variable name to store validation errors.
     /// </summary>
-    public string? ErrorVariableName { get; init; }
+    public string? ErrorsVariableName { get; init; }
 
     /// <summary>
     /// List of status codes to validate.

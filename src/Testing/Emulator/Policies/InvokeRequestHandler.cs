@@ -85,7 +85,7 @@ internal class InvokeRequestHandler : IPolicyHandler
         var bodyContent = config.Body?.Content?.ToString();
         if (string.IsNullOrEmpty(bodyContent) && context.Request.Body?.Content is not null)
         {
-            bodyContent = context.Request.Body.As<string>(preserveContent: true);
+            bodyContent = context.Request.Body is { Consumed: false } body ? body.As<string>(preserveContent: true) : null;
         }
 
         if (!string.IsNullOrEmpty(bodyContent))
