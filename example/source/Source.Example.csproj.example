@@ -6,9 +6,11 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <ExampleTargetFramework Condition="'$(ExampleTargetFramework)' == ''">net10.0</ExampleTargetFramework>
+    <TargetFramework>$(ExampleTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <WarningsAsErrors>$(WarningsAsErrors);CS9057</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

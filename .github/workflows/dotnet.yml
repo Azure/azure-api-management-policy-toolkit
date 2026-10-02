@@ -102,3 +102,65 @@ jobs:
       - name: Compile policies
         working-directory: ./example
         run: dotnet azure-apim-policy-compiler --s ./source/ --o ./target/ --format true
+
+  analyzer-sdk-compatibility:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: "8.0"
+            framework: net8.0
+          - sdk: "9.0"
+            framework: net9.0
+          - sdk: "10.0"
+            framework: net10.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+      - name: Create packages
+        run: dotnet pack
+      - name: Prepare example source
+        shell: bash
+        run: |
+          mv ./example/source/Source.Example.csproj.example ./example/source/Source.Example.csproj
+          dotnet new globaljson \
+            --sdk-version "${{ matrix.sdk }}.100" \
+            --roll-forward latestFeature \
+            --output ./example \
+            --force
+      - name: Verify analyzer with .NET ${{ matrix.sdk }}
+        working-directory: ./example
+        shell: bash
+        run: |
+          dotnet --version
+          dotnet restore ./source/Source.Example.csproj -p:ExampleTargetFramework=${{ matrix.framework }}
+          dotnet build ./source/Source.Example.csproj --no-restore -p:ExampleTargetFramework=${{ matrix.framework }}
+          cat > ./source/AnalyzerCompatibilityProbe.cs <<'EOF'
+          using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+          using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+
+          public class AnalyzerCompatibilityProbe
+          {
+              [Expression]
+              public void InvalidExpression(IExpressionContext context)
+              {
+              }
+          }
+          EOF
+          set +e
+          dotnet build ./source/Source.Example.csproj --no-restore \
+            -p:ExampleTargetFramework=${{ matrix.framework }} 2>&1 | tee analyzer-probe.log
+          build_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$build_status" -eq 0 ]; then
+            echo "Expected the analyzer probe build to fail."
+            exit 1
+          fi
+          grep -q "APIM101" analyzer-probe.log
