@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -22,8 +23,9 @@ public static class RawXmlContent
         element.HasElements;
 
     /// <summary>
-    /// Adds the value to a liquid set-body as markup when it is well-formed XML with at least one element;
-    /// otherwise as plain text. Markup is written back in its normal form, such as double-quoted attributes.
+    /// Adds the value to a liquid set-body as markup when it is well-formed XML with at least one element,
+    /// also when it is apart from a &lt; or &amp; written as text; otherwise as plain text. Markup is written
+    /// back in its normal form, such as double-quoted attributes.
     /// </summary>
     public static void AddTo(XElement element, string value)
     {
@@ -46,6 +48,20 @@ public static class RawXmlContent
             return false;
         }
 
+        // A < or & that doesn't start a tag or an entity, as in {% if item.Count < 2 %}, is text; the gateway
+        // reads it back from its escaped form inside a liquid tag.
+        return TryParseXml(value, out nodes) ||
+               TryParseXml(StrayAmpersand.Replace(StrayLessThan.Replace(value, "&lt;"), "&amp;"), out nodes);
+    }
+
+    private static readonly Regex StrayLessThan = new(@"<(?![A-Za-z_/!?])", RegexOptions.Compiled);
+
+    private static readonly Regex StrayAmpersand =
+        new(@"&(?!(?:[A-Za-z][A-Za-z0-9]*|#[0-9]+|#x[0-9A-Fa-f]+);)", RegexOptions.Compiled);
+
+    private static bool TryParseXml(string value, out List<XNode> nodes)
+    {
+        nodes = [];
         try
         {
             var wrapper = XElement.Parse($"<wrapper>{value}</wrapper>", LoadOptions.PreserveWhitespace);

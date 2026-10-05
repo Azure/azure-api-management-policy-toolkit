@@ -188,6 +188,7 @@ public class SetBodyTests
             context.SetBody("<Envelope><a>1</a>  <b note='x &amp; y'>{{body.x}}</b></Envelope>", new SetBodyConfig { Template = "liquid" });
             context.SetBody("<plain><a>1</a></plain>");
             context.SetBody("{ \"a\": \"{{body.x}}\" }", new SetBodyConfig { Template = "liquid" });
+            context.SetBody("{% if body.n < 2 && body.m %}<p>{{body.x}} & co</p>{% endif %}", new SetBodyConfig { Template = "liquid" });
             """);
 
         var result = code.CompileDocument();
@@ -208,5 +209,8 @@ public class SetBodyTests
         // and returns a body without a template that is written as markup empty: it has to stay text
         xml.Should().Contain("<set-body>&lt;plain&gt;&lt;a&gt;1&lt;/a&gt;&lt;/plain&gt;</set-body>");
         xml.Should().Contain("<set-body template=\"liquid\">{ \"a\": \"{{body.x}}\" }</set-body>");
+        // a comparison in a liquid tag doesn't stop the body from being markup: the gateway reads &lt; in a tag
+        xml.Should().Contain(
+            "<set-body template=\"liquid\">{% if body.n &lt; 2 &amp;&amp; body.m %}<p>{{body.x}} &amp; co</p>{% endif %}</set-body>");
     }
 }
