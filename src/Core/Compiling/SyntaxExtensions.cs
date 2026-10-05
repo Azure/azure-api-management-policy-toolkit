@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.IO;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -52,6 +53,14 @@ public static class SyntaxExtensions
             context.Report(Diagnostic.Create(
                 Diagnostics.CompilationErrors.InvalidDocumentName,
                 name.Location));
+        }
+        else if (!PathUtils.TryValidateOutputPath(name.Value!, out var validationError))
+        {
+            context.Report(Diagnostic.Create(
+                Diagnostics.CompilationErrors.InvalidDocumentOutputPath,
+                name.Location,
+                name.Value,
+                validationError));
         }
     }
 

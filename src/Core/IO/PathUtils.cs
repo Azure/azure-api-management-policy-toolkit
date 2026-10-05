@@ -18,14 +18,9 @@ public static class PathUtils
             .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
             .Replace(Path.DirectorySeparatorChar == '\\' ? '/' : '\\', Path.DirectorySeparatorChar);
 
-        if (IsRootedOnAnyPlatform(normalizedPath))
+        if (!TryValidateOutputPath(normalizedPath, out var validationError))
         {
-            throw new ArgumentException("The output path must be relative.", nameof(path));
-        }
-
-        if (normalizedPath.Split(Path.DirectorySeparatorChar).Contains(".."))
-        {
-            throw new ArgumentException("The output path cannot contain parent directory segments.", nameof(path));
+            throw new ArgumentException(validationError, nameof(path));
         }
 
         return Path.HasExtension(normalizedPath) ? normalizedPath : Path.ChangeExtension(normalizedPath, extension);
@@ -51,6 +46,28 @@ public static class PathUtils
         }
 
         return fullPath;
+    }
+
+    internal static bool TryValidateOutputPath(string path, out string? error)
+    {
+        var normalizedPath = path
+            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+            .Replace(Path.DirectorySeparatorChar == '\\' ? '/' : '\\', Path.DirectorySeparatorChar);
+
+        if (IsRootedOnAnyPlatform(normalizedPath))
+        {
+            error = "The output path must be relative";
+            return false;
+        }
+
+        if (normalizedPath.Split(Path.DirectorySeparatorChar).Contains(".."))
+        {
+            error = "The output path cannot contain parent directory segments";
+            return false;
+        }
+
+        error = null;
+        return true;
     }
 
     private static bool IsRootedOnAnyPlatform(string path)

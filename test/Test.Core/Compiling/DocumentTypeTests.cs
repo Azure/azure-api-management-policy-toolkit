@@ -192,6 +192,33 @@ public class DocumentTypeTests
     }
 
     [TestMethod]
+    [DataRow("../policy", "The output path cannot contain parent directory segments")]
+    [DataRow(@"..\policy.xml", "The output path cannot contain parent directory segments")]
+    [DataRow("/policy", "The output path must be relative")]
+    [DataRow(@"C:\policy.xml", "The output path must be relative")]
+    public void ShouldRejectDocumentNameOutsideOutputFolder(string documentName, string reason)
+    {
+        var document =
+            $$"""
+              [Document(@"{{documentName}}")]
+              public class PolicyDocument : IDocument
+              {
+                  public void Inbound(IInboundContext context)
+                  {
+                      context.Base();
+                  }
+              }
+              """;
+
+        var result = document.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM2021" &&
+            error.GetMessage() == $"Document name '{documentName}' is invalid: {reason}");
+        result.Errors.Single().Location.GetLineSpan().StartLinePosition.Line.Should().Be(5);
+    }
+
+    [TestMethod]
     public void ShouldReadDocumentTypeFromTheAttributeNotTheClassName()
     {
         // The type was matched by looking for "Fragment" anywhere in the attribute's arguments.
