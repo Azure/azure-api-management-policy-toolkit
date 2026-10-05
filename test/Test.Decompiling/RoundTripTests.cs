@@ -645,6 +645,17 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void QueryExpression_GetsTheLinqUsingDirective()
+    {
+        var xml = """<policies><inbound><set-variable name="a" value="@(string.Join(&quot;,&quot;, from h in context.Request.Headers select h.Key))" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("using System.Linq;");
+        CompileCSharp(csharp).Errors.Should().BeEmpty("the decompiled C# should compile.\nGenerated C#:\n{0}", csharp);
+    }
+
+    [TestMethod]
     public void DocumentWithoutSuchTypes_GetsNoExtraUsingDirectives()
     {
         var csharp = s_decompiler.DecompileDocument(

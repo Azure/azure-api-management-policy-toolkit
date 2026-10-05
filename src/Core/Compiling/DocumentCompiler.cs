@@ -27,7 +27,7 @@ public class DocumentCompiler
         // Only the document's own section methods: not those of nested classes, nor overloads taking anything
         // other than the section context, which would otherwise each become another section.
         var methods = document.Members.OfType<MethodDeclarationSyntax>()
-            .Where(TakesSectionContext);
+            .Where(method => TakesSectionContext(method, semanticModel));
         var rootElement = new XElement(documentType == DocumentType.Fragment ? "fragment" : "policies");
         var context = new DocumentCompilationContext(compilation, document, rootElement);
         document.ValidateDocumentName(semanticModel, context);
@@ -46,12 +46,19 @@ public class DocumentCompiler
         nameof(IFragmentContext)
     ];
 
-    // A section takes one section context, by the name as written: an overload such as Inbound(int) isn't one.
-    private static bool TakesSectionContext(MethodDeclarationSyntax method)
+    // A section takes one section context of the authoring library: an overload such as Inbound(int) isn't one.
+    // The name as written decides only when the type can't be resolved.
+    private static bool TakesSectionContext(MethodDeclarationSyntax method, SemanticModel model)
     {
         if (method.ParameterList.Parameters is not [{ Type: { } type }])
         {
             return false;
+        }
+
+        if (model.GetTypeInfo(type).Type is INamedTypeSymbol { TypeKind: not TypeKind.Error } symbol)
+        {
+            return SectionContexts.Contains(symbol.Name) &&
+                   symbol.ContainingNamespace?.ToDisplayString() == typeof(IDocument).Namespace;
         }
 
         var name = type switch

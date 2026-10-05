@@ -35,7 +35,9 @@ internal static class RequiredUsings
             "LastOrDefault", "Single", "SingleOrDefault", "Count", "Sum", "Min", "Max", "Average", "OrderBy",
             "OrderByDescending", "ThenBy", "GroupBy", "Distinct", "ToList", "ToArray", "ToDictionary", "Skip",
             "Take", "Contains", "Concat", "Union", "Intersect", "Except", "Aggregate", "Cast", "OfType", "Zip",
-            "Reverse", "ElementAt", "DefaultIfEmpty", "SequenceEqual", "ToLookup"
+            "Reverse", "ElementAt", "DefaultIfEmpty", "SequenceEqual", "ToLookup",
+            // a query expression: from x in y select z
+            "from"
         ]),
         ("System.Net", ["IPAddress", "WebUtility", "HttpStatusCode"]),
         ("System.Security.Claims", ["Claim"]),

@@ -162,6 +162,16 @@ public static class CompilerUtils
                 continue;
             }
 
+            if (value.UnnamedValues is null && IsCollectionProperty(context, assignment.Left))
+            {
+                // a collection that isn't written in place, such as a method call, has no items to emit
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.NotSupportedParameter,
+                    assignment.Right.GetLocation()
+                ));
+                continue;
+            }
+
             result[name] = value;
         }
 
@@ -186,6 +196,14 @@ public static class CompilerUtils
                context.Compilation.ContainsSyntaxTree(expression.SyntaxTree) &&
                CachedModel(context.Compilation, expression.SyntaxTree).GetConstantValue(expression) is
                    { HasValue: true, Value: null };
+    }
+
+    // Collections of the policy configurations are arrays; byte[] is a single binary value.
+    private static bool IsCollectionProperty(IDocumentCompilationContext context, ExpressionSyntax property)
+    {
+        return context.Compilation.ContainsSyntaxTree(property.SyntaxTree) &&
+               CachedModel(context.Compilation, property.SyntaxTree).GetTypeInfo(property).Type is
+                   IArrayTypeSymbol { ElementType.SpecialType: not SpecialType.System_Byte };
     }
 
     private static bool IsScalarProperty(IDocumentCompilationContext context, ExpressionSyntax property)

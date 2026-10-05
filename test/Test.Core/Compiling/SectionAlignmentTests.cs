@@ -71,12 +71,25 @@ public class SectionAlignmentTests
     {
         var code =
             """
+            using Aliased = Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.IBackendContext;
+
+            public interface IOnErrorContext { }
+
             [Document]
             public class PolicyDocument : IDocument
             {
                 public void Inbound(IInboundContext context)
                 {
                     context.Base();
+                }
+
+                public void Backend(Aliased context)
+                {
+                    context.Base();
+                }
+
+                public void OnError(Test.IOnErrorContext notTheAuthoringContext)
+                {
                 }
 
                 public void Inbound(IInboundContext context, int extra)
@@ -104,6 +117,9 @@ public class SectionAlignmentTests
                 <inbound>
                     <base />
                 </inbound>
+                <backend>
+                    <base />
+                </backend>
             </policies>
             """);
     }

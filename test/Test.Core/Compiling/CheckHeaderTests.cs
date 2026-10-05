@@ -218,6 +218,33 @@ public class CheckHeaderTests
     }
 
     [TestMethod]
+    public void ShouldReportValuesThatAreNotWrittenInPlace()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.CheckHeader(new CheckHeaderConfig
+                    {
+                        Name = "X-Required",
+                        FailCheckHttpCode = 400,
+                        FailCheckErrorMessage = "Missing header",
+                        IgnoreCase = true,
+                        Values = Allowed()
+                    });
+                }
+
+                static string[] Allowed() => new[] { "a" };
+            }
+            """;
+
+        code.CompileDocument().Errors.Should().ContainSingle(error => error.Id == "APIM2005");
+    }
+
+    [TestMethod]
     public void ShouldCompileDefaultOfAValueTypeAsItsValue()
     {
         // default is false here, not "not set"
