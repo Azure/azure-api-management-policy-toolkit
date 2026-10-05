@@ -108,6 +108,16 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
             return nestedNamedValue;
         }
 
+        // API Management types an expression by its code and rejects one typed object, so the cast to object
+        // that a helper declared to return object leaves around its result is dropped.
+        while (lowered is ExpressionSyntax expression && expression.Unparenthesized() is CastExpressionSyntax
+               {
+                   Type: PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.ObjectKeyword }
+               } cast)
+        {
+            lowered = cast.Expression;
+        }
+
         return FinalizeCode(lowered);
 
         SyntaxNode? CompileRootBody(bool renameAll)
@@ -530,7 +540,7 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
 
     // C# converts 300 to uint when a helper declared to return uint returns it, but the emitted expression
     // is only the 300, which API Management types as int. The conversion has to be written out.
-    private static bool TryGetImplicitNumericConversion(
+    internal static bool TryGetImplicitNumericConversion(
         SemanticModel model,
         ExpressionSyntax expression,
         [NotNullWhen(true)] out ITypeSymbol? target)

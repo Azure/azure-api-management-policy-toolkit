@@ -76,8 +76,8 @@ public class CacheStoreTests
     }
 
     [TestMethod]
-    // default is left out too; the references of this test compilation don't resolve bool?
     [DataRow("null")]
+    [DataRow("default")]
     [DataRow("(bool?)null")]
     public void ShouldLeaveOutCacheResponseThatIsNull(string cacheResponse)
     {

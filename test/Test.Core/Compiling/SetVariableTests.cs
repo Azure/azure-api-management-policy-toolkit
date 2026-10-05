@@ -159,12 +159,15 @@ public class SetVariableTests
     }
 
     [TestMethod]
-    // Uri and enum values are reported too; the references of this test compilation don't resolve them
+    // Uri values are reported too; the references of this test compilation don't resolve it
     [DataRow("object", "new { a = 1 }")]
+    [DataRow("System.DayOfWeek", "System.DayOfWeek.Monday")]
     [DataRow("object", "System.Tuple.Create(1, \"a\")")]
     [DataRow("object", "new System.Collections.Generic.Dictionary<string, string>()")]
     [DataRow("int[]", "new[] { 1 }")]
     [DataRow("object", "Inner(context)")]
+    [DataRow("object", "(object)new { a = 1 }")]
+    [DataRow("object", "((object)(Inner(context)))")]
     public void ShouldReportVariableValueOfATypeTheGatewayRejects(string returnType, string expression)
     {
         var result =

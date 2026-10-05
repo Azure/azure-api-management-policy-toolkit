@@ -50,7 +50,7 @@ public static class CompilerUtils
             case LiteralExpressionSyntax syntax:
                 return syntax.Token.ValueText;
             case InvocationExpressionSyntax syntax:
-                return FindCode(syntax, context);
+                return WithConversionToTarget(FindCode(syntax, context), syntax, semanticModel);
             case MemberAccessExpressionSyntax syntax:
                 return FindCode(syntax, context);
             // case InterpolatedStringExpressionSyntax syntax:
@@ -74,6 +74,16 @@ public static class CompilerUtils
                 ));
                 return "";
         }
+    }
+
+    // C# converts an int helper to the long of the property it is assigned to, such as TokenQuota, but the
+    // emitted expression is still typed int, which API Management rejects there. The conversion is written out.
+    private static string WithConversionToTarget(string code, ExpressionSyntax helperCall, SemanticModel? model)
+    {
+        return model is not null && code.StartsWith("@(", StringComparison.Ordinal) && code.EndsWith(')') &&
+               PolicyExpressionCompiler.TryGetImplicitNumericConversion(model, helperCall, out var target)
+            ? $"@(({target.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)})({code[2..^1]}))"
+            : code;
     }
 
     public static string FindCode(this InvocationExpressionSyntax syntax, IDocumentCompilationContext context)

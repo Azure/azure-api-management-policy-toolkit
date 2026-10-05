@@ -99,22 +99,30 @@ public class SetVariableCompiler : IMethodPolicyHandler
         }
 
         var model = CompilerUtils.CachedModel(context.Compilation, value.SyntaxTree);
-        if (value is not InvocationExpressionSyntax invocation)
+        switch (value)
+        {
+            case ParenthesizedExpressionSyntax parenthesized:
+                return FindRejectedValueType(context, parenthesized.Expression, visited);
+            // a cast to object keeps the value it is given
+            case CastExpressionSyntax cast when model.GetTypeInfo(cast).Type is { SpecialType: SpecialType.System_Object }:
+                return FindRejectedValueType(context, cast.Expression, visited);
+        }
+
+        if (value is not InvocationExpressionSyntax invocation ||
+            model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
+            method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is not MethodDeclarationSyntax declaration ||
+            !context.Compilation.ContainsSyntaxTree(declaration.SyntaxTree))
         {
             // A value written in place, such as DayOfWeek.Monday, would otherwise be emitted as plain text.
             return model.GetTypeInfo(value).Type is { } type && IsRejectedValueType(type) ? type : null;
         }
 
-        if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
-            method.GetAttributes().Any(attribute => attribute.AttributeClass?.Name == nameof(NamedValueAttribute)) ||
-            method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is not MethodDeclarationSyntax declaration ||
-            !context.Compilation.ContainsSyntaxTree(declaration.SyntaxTree) ||
+        if (method.GetAttributes().Any(attribute => attribute.AttributeClass?.Name == nameof(NamedValueAttribute)) ||
             !(visited ??= new HashSet<ISymbol>(SymbolEqualityComparer.Default)).Add(method))
         {
             return null;
         }
 
-        var declarationModel = CompilerUtils.CachedModel(context.Compilation, declaration.SyntaxTree);
         var returned = declaration.ExpressionBody is { } arrow
             ? [arrow.Expression]
             : declaration.Body?.DescendantNodes(node => node is not (LambdaExpressionSyntax or LocalFunctionStatementSyntax))
@@ -122,9 +130,7 @@ public class SetVariableCompiler : IMethodPolicyHandler
                 .Select(statement => statement.Expression)
                 .OfType<ExpressionSyntax>() ?? [];
         return returned
-            .Select(expression => declarationModel.GetTypeInfo(expression).Type is { } type && IsRejectedValueType(type)
-                ? type
-                : expression is InvocationExpressionSyntax ? FindRejectedValueType(context, expression, visited) : null)
+            .Select(expression => FindRejectedValueType(context, expression, visited))
             .FirstOrDefault(type => type is not null);
     }
 

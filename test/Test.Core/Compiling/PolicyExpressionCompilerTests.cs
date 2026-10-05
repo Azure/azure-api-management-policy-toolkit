@@ -630,7 +630,7 @@ public partial class PolicyExpressionCompilerTests
     }
 
     [TestMethod]
-    public void ShouldWriteOutImplicitNumericConversionOfReturnedValue()
+    public void ShouldWriteOutOnlyTheConversionsOfAReturnedValueThatTheGatewayNeeds()
     {
         var code =
             """
@@ -644,7 +644,11 @@ public partial class PolicyExpressionCompilerTests
                     context.SetVariable("c", Same(context.ExpressionContext));
                     context.SetVariable("d", Block(context.ExpressionContext));
                     context.SetVariable("e", Optional(context.ExpressionContext));
+                    context.SetVariable("f", Boxed(context.ExpressionContext));
                 }
+
+                object Boxed(IExpressionContext context) => Inner(context);
+                object Inner(IExpressionContext context) => context.Request.Method;
 
                 uint? Optional(IExpressionContext context) => 300;
                 uint MaxAge(IExpressionContext context) => 300;
@@ -679,6 +683,7 @@ public partial class PolicyExpressionCompilerTests
             return (uint)status;
             }" />
                     <set-variable name="e" value="@((uint)300)" />
+                    <set-variable name="f" value="@(context.Request.Method)" />
                 </inbound>
             </policies>
             """);

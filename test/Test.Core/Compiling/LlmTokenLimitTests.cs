@@ -161,7 +161,7 @@ public class LlmTokenLimitTests
         """
         <policies>
             <inbound>
-                <llm-token-limit counter-key="counter-key" estimate-prompt-tokens="true" token-quota="@(context.User.Groups.Contains("premium") ? 50000 : 20000)" token-quota-period="Daily" />
+                <llm-token-limit counter-key="counter-key" estimate-prompt-tokens="true" token-quota="@((long)(context.User.Groups.Contains("premium") ? 50000 : 20000))" token-quota-period="Daily" />
             </inbound>
         </policies>
         """,

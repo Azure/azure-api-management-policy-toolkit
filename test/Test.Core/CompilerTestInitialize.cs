@@ -19,6 +19,9 @@ public static class CompilerTestInitialize
     private static readonly IEnumerable<MetadataReference> References =
     [
         MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+        // the authoring library refers to the types of its members through System.Runtime
+        MetadataReference.CreateFromFile(
+            Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location)!, "System.Runtime.dll")),
         MetadataReference.CreateFromFile(typeof(XElement).Assembly.Location),
         MetadataReference.CreateFromFile(typeof(IDocument).Assembly.Location)
     ];
