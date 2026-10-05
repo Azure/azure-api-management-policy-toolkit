@@ -645,6 +645,17 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void TokenQuotaNamedValue_GetsALongHelper()
+    {
+        var xml = """<policies><inbound><llm-token-limit counter-key="@(context.Request.IpAddress)" estimate-prompt-tokens="true" token-quota="{{quota}}" token-quota-period="Daily" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("long NamedValue_Quota");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
     public void QueryExpression_GetsTheLinqUsingDirective()
     {
         var xml = """<policies><inbound><set-variable name="a" value="@(string.Join(&quot;,&quot;, from h in context.Request.Headers select h.Key))" /></inbound></policies>""";
