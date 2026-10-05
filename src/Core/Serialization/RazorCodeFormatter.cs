@@ -30,8 +30,15 @@ public static class RazorCodeFormatter
     /// </summary>
     public static void FormatExpressions(XElement element)
     {
+        // The markup of a liquid set-body is template text: an @(...) in it isn't a policy expression.
+        var templates = element.DescendantsAndSelf().Where(RawXmlContent.IsMarkupBody).ToList();
         foreach (var node in element.DescendantsAndSelf())
         {
+            if (templates.Any(template => node == template || node.Ancestors().Contains(template)))
+            {
+                continue;
+            }
+
             foreach (var attribute in node.Attributes())
             {
                 if (CSharpCodeStart.IsMatch(attribute.Value))

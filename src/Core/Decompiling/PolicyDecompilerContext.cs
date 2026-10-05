@@ -5,6 +5,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
 
 public record ExpressionMethodInfo(
@@ -755,9 +757,15 @@ public class PolicyDecompilerContext
         {
             return string.Concat(element.Nodes().OfType<XText>().Select(t => t.Value));
         }
+        if (RawXmlContent.IsMarkupBody(element))
+        {
+            // The markup of a liquid body is template text and stays XML: an @(...) in it isn't an expression,
+            // and written raw its reserved characters would stop the body from being read back as markup.
+            return string.Concat(element.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting)));
+        }
         if (element.HasElements)
         {
-            // Markup content (e.g. a liquid or SOAP body) is kept as written instead of flattened to its text.
+            // Other markup content (e.g. a SOAP body) is kept as written instead of flattened to its text.
             return GetInnerRawXml(element);
         }
         return element.Value;

@@ -107,4 +107,16 @@ public class RazorCodeFormatterLexicalTests
         element.ToString(SaveOptions.DisableFormatting).Should()
             .Be("<foo>@(1 + 1)<b>@(2 + 2)</b><!-- c -->@(3 + 3)</foo>");
     }
+
+    [TestMethod]
+    public void ShouldLeaveTheMarkupOfALiquidBodyAsItIs()
+    {
+        var element = XElement.Parse(
+            """<foo a="@(1+1)"><set-body template="liquid"><e x="@(2+2)">@(3+3)</e></set-body><set-body>@(4+4)</set-body></foo>""");
+
+        RazorCodeFormatter.FormatExpressions(element);
+
+        element.ToString(SaveOptions.DisableFormatting).Should().Be(
+            """<foo a="@(1 + 1)"><set-body template="liquid"><e x="@(2+2)">@(3+3)</e></set-body><set-body>@(4 + 4)</set-body></foo>""");
+    }
 }

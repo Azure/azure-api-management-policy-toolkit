@@ -490,6 +490,10 @@ public class RoundTripTests
         DisplayName = "Inline policy with characters XML escapes in expressions")]
     [DataRow("""<inbound><choose><when condition="true" /></choose></inbound>""",
         DisplayName = "choose with an empty when")]
+    [DataRow("""<inbound><set-body template="liquid"><E a="@(&quot;x&quot;)">@(1 &lt; 2) &amp; {{body.x}}</E></set-body></inbound>""",
+        DisplayName = "liquid body with expression-like text in its markup")]
+    [DataRow("""<inbound><return-response><set-body template="liquid"><E>@(context.Request.Method == "GET" &amp;&amp; 1 &lt; 2)</E></set-body></return-response></inbound>""",
+        DisplayName = "nested liquid body with expression-like text in its markup")]
     [DataRow("""<inbound><retry condition="@(context.Response.StatusCode == 500)" count="3" interval="1"><base /></retry></inbound>""",
         DisplayName = "retry with an expression condition")]
     [DataRow("""<inbound><choose><when condition="@(1 &gt; 0)"><base /></when><otherwise /></choose></inbound>""",
