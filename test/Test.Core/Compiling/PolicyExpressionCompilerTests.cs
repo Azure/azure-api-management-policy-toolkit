@@ -643,8 +643,10 @@ public partial class PolicyExpressionCompilerTests
                     context.SetVariable("b", Count(context.ExpressionContext));
                     context.SetVariable("c", Same(context.ExpressionContext));
                     context.SetVariable("d", Block(context.ExpressionContext));
+                    context.SetVariable("e", Optional(context.ExpressionContext));
                 }
 
+                uint? Optional(IExpressionContext context) => 300;
                 uint MaxAge(IExpressionContext context) => 300;
                 long Count(IExpressionContext context) => context.Response.StatusCode + 1;
                 int Same(IExpressionContext context) => context.Response.StatusCode;
@@ -676,6 +678,7 @@ public partial class PolicyExpressionCompilerTests
 
             return (uint)status;
             }" />
+                    <set-variable name="e" value="@((uint)300)" />
                 </inbound>
             </policies>
             """);

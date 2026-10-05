@@ -13,7 +13,7 @@ internal abstract class PolicyHandler<TConfig> : IPolicyHandler
 
     public object? Handle(GatewayContext context, object?[]? args)
     {
-        var config = args.ExtractArgument<TConfig>();
+        var config = ExtractArgument(args);
         var callbackHook = CallbackSetup.Find(hook => hook.Item1(context, config));
         if (callbackHook is not null)
         {
@@ -26,6 +26,8 @@ internal abstract class PolicyHandler<TConfig> : IPolicyHandler
 
         return null;
     }
+
+    protected virtual TConfig ExtractArgument(object?[]? args) => args.ExtractArgument<TConfig>();
 
     protected abstract void Handle(GatewayContext context, TConfig config);
 }

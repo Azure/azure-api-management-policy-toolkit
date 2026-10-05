@@ -133,7 +133,7 @@ public class SetVariableCompiler : IMethodPolicyHandler
         null or IDynamicTypeSymbol or IErrorTypeSymbol => false,
         { TypeKind: TypeKind.Enum } => true,
         IArrayTypeSymbol array => array.Rank != 1 || array.ElementType.SpecialType is not
-            (SpecialType.System_String or SpecialType.System_Byte or SpecialType.System_SByte),
+            (SpecialType.System_String or SpecialType.System_Byte),
         INamedTypeSymbol named => named.IsAnonymousType || named.IsTupleType ||
                                   named.ToDisplayString() == "System.Uri" ||
                                   named.OriginalDefinition.ToDisplayString() is

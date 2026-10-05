@@ -490,12 +490,16 @@ public class RoundTripTests
         DisplayName = "Inline policy with characters XML escapes in expressions")]
     [DataRow("""<inbound><choose><when condition="true" /></choose></inbound>""",
         DisplayName = "choose with an empty when")]
+    [DataRow("""<inbound><retry condition="@(context.Response.StatusCode == 500)" count="3" interval="1"><base /></retry></inbound>""",
+        DisplayName = "retry with an expression condition")]
     [DataRow("""<inbound><choose><when condition="@(1 &gt; 0)"><base /></when><otherwise /></choose></inbound>""",
         DisplayName = "choose with an empty otherwise")]
     [DataRow("""<inbound><send-request mode="new" response-variable-name="r"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="AAECAw==" password="p" /></send-request></inbound>""",
         DisplayName = "send-request with a literal certificate body")]
     [DataRow("""<inbound><llm-semantic-cache-lookup score-threshold="{{threshold}}" embeddings-backend-id="embeddings" embeddings-backend-auth="system-assigned" /></inbound>""",
         DisplayName = "semantic cache lookup score threshold from a named value")]
+    [DataRow("""<inbound><llm-semantic-cache-lookup score-threshold="0.{{fraction}}" embeddings-backend-id="embeddings" embeddings-backend-auth="system-assigned" /></inbound>""",
+        DisplayName = "semantic cache lookup score threshold put together from a named value")]
     [DataRow("""<inbound><send-request response-variable-name="r" mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="{{certificate}}" /></send-request></inbound>""",
         DisplayName = "send-request with a certificate body from a named value")]
     public void ConformancePolicy_RoundTrips(string sections)

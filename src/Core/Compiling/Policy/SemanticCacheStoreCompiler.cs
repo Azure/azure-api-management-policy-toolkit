@@ -6,7 +6,6 @@ using System.Xml.Linq;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
@@ -44,7 +43,7 @@ public abstract class BaseSemanticCacheStoreCompiler : IMethodPolicyHandler
         var element = new XElement(_policyName);
         element.Add(new XAttribute("duration", arguments[0].Expression.ProcessParameter(context)));
 
-        if (arguments.Count == 2 && !arguments[1].Expression.IsKind(SyntaxKind.NullLiteralExpression))
+        if (arguments.Count == 2 && !CompilerUtils.IsNull(arguments[1].Expression, context))
         {
             element.Add(new XAttribute("cache-response", arguments[1].Expression.ProcessParameter(context)));
         }

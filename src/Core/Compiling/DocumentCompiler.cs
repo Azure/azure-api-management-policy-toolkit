@@ -40,12 +40,6 @@ public class DocumentCompiler
         return context;
     }
 
-    private static readonly HashSet<string> SectionContexts =
-    [
-        nameof(IInboundContext), nameof(IBackendContext), nameof(IOutboundContext), nameof(IOnErrorContext),
-        nameof(IFragmentContext)
-    ];
-
     // A section takes one section context of the authoring library: an overload such as Inbound(int) isn't one.
     // The name as written decides only when the type can't be resolved.
     private static bool TakesSectionContext(MethodDeclarationSyntax method, SemanticModel model)
@@ -55,10 +49,9 @@ public class DocumentCompiler
             return false;
         }
 
-        if (model.GetTypeInfo(type).Type is INamedTypeSymbol { TypeKind: not TypeKind.Error } symbol)
+        if (model.GetTypeInfo(type).Type is { TypeKind: not TypeKind.Error } symbol)
         {
-            return SectionContexts.Contains(symbol.Name) &&
-                   symbol.ContainingNamespace?.ToDisplayString() == typeof(IDocument).Namespace;
+            return PolicyExpressionCompiler.IsAuthoringSectionContext(symbol);
         }
 
         var name = type switch
@@ -67,7 +60,7 @@ public class DocumentCompiler
             AliasQualifiedNameSyntax aliased => aliased.Name,
             _ => type as SimpleNameSyntax
         };
-        return name is not null && SectionContexts.Contains(name.Identifier.ValueText);
+        return name is not null && PolicyExpressionCompiler.IsSectionContextName(name.Identifier.ValueText);
     }
 
     private void CompilePolicy(DocumentCompilationContext context, IEnumerable<MethodDeclarationSyntax> methods)

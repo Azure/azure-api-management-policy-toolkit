@@ -74,4 +74,32 @@ public class CacheStoreTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    // default is left out too; the references of this test compilation don't resolve bool?
+    [DataRow("null")]
+    [DataRow("(bool?)null")]
+    public void ShouldLeaveOutCacheResponseThatIsNull(string cacheResponse)
+    {
+        var code =
+            $$"""
+              [Document]
+              public class PolicyDocument : IDocument
+              {
+                  public void Outbound(IOutboundContext context)
+                  {
+                      context.CacheStore(10, {{cacheResponse}});
+                  }
+              }
+              """;
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <outbound>
+                    <cache-store duration="10" />
+                </outbound>
+            </policies>
+            """);
+    }
 }

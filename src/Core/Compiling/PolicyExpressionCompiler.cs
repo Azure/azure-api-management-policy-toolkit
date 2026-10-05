@@ -542,7 +542,14 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
         }
 
         var info = model.GetTypeInfo(expression);
-        if (info.Type is not { } type || info.ConvertedType is not { } converted ||
+        var converted = info.ConvertedType;
+        if (converted is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable)
+        {
+            // a helper declared to return uint? converts 300 the same way
+            converted = nullable.TypeArguments[0];
+        }
+
+        if (info.Type is not { } type || converted is null ||
             !IsNumeric(type) || !IsNumeric(converted) ||
             SymbolEqualityComparer.Default.Equals(type, converted))
         {
@@ -653,14 +660,17 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
             Name: { } name,
             ContainingNamespace: { } containingNamespace
         } &&
-        name is (nameof(IHaveExpressionContext)
+        IsSectionContextName(name) &&
+        containingNamespace.ToDisplayString() ==
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring";
+
+    internal static bool IsSectionContextName(string name) =>
+        name is nameof(IHaveExpressionContext)
             or nameof(IInboundContext)
             or nameof(IOutboundContext)
             or nameof(IBackendContext)
             or nameof(IOnErrorContext)
-            or nameof(IFragmentContext)) &&
-        containingNamespace.ToDisplayString() ==
-        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring";
+            or nameof(IFragmentContext);
 
     private static bool IsSafeSourceHelper(
         InvocationExpressionSyntax invocation,

@@ -104,12 +104,13 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
             innerInvocation.Expression is MemberAccessExpressionSyntax innerMemberAccess &&
             innerMemberAccess.Name.ToString() == "WithId")
         {
-            if (context.PendingPolicyId is null && innerInvocation.ArgumentList.Arguments.Count == 1)
+            if (innerInvocation.ArgumentList.Arguments.Count == 1)
             {
                 var argExpression = innerInvocation.ArgumentList.Arguments[0].Expression;
                 var idValue = ExtractConstantStringValue(context, argExpression);
                 if (idValue is not null)
                 {
+                    ReportPendingPolicyId(context, innerInvocation);
                     context.PendingPolicyId = idValue;
                 }
             }
@@ -156,8 +157,22 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
             return false;
         }
 
+        ReportPendingPolicyId(context, withIdInvocation);
         context.PendingPolicyId = id;
         return true;
+    }
+
+    // An id that is still waiting for its policy when the next id is given was not followed by one.
+    private static void ReportPendingPolicyId(IDocumentCompilationContext context, SyntaxNode nextId)
+    {
+        if (context.PendingPolicyId is { } pending)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.PolicyIdWithoutPolicy,
+                nextId.GetLocation(),
+                pending
+            ));
+        }
     }
 
     /// <summary>

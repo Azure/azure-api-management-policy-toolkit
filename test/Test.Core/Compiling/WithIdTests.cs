@@ -354,15 +354,15 @@ public class WithIdCompilationTests
     }
 
     [TestMethod]
-    public void ShouldReportWithIdThatNoPolicyFollows()
+    [DataRow("""context.SetHeader("X-A", "1"); context.WithId("orphan");""")]
+    [DataRow("""context.WithId("orphan"); context.WithId("kept"); context.Base();""")]
+    [DataRow("""context.WithId("orphan"); context.WithId("kept").SetHeader("X-A", "1");""")]
+    public void ShouldReportWithIdThatNoPolicyFollows(string statements)
     {
-        var result = CompilerTestInitialize.InboundDocument(
-            """
-            context.SetHeader("X-A", "1");
-            context.WithId("orphan");
-            """).CompileDocument();
+        var result = CompilerTestInitialize.InboundDocument(statements).CompileDocument();
 
-        result.Errors.Should().ContainSingle(error => error.Id == "APIM2033");
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM2033" && error.GetMessage(null).Contains("orphan"));
     }
 
     [TestMethod]

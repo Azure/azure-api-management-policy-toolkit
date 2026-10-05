@@ -71,7 +71,7 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
             // the gateway accepts string[] and byte[] as the value of an expression, but not int[]
             case IArrayTypeSymbol { Rank: 1 } array:
                 return array.ElementType.SpecialType is
-                    SpecialType.System_String or SpecialType.System_Byte or SpecialType.System_SByte;
+                    SpecialType.System_String or SpecialType.System_Byte;
             case INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable:
                 return IsAllowedReturnType(nullable.TypeArguments[0]);
             default:

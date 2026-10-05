@@ -150,6 +150,13 @@ public static class CompilerUtils
                 continue;
             }
 
+            // A callback, such as RetryConfig.ConditionEvaluator, is only run by the emulator and isn't part of
+            // the policy.
+            if (assignment.Right is AnonymousFunctionExpressionSyntax || IsDelegateProperty(context, assignment.Left))
+            {
+                continue;
+            }
+
             var name = assignment.Left.ToString();
             var value = assignment.Right.ProcessExpression(context);
             if (value.Value is null && IsScalarProperty(context, assignment.Left))
@@ -184,17 +191,49 @@ public static class CompilerUtils
     }
 
     // null, or a constant that is null: default or default(string) for a reference type, (string?)null, a null
-    // const. default for a value type is zero or false and is a value like any other.
-    private static bool IsNull(ExpressionSyntax expression, IDocumentCompilationContext context)
+    // const, and default for a nullable value type. default for a value type is zero or false and is a value like
+    // any other.
+    internal static bool IsNull(ExpressionSyntax expression, IDocumentCompilationContext context)
     {
         if (expression.IsKind(SyntaxKind.NullLiteralExpression))
         {
             return true;
         }
 
-        return context.Compilation.ContainsSyntaxTree(expression.SyntaxTree) &&
-               CachedModel(context.Compilation, expression.SyntaxTree).GetConstantValue(expression) is
-                   { HasValue: true, Value: null };
+        // (bool?)null is not a constant either
+        switch (expression)
+        {
+            case CastExpressionSyntax cast:
+                return IsNull(cast.Expression, context);
+            case ParenthesizedExpressionSyntax parenthesized:
+                return IsNull(parenthesized.Expression, context);
+        }
+
+        if (!context.Compilation.ContainsSyntaxTree(expression.SyntaxTree))
+        {
+            return false;
+        }
+
+        var model = CachedModel(context.Compilation, expression.SyntaxTree);
+        if (model.GetConstantValue(expression) is { HasValue: true, Value: null })
+        {
+            return true;
+        }
+
+        // default for a nullable value type, such as bool?, is null without being a constant
+        return expression is LiteralExpressionSyntax or DefaultExpressionSyntax &&
+               expression.Kind() is SyntaxKind.DefaultLiteralExpression or SyntaxKind.DefaultExpression &&
+               model.GetTypeInfo(expression).ConvertedType is INamedTypeSymbol
+               {
+                   OriginalDefinition.SpecialType: SpecialType.System_Nullable_T
+               };
+    }
+
+    private static bool IsDelegateProperty(IDocumentCompilationContext context, ExpressionSyntax property)
+    {
+        return context.Compilation.ContainsSyntaxTree(property.SyntaxTree) &&
+               CachedModel(context.Compilation, property.SyntaxTree).GetTypeInfo(property).Type is
+                   { TypeKind: TypeKind.Delegate };
     }
 
     // Collections of the policy configurations are arrays; byte[] is a single binary value.
