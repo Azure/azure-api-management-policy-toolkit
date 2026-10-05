@@ -21,7 +21,7 @@
   "defaultName": "PolicyFragment1",
   "primaryOutputs": [
     {
-      "path": ".cs"
+      "path": "PolicyFragment1.cs"
     }
   ],
   "symbols": {

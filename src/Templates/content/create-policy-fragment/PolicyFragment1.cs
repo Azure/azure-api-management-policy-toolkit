@@ -1,3 +1,5 @@
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+
 namespace Company.PolicyProject1;
 
 [Document(Type = DocumentType.Fragment)]
