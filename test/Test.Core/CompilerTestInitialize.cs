@@ -42,6 +42,29 @@ public static class CompilerTestInitialize
         s_serviceProvider.Dispose();
     }
 
+    /// <summary>A policy document whose inbound section holds the statements.</summary>
+    public static string InboundDocument(string statements) =>
+        $$"""
+          [Document]
+          public class PolicyDocument : IDocument
+          {
+              public void Inbound(IInboundContext context)
+              {
+                  {{statements}}
+              }
+          }
+          """;
+
+    /// <summary>The policy XML of a document whose inbound section holds the policy.</summary>
+    public static string InboundXml(string policy) =>
+        $"""
+         <policies>
+             <inbound>
+                 {policy.ReplaceLineEndings("\n        ")}
+             </inbound>
+         </policies>
+         """;
+
     public static IDocumentCompilationResult CompileDocument(this string document) => document.CompileDocument([]);
 
     public static IDocumentCompilationResult CompileDocument(this string document, params string[] separateDocuments)

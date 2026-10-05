@@ -46,8 +46,9 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
             return result;
         }
 
+        var projectFolder = Path.GetDirectoryName(Path.GetFullPath(options.ProjectPath))!;
         var onlyUserSyntaxTrees =
-            compilation.SyntaxTrees.Where(t => PathUtils.IsNotInObjOrBinFolder(Path.GetFullPath(t.FilePath)));
+            compilation.SyntaxTrees.Where(t => PathUtils.IsNotInObjOrBinFolder(t.FilePath, projectFolder));
 
         foreach (var syntaxTree in onlyUserSyntaxTrees)
         {
