@@ -10,12 +10,14 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 public class MetricDimensionConfig
 {
     /// <summary>
-    /// Required. The name of the dimension.
+    /// Required. The name of the dimension. Can be a static value or a policy expression.
     /// </summary>
+    [ExpressionAllowed]
     public required string Name { get; init; }
 
     /// <summary>
-    /// Required. The value for the dimension. Can be a static value or a policy expression.
+    /// The value for the dimension. Can be a static value or a policy expression.
+    /// Can only be omitted if the name matches one of the default dimensions.
     /// Examples: "gpt-4", "completions", or expressions like "@(context.Request.Headers.GetValueOrDefault("x-operation-id"))".
     /// </summary>
     [ExpressionAllowed]

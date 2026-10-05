@@ -19,5 +19,5 @@ public record StatusConfig
     /// A description of the reason for returning the status code. Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public required string Reason { get; init; }
+    public string? Reason { get; init; }
 };

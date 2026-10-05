@@ -25,5 +25,7 @@ public interface IRequest
 
     IPrivateEndpointConnection? PrivateEndpointConnection { get; }
 
+    IFoundry? Foundry { get; }
+
     IAzureVnetInfo? AzureVnetInfo { get; }
 }

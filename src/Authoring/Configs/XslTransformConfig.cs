@@ -10,9 +10,8 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 public record XslTransformConfig
 {
     /// <summary>
-    /// The XSLT stylesheet to use for the transformation. Policy expressions are allowed.
+    /// The XSLT stylesheet to use for the transformation, as XML.
     /// </summary>
-    [ExpressionAllowed]
     public required string StyleSheet { get; init; }
 
     /// <summary>

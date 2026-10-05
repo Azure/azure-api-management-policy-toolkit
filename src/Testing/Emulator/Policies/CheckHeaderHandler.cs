@@ -26,7 +26,7 @@ internal class CheckHeaderHandler : PolicyHandler<CheckHeaderConfig>
         bool pass = false;
         if (context.Request.Headers.TryGetValue(config.Name, out var values) && values.Length == 1)
         {
-            pass = config.Values.Length == 0 || config.Values.Contains(values[0], ValueComparer(config));
+            pass = config.Values is null || config.Values.Length == 0 || config.Values.Contains(values[0], ValueComparer(config));
         }
 
         if (pass)

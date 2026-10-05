@@ -45,6 +45,11 @@ public class RateLimitByKeyCompiler : IMethodPolicyHandler
             return;
         }
 
+        if (context.ReportIfOutOfRange(values, nameof(RateLimitByKeyConfig.RenewalPeriod), "rate-limit-by-key", 1, 300))
+        {
+            return;
+        }
+
         if (!element.AddAttribute(values, nameof(RateLimitByKeyConfig.CounterKey), "counter-key"))
         {
             context.Report(Diagnostic.Create(

@@ -8,7 +8,7 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 /// This policy establishes a secure TLS channel with the backend and sends the client certificate as part of the TLS handshake.
 /// </summary>
 /// <remarks>
-/// You must provide exactly one of the following: Thumbprint, CertificateId, or a combination of Body and Password.
+/// You must provide exactly one of the following: Thumbprint, CertificateId, or Body (with Password when the certificate is password protected).
 /// </remarks>
 public record CertificateAuthenticationConfig : IAuthenticationConfig
 {
@@ -17,7 +17,7 @@ public record CertificateAuthenticationConfig : IAuthenticationConfig
     /// The certificate must be added to the API Management service.
     /// </summary>
     /// <remarks>
-    /// This property is mutually exclusive with CertificateId and Body+Password.
+    /// This property is mutually exclusive with CertificateId and Body.
     /// </remarks>
     [ExpressionAllowed]
     public string? Thumbprint { get; init; }
@@ -27,7 +27,7 @@ public record CertificateAuthenticationConfig : IAuthenticationConfig
     /// The certificate must be added to the API Management service.
     /// </summary>
     /// <remarks>
-    /// This property is mutually exclusive with Thumbprint and Body+Password.
+    /// This property is mutually exclusive with Thumbprint and Body.
     /// </remarks>
     [ExpressionAllowed]
     public string? CertificateId { get; init; }
@@ -36,7 +36,7 @@ public record CertificateAuthenticationConfig : IAuthenticationConfig
     /// Specifies the raw client certificate as a base64-encoded string.
     /// </summary>
     /// <remarks>
-    /// This property must be used with Password and is mutually exclusive with Thumbprint and CertificateId.
+    /// Use Password as well when the certificate is password protected. This property is mutually exclusive with Thumbprint and CertificateId.
     /// </remarks>
     [ExpressionAllowed]
     public byte[]? Body { get; init; }
@@ -45,7 +45,7 @@ public record CertificateAuthenticationConfig : IAuthenticationConfig
     /// Specifies the password for the client certificate, if the certificate is password-protected.
     /// </summary>
     /// <remarks>
-    /// This property must be used with Body and is mutually exclusive with Thumbprint and CertificateId.
+    /// This property can only be used with Body and is mutually exclusive with Thumbprint and CertificateId.
     /// </remarks>
     [ExpressionAllowed]
     public string? Password { get; init; }

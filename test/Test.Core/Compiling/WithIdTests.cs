@@ -352,4 +352,29 @@ public class WithIdCompilationTests
             """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldReportWithIdThatNoPolicyFollows()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.SetHeader("X-A", "1");
+            context.WithId("orphan");
+            """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2033");
+    }
+
+    [TestMethod]
+    public void ShouldNotMoveIdOfAPolicyThatFailedToTheNextPolicy()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.WithId("limit").RateLimit(new RateLimitConfig { RenewalPeriod = 10 });
+            context.SetHeader("X-A", "1");
+            """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2006");
+        result.Document.Descendants("set-header").Single().Attribute("id").Should().BeNull();
+    }
 }

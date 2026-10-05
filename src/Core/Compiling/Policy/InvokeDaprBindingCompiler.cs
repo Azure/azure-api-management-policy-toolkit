@@ -110,22 +110,4 @@ public class InvokeDaprBindingCompiler : IMethodPolicyHandler
 
         parentElement.Add(element);
     }
-
-    private static void HandleData(IDocumentCompilationContext context, InitializerValue dataValue,
-        XElement parentElement)
-    {
-        if (dataValue.Value is null)
-        {
-            return;
-        }
-
-        XElement dataElement = new("data");
-
-        foreach (InitializerValue item in dataValue.UnnamedValues)
-        {
-            dataElement.Add(new XElement("item", item.Value));
-        }
-
-        parentElement.Add(dataElement);
-    }
 }

@@ -64,12 +64,12 @@ public abstract class BaseTokenLimitCompiler : IMethodPolicyHandler
             element.AddAttribute(values, nameof(TokenLimitConfig.TokensPerMinute), "tokens-per-minute");
         var quotaAdded = element.AddAttribute(values, nameof(TokenLimitConfig.TokenQuota), "token-quota");
 
-        if (tokensPerMinuteAdded == quotaAdded)
+        if (!tokensPerMinuteAdded && !quotaAdded)
         {
             context.Report(Diagnostic.Create(
-                CompilationErrors.OnlyOneOfTwoShouldBeDefined,
+                CompilationErrors.AtLeastOneOfTwoShouldBeDefined,
                 node.GetLocation(),
-                "llm-token-limit",
+                _policyName,
                 nameof(TokenLimitConfig.TokensPerMinute),
                 nameof(TokenLimitConfig.TokenQuota)
             ));

@@ -12,7 +12,7 @@ public record HeaderConfig
     public required string Name { get; init; }
 
     /// <summary>
-    /// Specifies the action to take if the header already exists. Possible values are "override" and "skip". Policy expressions are allowed.
+    /// Specifies the action to take if the header already exists. Possible values are "override" (default), "skip", "append" and "delete". Policy expressions are allowed.
     /// </summary>
     [ApimDefaultValue("override", "exists-action")]
     [ExpressionAllowed]

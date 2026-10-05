@@ -16,7 +16,7 @@ public class XmlToJsonCompiler : IMethodPolicyHandler
 
     public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
-        if (!node.TryExtractingConfigParameter<XmlToJsonConfig>(context, "xml-to=json", out var values))
+        if (!node.TryExtractingConfigParameter<XmlToJsonConfig>(context, "xml-to-json", out var values))
         {
             return;
         }

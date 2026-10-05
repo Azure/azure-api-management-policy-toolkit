@@ -51,7 +51,7 @@ internal class ReturnResponseHandler : IPolicyHandler
         if (config.Status is not null)
         {
             response.StatusCode = config.Status.Code;
-            response.StatusReason = config.Status.Reason;
+            response.StatusReason = config.Status.Reason ?? string.Empty;
         }
 
         foreach (var header in config.Headers ?? [])

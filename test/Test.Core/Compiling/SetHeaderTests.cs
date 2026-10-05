@@ -248,4 +248,15 @@ public class SetHeaderCompilationTests
             """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldReportNullPolicyArgument()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.SetHeader("X-Null", null);
+            """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2005");
+    }
 }

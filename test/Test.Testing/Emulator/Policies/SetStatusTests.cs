@@ -33,6 +33,25 @@ public class SetStatusTests
         }
     }
 
+    class SetStatusWithoutReason : IDocument
+    {
+        public void Inbound(IInboundContext context)
+        {
+            context.SetStatus(new StatusConfig() { Code = 404 });
+        }
+    }
+
+    [TestMethod]
+    public void SetStatus_WithoutReason()
+    {
+        var test = new SetStatusWithoutReason().AsTestDocument();
+
+        test.RunInbound();
+
+        test.Context.Response.StatusCode.Should().Be(404);
+        test.Context.Response.StatusReason.Should().BeEmpty();
+    }
+
     [TestMethod]
     public void SetStatus_Callback()
     {

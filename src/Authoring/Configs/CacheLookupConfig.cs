@@ -29,22 +29,22 @@ public record CacheLookupConfig
     public string? CachingType { get; init; }
 
     /// <summary>
-    /// Controls how the gateway interacts with response caching at downstream servers.<br/>
-    /// Valid values: "none" disables downstream caching, "public" honors cache directives from downstream servers, "private" means the response is not cached in shared caches, and "internal" means API Management will handle caching ignoring downstream directives.
+    /// Controls whether downstream caches (clients and proxies) may cache the response.<br/>
+    /// Valid values: "none" (default) - downstream caching is not allowed, "private" - downstream private caching is allowed, "public" - private and shared downstream caching is allowed.
     /// </summary>
     [ExpressionAllowed]
     public string? DownstreamCachingType { get; init; }
 
     /// <summary>
-    /// When true, the gateway will revalidate cached entries that have become stale, as per the Cache-Control directive.<br/>
-    /// This may improve cache hit ratio at the cost of additional backend load.
+    /// When downstream caching is enabled, turns the must-revalidate cache control directive in gateway responses on or off.<br/>
+    /// Default is true.
     /// </summary>
     [ExpressionAllowed]
     public bool? MustRevalidate { get; init; }
 
     /// <summary>
-    /// When true, responses with private cache directives will be stored in the API Management cache.<br/>
-    /// Use with caution, as this may lead to private information shared between clients.
+    /// When true, allows caching of requests that contain an Authorization header.<br/>
+    /// Default is false. Use with caution, as this may lead to private information shared between clients.
     /// </summary>
     [ExpressionAllowed]
     public bool? AllowPrivateResponseCaching { get; init; }

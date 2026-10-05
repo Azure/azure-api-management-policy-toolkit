@@ -15,24 +15,32 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable"
                 });
             }
             public void Backend(IBackendContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable"
                 });
             }
             public void Outbound(IOutboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable"
                 });
             }
             public void OnError(IOnErrorContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable"
                 });
             }
@@ -41,16 +49,28 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" />
+                <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-request>
             </inbound>
             <backend>
-                <send-request response-variable-name="variable" />
+                <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-request>
             </backend>
             <outbound>
-                <send-request response-variable-name="variable" />
+                <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-request>
             </outbound>
             <on-error>
-                <send-request response-variable-name="variable" />
+                <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-request>
             </on-error>
         </policies>
         """,
@@ -64,6 +84,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Mode = "new",
                 });
@@ -73,7 +95,10 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" mode="new" />
+                <send-request response-variable-name="variable" mode="new">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-request>
             </inbound>
         </policies>
         """,
@@ -112,6 +137,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Timeout = 100,
                 });
@@ -121,7 +148,10 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" timeout="100" />
+                <send-request response-variable-name="variable" timeout="100">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-request>
             </inbound>
         </policies>
         """,
@@ -135,6 +165,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Timeout = Exp(context.ExpressionContext),
                 });
@@ -146,7 +178,10 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" timeout="@(80 + 20)" />
+                <send-request response-variable-name="variable" timeout="@(80 + 20)">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-request>
             </inbound>
         </policies>
         """,
@@ -160,6 +195,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     IgnoreError = false,
                 });
@@ -169,7 +206,10 @@ public class SendRequestTests
         """
         <policies>
             <inbound>
-                <send-request response-variable-name="variable" ignore-error="false" />
+                <send-request response-variable-name="variable" ignore-error="false">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-request>
             </inbound>
         </policies>
         """,
@@ -183,6 +223,7 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Url = "https://test.example",
                 });
@@ -194,6 +235,7 @@ public class SendRequestTests
             <inbound>
                 <send-request response-variable-name="variable">
                     <set-url>https://test.example</set-url>
+                    <set-method>GET</set-method>
                 </send-request>
             </inbound>
         </policies>
@@ -208,6 +250,7 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
                     ResponseVariableName = "variable",
                     Method = "POST",
                 });
@@ -218,6 +261,7 @@ public class SendRequestTests
         <policies>
             <inbound>
                 <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
                     <set-method>POST</set-method>
                 </send-request>
             </inbound>
@@ -233,6 +277,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Headers = [
                         new HeaderConfig {
@@ -254,6 +300,8 @@ public class SendRequestTests
         <policies>
             <inbound>
                 <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <set-header name="content-type" exists-action="append">
                         <value>plain/text</value>
                     </set-header>
@@ -275,6 +323,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Headers = [
                         new HeaderConfig {
@@ -299,6 +349,8 @@ public class SendRequestTests
         <policies>
             <inbound>
                 <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <set-header name="content-type" exists-action="append">
                         <value>plain/text</value>
                     </set-header>
@@ -320,6 +372,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Body = new BodyConfig {
                         Template = "liquid",
@@ -335,6 +389,8 @@ public class SendRequestTests
         <policies>
             <inbound>
                 <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <set-body template="liquid" xsi-nil="blank" parse-date="false">body</set-body>
                 </send-request>
             </inbound>
@@ -350,6 +406,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Body = new BodyConfig {
                         Content = Exp(context.ExpressionContext),
@@ -363,6 +421,8 @@ public class SendRequestTests
         <policies>
             <inbound>
                 <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <set-body>@("bo" + "dy")</set-body>
                 </send-request>
             </inbound>
@@ -378,6 +438,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Authentication = new CertificateAuthenticationConfig {
                         CertificateId = "example-domain-cert",
@@ -390,6 +452,8 @@ public class SendRequestTests
         <policies>
             <inbound>
                 <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <authentication-certificate certificate-id="example-domain-cert" />
                 </send-request>
             </inbound>
@@ -405,6 +469,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Authentication = new ManagedIdentityAuthenticationConfig {
                         Resource = "test.example/resource",
@@ -418,6 +484,8 @@ public class SendRequestTests
         <policies>
             <inbound>
                 <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <authentication-managed-identity resource="test.example/resource" client-id="example-client-id" />
                 </send-request>
             </inbound>
@@ -433,6 +501,8 @@ public class SendRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendRequest(new SendRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = "variable",
                     Proxy = new ProxyConfig() {
                         Url = "proxy.example",
@@ -447,6 +517,8 @@ public class SendRequestTests
         <policies>
             <inbound>
                 <send-request response-variable-name="variable">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <proxy url="proxy.example" username="test-user" password="pass" />
                 </send-request>
             </inbound>
@@ -512,5 +584,32 @@ public class SendRequestTests
     public void ShouldCompileSendRequestPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldReportBasicAuthenticationInSendRequest()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.SendRequest(new SendRequestConfig
+            {
+                ResponseVariableName = "response",
+                Url = "https://example.org",
+                Method = "GET",
+                Authentication = new BasicAuthenticationConfig { Username = "user", Password = "password" }
+            });
+            """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM9995");
+    }
+
+    [TestMethod]
+    [DataRow("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\" });", 2)]
+    [DataRow("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\", Url = \"https://example.com\" });", 1)]
+    [DataRow("context.SendOneWayRequest(new SendOneWayRequestConfig { Mode = \"new\" });", 2)]
+    [DataRow("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\", Mode = \"copy\" });", 0)]
+    public void ShouldRequireUrlAndMethodUnlessTheRequestIsCopied(string policy, int errors)
+    {
+        CompilerTestInitialize.InboundDocument(policy).CompileDocument().Errors.Where(error => error.Id == "APIM2006").Should().HaveCount(errors);
     }
 }

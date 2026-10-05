@@ -41,46 +41,28 @@ public class ForwardRequestCompiler : IMethodPolicyHandler
         var element = new XElement("forward-request");
         if (node.ArgumentList.Arguments.Count == 1)
         {
-            if (node.ArgumentList.Arguments[0].Expression is not ObjectCreationExpressionSyntax config)
+            var argument = node.ArgumentList.Arguments[0].Expression;
+            if (!argument.TryExtractingConfig<ForwardRequestConfig>(context, "forward-request", out var values))
             {
-                context.Report(Diagnostic.Create(
-                    CompilationErrors.PolicyArgumentIsNotAnObjectCreation,
-                    node.ArgumentList.Arguments[0].Expression.GetLocation(),
-                    "forward-request"));
                 return;
             }
 
-            var initializer = config.Process(context);
-            if (initializer.Type != nameof(ForwardRequestConfig))
+            if (values.ContainsKey(nameof(ForwardRequestConfig.Timeout))
+                && values.ContainsKey(nameof(ForwardRequestConfig.TimeoutMs)))
             {
                 context.Report(Diagnostic.Create(
-                    CompilationErrors.PolicyArgumentIsNotOfRequiredType,
-                    config.GetLocation(),
+                    CompilationErrors.OnlyOneOfTwoShouldBeDefined,
+                    argument.GetLocation(),
                     "forward-request",
-                    nameof(ForwardRequestConfig)
+                    nameof(ForwardRequestConfig.Timeout),
+                    nameof(ForwardRequestConfig.TimeoutMs)
                 ));
-                return;
             }
 
-            if (initializer.NamedValues is not null)
+            foreach ((string key, InitializerValue value) in values)
             {
-                if (initializer.NamedValues.ContainsKey(nameof(ForwardRequestConfig.Timeout))
-                    && initializer.NamedValues.ContainsKey(nameof(ForwardRequestConfig.TimeoutMs)))
-                {
-                    context.Report(Diagnostic.Create(
-                        CompilationErrors.OnlyOneOfTwoShouldBeDefined,
-                        config.GetLocation(),
-                        "forward-request",
-                        nameof(ForwardRequestConfig.Timeout),
-                        nameof(ForwardRequestConfig.TimeoutMs)
-                    ));
-                }
-
-                foreach ((string key, InitializerValue value) in initializer.NamedValues)
-                {
-                    var name = FieldToAttribute.GetValueOrDefault(key, key);
-                    element.Add(new XAttribute(name, value.Value!));
-                }
+                var name = FieldToAttribute.GetValueOrDefault(key, key);
+                element.Add(new XAttribute(name, value.Value!));
             }
         }
 

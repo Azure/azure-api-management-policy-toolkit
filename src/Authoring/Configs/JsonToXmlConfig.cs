@@ -21,9 +21,9 @@ public record JsonToXmlConfig
     public bool? ConsiderAcceptHeader { get; init; }
 
     /// <summary>
-    /// Specifies whether to parse dates in the JSON content. Policy expressions are allowed.
+    /// When set to false, date values are simply copied during transformation. Default is true.
+    /// Policy expressions aren't allowed.
     /// </summary>
-    [ExpressionAllowed]
     public bool? ParseDate { get; init; }
 
     /// <summary>

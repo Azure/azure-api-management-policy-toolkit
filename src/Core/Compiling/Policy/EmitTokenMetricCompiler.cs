@@ -65,6 +65,12 @@ public abstract class BaseEmitTokenMetricCompiler : IMethodPolicyHandler
         {
             if (!dimension.TryGetValues<MetricDimensionConfig>(out var result))
             {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.PolicyArgumentIsNotOfRequiredType,
+                    dimension.Node.GetLocation(),
+                    $"{_policyName}.dimension",
+                    nameof(MetricDimensionConfig)
+                ));
                 continue;
             }
 

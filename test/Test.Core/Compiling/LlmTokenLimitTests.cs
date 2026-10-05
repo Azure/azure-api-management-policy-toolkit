@@ -314,4 +314,41 @@ public class LlmTokenLimitTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldCompileRateLimitTogetherWithQuota()
+    {
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.LlmTokenLimit(new TokenLimitConfig
+            {
+                CounterKey = "key",
+                EstimatePromptTokens = true,
+                TokensPerMinute = 100,
+                TokenQuota = 1000,
+                TokenQuotaPeriod = "Daily"
+            });
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(CompilerTestInitialize.InboundXml(
+            """
+            <llm-token-limit counter-key="key" estimate-prompt-tokens="true" tokens-per-minute="100" token-quota="1000" token-quota-period="Daily" />
+            """));
+    }
+
+    [TestMethod]
+    public void ShouldReportTokenLimitWithoutRateOrQuota()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.AzureOpenAiTokenLimit(new TokenLimitConfig
+            {
+                CounterKey = "key",
+                EstimatePromptTokens = true
+            });
+            """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM9996" && error.GetMessage(null).Contains("azure-openai-token-limit"));
+    }
 }

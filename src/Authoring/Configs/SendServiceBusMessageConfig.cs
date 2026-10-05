@@ -37,6 +37,37 @@ public record SendServiceBusMessageConfig
     public string? ClientId { get; init; }
 
     /// <summary>
+    /// Optional. Message identifier. Must be a valid GUID. If omitted, API Management generates a GUID.
+    /// Policy expressions are allowed.
+    /// </summary>
+    [ExpressionAllowed]
+    public string? MessageId { get; init; }
+
+    /// <summary>
+    /// Optional. Service Bus session identifier used to group related messages. Must be a valid GUID.
+    /// Policy expressions are allowed.
+    /// </summary>
+    [ExpressionAllowed]
+    public string? SessionId { get; init; }
+
+    /// <summary>
+    /// Optional. How long the message remains available for processing before it expires,
+    /// as a TimeSpan value, for example "00:10:00".
+    /// </summary>
+    public string? TimeToLive { get; init; }
+
+    /// <summary>
+    /// Optional. Name of a context variable that receives information about the Service Bus send operation.
+    /// </summary>
+    public string? ResponseVariableName { get; init; }
+
+    /// <summary>
+    /// Optional. Whether a Service Bus send failure should allow policy execution to continue.
+    /// Default is false.
+    /// </summary>
+    public bool? IgnoreError { get; init; }
+
+    /// <summary>
     /// Optional. A collection of message properties to pass with the message payload.
     /// </summary>
     public ServiceBusMessageProperty[]? MessageProperties { get; init; }

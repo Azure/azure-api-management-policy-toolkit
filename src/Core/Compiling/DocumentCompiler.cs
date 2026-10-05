@@ -24,7 +24,10 @@ public class DocumentCompiler
     {
         var semanticModel = compilation.GetSemanticModel(document.SyntaxTree);
         var documentType = document.ExtractDocumentType(semanticModel);
-        var methods = document.DescendantNodes().OfType<MethodDeclarationSyntax>();
+        // Only the document's own section methods: not those of nested classes, nor overloads taking more
+        // than the section context, which would otherwise each become another section.
+        var methods = document.Members.OfType<MethodDeclarationSyntax>()
+            .Where(method => method.ParameterList.Parameters.Count == 1);
         var rootElement = new XElement(documentType == DocumentType.Fragment ? "fragment" : "policies");
         var context = new DocumentCompilationContext(compilation, document, rootElement);
         document.ValidateDocumentName(semanticModel, context);
@@ -88,8 +91,24 @@ public class DocumentCompiler
                 policyCount));
         }
 
+        // The gateway accepts these once per section, also when they are in different branches of a choose.
+        foreach (var policy in OncePerSection)
+        {
+            var count = sectionElement.Descendants(policy).Count();
+            if (count > 1)
+            {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.PolicyAllowedOncePerSection,
+                    method.Identifier.GetLocation(),
+                    policy,
+                    count));
+            }
+        }
+
         context.AddPolicy(sectionElement);
     }
+
+    private static readonly string[] OncePerSection = ["cors", "quota", "rate-limit"];
 
     private bool ValidateMethodBody(MethodDeclarationSyntax method, DocumentCompilationContext context)
     {

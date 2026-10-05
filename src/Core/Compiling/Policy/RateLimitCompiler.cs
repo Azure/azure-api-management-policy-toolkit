@@ -28,7 +28,7 @@ public class RateLimitCompiler : IMethodPolicyHandler
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,
                 node.GetLocation(),
-                "rate-limit-by-key",
+                "rate-limit",
                 nameof(RateLimitConfig.Calls)
             ));
             return;
@@ -39,9 +39,14 @@ public class RateLimitCompiler : IMethodPolicyHandler
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,
                 node.GetLocation(),
-                "rate-limit-by-key",
+                "rate-limit",
                 nameof(RateLimitConfig.RenewalPeriod)
             ));
+            return;
+        }
+
+        if (context.ReportIfOutOfRange(values, nameof(RateLimitConfig.RenewalPeriod), "rate-limit", 1, 300))
+        {
             return;
         }
 
@@ -54,7 +59,7 @@ public class RateLimitCompiler : IMethodPolicyHandler
 
         if (values.TryGetValue(nameof(RateLimitConfig.Apis), out var apis))
         {
-            foreach (var api in apis.UnnamedValues!)
+            foreach (var api in apis.UnnamedValues ?? [])
             {
                 if (!Handle(context, "api", api, out var apiElement))
                 {
@@ -63,9 +68,9 @@ public class RateLimitCompiler : IMethodPolicyHandler
 
                 element.Add(apiElement);
 
-                if (api.NamedValues!.TryGetValue(nameof(ApiRateLimit.Operations), out var operations))
+                if (api.NamedValues?.TryGetValue(nameof(ApiRateLimit.Operations), out var operations) ?? false)
                 {
-                    foreach (var operation in operations.UnnamedValues!)
+                    foreach (var operation in operations.UnnamedValues ?? [])
                     {
                         if (Handle(context, "operation", operation, out var operationElement))
                         {
@@ -82,7 +87,15 @@ public class RateLimitCompiler : IMethodPolicyHandler
     private bool Handle(IDocumentCompilationContext context, string name, InitializerValue value, out XElement element)
     {
         element = new XElement(name);
-        var values = value.NamedValues!;
+        if (value.NamedValues is not { } values)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.PolicyArgumentIsNotAnObjectCreation,
+                value.Node.GetLocation(),
+                $"rate-limit.{name}"
+            ));
+            return false;
+        }
 
         var isNameAdded = element.AddAttribute(values, nameof(EntityLimitConfig.Name), "name");
         var isIdAdded = element.AddAttribute(values, nameof(EntityLimitConfig.Id), "id");

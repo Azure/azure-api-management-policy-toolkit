@@ -121,7 +121,7 @@ public partial class PolicyExpressionCompilerTests
     }
 
     [TestMethod]
-    public void ShouldRenderConstantsAsPlainXmlAttributeValues()
+    public void ShouldRenderConstantsAsAttributeValuesThatKeepTheirType()
     {
         const string document =
             """
@@ -154,8 +154,10 @@ public partial class PolicyExpressionCompilerTests
             .ToDictionary(
                 element => element.Attribute("name")!.Value,
                 element => element.Attribute("value")!.Value);
-        values["offset"].Should().Be("-0.5");
-        values["count"].Should().Be("-5");
+        // a set-variable value written as plain text is a string in the gateway, so a constant that isn't a
+        // string is written as an expression
+        values["offset"].Should().Be("@(-0.5)");
+        values["count"].Should().Be("@(-5L)");
     }
 
     [TestMethod]
@@ -595,5 +597,87 @@ public partial class PolicyExpressionCompilerTests
             """);
 
         result.Errors.Should().Contain(error => error.Id == "APIM2013");
+    }
+
+    [TestMethod]
+    public void ShouldCompileBackendWorkspaceAndGatewayContextMembers()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Info", Info(context.ExpressionContext));
+                }
+
+                string Info(IExpressionContext context) =>
+                    context.Backend.Id + context.Workspace.Id + context.Deployment.Gateway.Id;
+            }
+            """;
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <inbound>
+                    <set-header name="X-Info">
+                        <value>@(context.Backend.Id + context.Workspace.Id + context.Deployment.Gateway.Id)</value>
+                    </set-header>
+                </inbound>
+            </policies>
+            """);
+    }
+
+    [TestMethod]
+    public void ShouldWriteOutImplicitNumericConversionOfReturnedValue()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetVariable("a", MaxAge(context.ExpressionContext));
+                    context.SetVariable("b", Count(context.ExpressionContext));
+                    context.SetVariable("c", Same(context.ExpressionContext));
+                    context.SetVariable("d", Block(context.ExpressionContext));
+                }
+
+                uint MaxAge(IExpressionContext context) => 300;
+                long Count(IExpressionContext context) => context.Response.StatusCode + 1;
+                int Same(IExpressionContext context) => context.Response.StatusCode;
+                uint Block(IExpressionContext context)
+                {
+                    var status = context.Response.StatusCode;
+                    if (status > 200)
+                    {
+                        return 1;
+                    }
+                    return (uint)status;
+                }
+            }
+            """;
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <inbound>
+                    <set-variable name="a" value="@((uint)300)" />
+                    <set-variable name="b" value="@((long)(context.Response.StatusCode + 1))" />
+                    <set-variable name="c" value="@(context.Response.StatusCode)" />
+                    <set-variable name="d" value="@{
+            var status = context.Response.StatusCode;
+            if (status > 200)
+            {
+            return (uint)1;
+            }
+
+            return (uint)status;
+            }" />
+                </inbound>
+            </policies>
+            """);
     }
 }

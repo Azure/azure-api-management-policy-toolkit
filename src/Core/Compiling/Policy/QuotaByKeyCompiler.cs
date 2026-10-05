@@ -61,6 +61,11 @@ public class QuotaByKeyCompiler : IMethodPolicyHandler
             return;
         }
 
+        if (context.ReportIfOutOfRange(values, nameof(QuotaByKeyConfig.RenewalPeriod), "quota-by-key", 300))
+        {
+            return;
+        }
+
         element.AddAttribute(values, nameof(QuotaByKeyConfig.IncrementCondition), "increment-condition");
         element.AddAttribute(values, nameof(QuotaByKeyConfig.IncrementCount), "increment-count");
         element.AddAttribute(values, nameof(QuotaByKeyConfig.FirstPeriodStart), "first-period-start");

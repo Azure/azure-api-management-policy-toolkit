@@ -5,6 +5,7 @@ using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -84,7 +85,7 @@ public class SetBodyCompiler : IMethodPolicyHandler
         if (useValueElement)
             element.Add(new XElement("value", value));
         else
-            element.Add(value);
+            RawXmlContent.AddTo(element, value);
 
         context.AddPolicy(element);
     }
@@ -116,6 +117,28 @@ public class SetBodyCompiler : IMethodPolicyHandler
         var useValueElement = config.TryGetValue(nameof(BodyConfig.UseValueElement), out var useVal) &&
                               useVal.Value == "true";
 
+        if (config.TryGetValue(nameof(BodyConfig.Template), out var template) && template.Value != "liquid")
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.ValueShouldBe,
+                template.Node.GetLocation(),
+                "set-body.template",
+                "liquid"
+            ));
+            return;
+        }
+
+        if (config.TryGetValue(nameof(BodyConfig.XsiNil), out var xsiNil) && xsiNil.Value is not ("blank" or "null"))
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.ValueShouldBe,
+                xsiNil.Node.GetLocation(),
+                "set-body.xsi-nil",
+                "blank' or 'null"
+            ));
+            return;
+        }
+
         var bodyElement = new XElement("set-body");
         bodyElement.AddAttribute(config, nameof(BodyConfig.Template), "template");
         bodyElement.AddAttribute(config, nameof(BodyConfig.XsiNil), "xsi-nil");
@@ -124,7 +147,7 @@ public class SetBodyCompiler : IMethodPolicyHandler
         if (useValueElement)
             bodyElement.Add(new XElement("value", content.Value!));
         else
-            bodyElement.Add(content.Value!);
+            RawXmlContent.AddTo(bodyElement, content.Value!);
         element.Add(bodyElement);
     }
 }

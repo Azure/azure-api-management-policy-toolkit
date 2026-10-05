@@ -43,7 +43,7 @@ public class AzureOpenAiSemanticCacheStoreTests
         """
         <policies>
             <outbound>
-                <azure-openai-semantic-cache-store duration="@(context.User.Email.EndsWith("@contoso.example") ? 10 : 60)" />
+                <azure-openai-semantic-cache-store duration="@((uint)(context.User.Email.EndsWith("@contoso.example") ? 10 : 60))" />
             </outbound>
         </policies>
         """,

@@ -51,7 +51,7 @@ public class QuotaCompiler : IMethodPolicyHandler
 
         if (values.TryGetValue(nameof(QuotaConfig.Apis), out var apis))
         {
-            foreach (var api in apis.UnnamedValues!)
+            foreach (var api in apis.UnnamedValues ?? [])
             {
                 if (api.Type != nameof(ApiQuota))
                 {
@@ -73,7 +73,7 @@ public class QuotaCompiler : IMethodPolicyHandler
 
                 if (api.NamedValues!.TryGetValue(nameof(ApiQuota.Operations), out var operations))
                 {
-                    foreach (var operation in operations.UnnamedValues!)
+                    foreach (var operation in operations.UnnamedValues ?? [])
                     {
                         if (operation.Type != nameof(OperationQuota))
                         {

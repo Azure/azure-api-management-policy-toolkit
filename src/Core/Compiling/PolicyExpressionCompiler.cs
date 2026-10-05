@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
@@ -114,12 +115,29 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
             var rewriter = new HelperInliningRewriter(
                 this, declarationModel, bindings, stack, method, _renamer.CreateRenames(body, declarationModel, renameAll));
             var visited = rewriter.Visit(body);
+            if (visited is ExpressionSyntax result && body is ExpressionSyntax written &&
+                TryGetImplicitNumericConversion(declarationModel, written, out var returnType))
+            {
+                visited = CastTo(returnType, result).Expression;
+            }
+
             return rewriter.HasUnsupportedWrite ? null : visited;
         }
     }
 
     public string CompileCondition(ExpressionSyntax condition)
     {
+        // A boolean constant is a valid condition as is: <when condition="true">
+        if (condition.IsKind(SyntaxKind.TrueLiteralExpression))
+        {
+            return "true";
+        }
+
+        if (condition.IsKind(SyntaxKind.FalseLiteralExpression))
+        {
+            return "false";
+        }
+
         var model = CompilerUtils.CachedModel(context.Compilation, condition.SyntaxTree);
         if (condition is InvocationExpressionSyntax namedValueInvocation &&
             TryResolveMethod(namedValueInvocation, model, out var namedValueMethod) &&
@@ -510,7 +528,38 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
         (SymbolEqualityComparer.Default.Equals(first, second) ||
          first.ToDisplayString(EmittedTypeFormat) == second.ToDisplayString(EmittedTypeFormat));
 
-    private static ExpressionSyntax CastTo(ITypeSymbol type, ExpressionSyntax expression) =>
+    // C# converts 300 to uint when a helper declared to return uint returns it, but the emitted expression
+    // is only the 300, which API Management types as int. The conversion has to be written out.
+    private static bool TryGetImplicitNumericConversion(
+        SemanticModel model,
+        ExpressionSyntax expression,
+        [NotNullWhen(true)] out ITypeSymbol? target)
+    {
+        target = null;
+        if (model.SyntaxTree != expression.SyntaxTree)
+        {
+            return false;
+        }
+
+        var info = model.GetTypeInfo(expression);
+        if (info.Type is not { } type || info.ConvertedType is not { } converted ||
+            !IsNumeric(type) || !IsNumeric(converted) ||
+            SymbolEqualityComparer.Default.Equals(type, converted))
+        {
+            return false;
+        }
+
+        target = converted;
+        return true;
+    }
+
+    private static bool IsNumeric(ITypeSymbol type) => type.SpecialType is
+        SpecialType.System_SByte or SpecialType.System_Byte or SpecialType.System_Int16 or
+        SpecialType.System_UInt16 or SpecialType.System_Int32 or SpecialType.System_UInt32 or
+        SpecialType.System_Int64 or SpecialType.System_UInt64 or SpecialType.System_Single or
+        SpecialType.System_Double or SpecialType.System_Decimal;
+
+    private static ParenthesizedExpressionSyntax CastTo(ITypeSymbol type, ExpressionSyntax expression) =>
         SyntaxFactory.ParenthesizedExpression(SyntaxFactory.CastExpression(
             SyntaxFactory.ParseTypeName(type.ToDisplayString(EmittedTypeFormat)),
             ParenthesizeIfNeeded(expression)));

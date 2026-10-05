@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
@@ -19,6 +20,16 @@ public static class CompilerUtils
 {
     public static string ProcessParameter(this ExpressionSyntax expression, IDocumentCompilationContext context)
     {
+        // null has no policy representation; it used to be written out as the text "null"
+        if (IsNull(expression, context))
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.NotSupportedParameter,
+                expression.GetLocation()
+            ));
+            return "";
+        }
+
         var semanticModel = context.Compilation.ContainsSyntaxTree(expression.SyntaxTree)
             ? CachedModel(context.Compilation, expression.SyntaxTree)
             : null;
@@ -133,8 +144,25 @@ public static class CompilerUtils
                 continue;
             }
 
+            // Prop = null is the same as not setting the property
+            if (IsNull(assignment.Right, context))
+            {
+                continue;
+            }
+
             var name = assignment.Left.ToString();
-            result[name] = assignment.Right.ProcessExpression(context);
+            var value = assignment.Right.ProcessExpression(context);
+            if (value.Value is null && IsScalarProperty(context, assignment.Left))
+            {
+                // an object or a collection where a single value is expected would otherwise be dropped silently
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.NotSupportedParameter,
+                    assignment.Right.GetLocation()
+                ));
+                continue;
+            }
+
+            result[name] = value;
         }
 
         return new InitializerValue
@@ -142,6 +170,44 @@ public static class CompilerUtils
             Type = (creationSyntax.Type as IdentifierNameSyntax)?.Identifier.ValueText,
             NamedValues = result,
             Node = creationSyntax,
+        };
+    }
+
+    // null, or a constant such as default for a reference or nullable type. default for a value type is
+    // zero or false and is a value like any other.
+    private static bool IsNull(ExpressionSyntax expression, IDocumentCompilationContext context)
+    {
+        if (expression.IsKind(SyntaxKind.NullLiteralExpression))
+        {
+            return true;
+        }
+
+        return expression.IsKind(SyntaxKind.DefaultLiteralExpression) &&
+               context.Compilation.ContainsSyntaxTree(expression.SyntaxTree) &&
+               CachedModel(context.Compilation, expression.SyntaxTree).GetConstantValue(expression) is
+                   { HasValue: true, Value: null };
+    }
+
+    private static bool IsScalarProperty(IDocumentCompilationContext context, ExpressionSyntax property)
+    {
+        if (!context.Compilation.ContainsSyntaxTree(property.SyntaxTree))
+        {
+            return false;
+        }
+
+        var type = CachedModel(context.Compilation, property.SyntaxTree).GetTypeInfo(property).Type;
+        if (type is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable)
+        {
+            type = nullable.TypeArguments[0];
+        }
+
+        return type switch
+        {
+            IArrayTypeSymbol array => array.ElementType.SpecialType == SpecialType.System_Byte,
+            { SpecialType: SpecialType.System_Object } => false,
+            { TypeKind: TypeKind.Enum } => true,
+            not null => type.SpecialType != SpecialType.None,
+            _ => false
         };
     }
 
@@ -202,13 +268,43 @@ public static class CompilerUtils
     public static bool AddAttribute(this XElement element, IReadOnlyDictionary<string, InitializerValue> parameters,
         string key, string attName)
     {
-        if (parameters.TryGetValue(key, out var value))
+        if (parameters.TryGetValue(key, out var value) && value.Value is not null)
         {
-            element.Add(new XAttribute(attName, value.Value!));
+            element.Add(new XAttribute(attName, value.Value));
             return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Reports a literal value outside the range the gateway accepts. A value given by an expression
+    /// can't be checked.
+    /// </summary>
+    public static bool ReportIfOutOfRange(
+        this IDocumentCompilationContext context,
+        IReadOnlyDictionary<string, InitializerValue> parameters,
+        string key,
+        string policy,
+        int minimum,
+        int maximum = int.MaxValue)
+    {
+        if (!parameters.TryGetValue(key, out var parameter) ||
+            !int.TryParse(parameter.Value, out var value) ||
+            (value >= minimum && value <= maximum))
+        {
+            return false;
+        }
+
+        context.Report(Diagnostic.Create(
+            CompilationErrors.ValueOutOfRange,
+            parameter.Node.GetLocation(),
+            policy,
+            key,
+            value,
+            minimum,
+            maximum));
+        return true;
     }
 
     /// <summary>

@@ -30,7 +30,7 @@ public record RetryConfig
     /// A positive number in seconds specifying the wait interval between retry attempts. Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public int? Interval { get; init; }
+    public required int Interval { get; init; }
 
     /// <summary>
     /// A positive number in seconds specifying the maximum wait interval between retry attempts. Used to implement an exponential retry algorithm. Policy expressions are allowed.

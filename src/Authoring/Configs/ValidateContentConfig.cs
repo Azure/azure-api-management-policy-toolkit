@@ -80,8 +80,9 @@ public record ContentTypeMap
     public required string To { get; init; }
 
     /// <summary>
-    /// Optional condition for when the mapping should be applied.
+    /// Optional condition for when the mapping should be applied, given as a policy expression.
     /// </summary>
+    [ExpressionAllowed]
     public bool? When { get; init; }
 }
 

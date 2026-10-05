@@ -23,4 +23,12 @@ public record CacheRemoveValueConfig
     /// Policy expressions are not allowed.
     /// </summary>
     public string? CachingType { get; init; }
+
+    /// <summary>
+    /// Optional. Set to true to fail the request if the cache removal operation fails,
+    /// or false to ignore cache removal errors. Default is false.<br/>
+    /// Policy expressions are allowed.
+    /// </summary>
+    [ExpressionAllowed]
+    public bool? FailOnCacheRemovalError { get; init; }
 }

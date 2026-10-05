@@ -484,4 +484,37 @@ public class ValidateAzureAdTokenTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldCompileAuthenticationEndpoint()
+    {
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.ValidateAzureAdToken(new ValidateAzureAdTokenConfig
+            {
+                TenantId = "tenant",
+                AuthenticationEndpoint = "https://login.microsoftonline.us"
+            });
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(CompilerTestInitialize.InboundXml(
+            """
+            <validate-azure-ad-token tenant-id="tenant" authentication-endpoint="https://login.microsoftonline.us" />
+            """));
+    }
+
+    [TestMethod]
+    public void ShouldReportInsteadOfThrowingForInvalidDecryptionKey()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.ValidateAzureAdToken(new ValidateAzureAdTokenConfig
+            {
+                TenantId = "tenant",
+                DecryptionKeys = [GetKey()]
+            });
+            """).CompileDocument();
+
+        result.Errors.Should().NotBeEmpty();
+    }
 }

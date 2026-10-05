@@ -94,7 +94,7 @@ public class XslTransformCompiler : IMethodPolicyHandler
                     CompilationErrors.RequiredParameterNotDefined,
                     paramValue.Node.GetLocation(),
                     "xsl-transform.parameter",
-                    nameof(XslTransformConfig.StyleSheet)
+                    nameof(XslTransformParameter.Value)
                 ));
                 continue;
             }

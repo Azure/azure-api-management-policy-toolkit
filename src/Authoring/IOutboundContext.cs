@@ -52,12 +52,16 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Stores the current Azure OpenAI request and response in the semantic cache for future lookup.<br/>
     /// This policy must be placed in the outbound section to capture both the request and response.<br/>
     /// When stored, the entries can later be found by the azure-openai-semantic-cache-lookup policy.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-semantic-cache-store-policy">azure-openai-semantic-cache-store</a> policy.
+    /// Compiled to the <c>azure-openai-semantic-cache-store</c> policy, an earlier name of <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-semantic-cache-store-policy">llm-semantic-cache-store</a> that the gateway still accepts.
     /// </summary>
     /// <param name="duration">
     /// Duration in seconds for which the cached entry is valid. Policy expressions are allowed.
     /// </param>
-    void AzureOpenAiSemanticCacheStore([ExpressionAllowed] uint duration);
+    /// <param name="cacheResponse">
+    /// Set to true to cache the current HTTP response. If omitted, only responses with status code 200 OK are cached.
+    /// Policy expressions are allowed.
+    /// </param>
+    void AzureOpenAiSemanticCacheStore([ExpressionAllowed] uint duration, [ExpressionAllowed] bool? cacheResponse = null);
 
     /// <summary>
     /// The base policy used to specify when parent scope policy should be executed
@@ -92,7 +96,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Specifies the duration in seconds that the response should be cached. Policy expressions are allowed.
     /// </param>
     /// <param name="cacheResponse">
-    /// Indicates whether the response should be cached. If set to false, the response will not be cached. Policy expressions are allowed.
+    /// Set to true to cache the current HTTP response. If omitted (null), only responses with status code 200 OK are cached. Policy expressions are allowed.
     /// </param>
     void CacheStore([ExpressionAllowed] int duration, [ExpressionAllowed] bool? cacheResponse);
 
@@ -109,7 +113,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Provides a unified caching solution with stampede protection by combining cache lookup and store operations.<br/>
     /// On cache hit, the cached value is assigned to the specified variable. On cache miss, the nested value block is executed
     /// and the resulting variable value is stored in the cache.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-value-policy">cache-value</a> policy.
+    /// Compiled to the <c>cache-value</c> policy, which is not part of the public policy reference.
     /// </summary>
     /// <param name="config">
     /// Configuration specifying the cache key, variable name, expiration, refresh interval, default value, and optional caching type.
@@ -231,7 +235,11 @@ public interface IOutboundContext : IHaveExpressionContext
     /// <param name="duration">
     /// Duration in seconds for which the cached entry is valid. Policy expressions are allowed.
     /// </param>
-    void LlmSemanticCacheStore([ExpressionAllowed] uint duration);
+    /// <param name="cacheResponse">
+    /// Set to true to cache the current HTTP response. If omitted, only responses with status code 200 OK are cached.
+    /// Policy expressions are allowed.
+    /// </param>
+    void LlmSemanticCacheStore([ExpressionAllowed] uint duration, [ExpressionAllowed] bool? cacheResponse = null);
 
     /// <summary>
     /// Sends messages in the specified format to an Azure Event Hub defined by a Logger entity.<br/>
@@ -249,7 +257,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/mock-response-policy">mock-response</a> policy.
     /// </summary>
     /// <param name="config">
-    /// Optional configuration specifying status code, content type, headers, and other response characteristics.
+    /// Optional configuration specifying the status code and content type used to select the mocked response.
     /// When null, returns a default empty 200 OK response.
     /// </param>
     void MockResponse(MockResponseConfig? config = null);
@@ -420,7 +428,7 @@ public interface IOutboundContext : IHaveExpressionContext
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-variable-policy">set-variable</a> policy.
     /// </summary>
     /// <param name="name">
-    /// Specifies the name of the variable to be set. Policy expressions are allowed.
+    /// Specifies the name of the variable to be set. Policy expressions are not allowed.
     /// </param>
     /// <param name="value">
     /// Specifies the value of the variable to be set. Policy expressions are allowed.
@@ -488,12 +496,10 @@ public interface IOutboundContext : IHaveExpressionContext
 
     /// <summary>
     /// Transforms XML in request or response body using XSL transform (XSLT).<br/>
-    /// Can transform XML in the request body, response body, or a context variable.<br/>
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xsl-transform-policy">xsl-transform</a> policy.
     /// </summary>
     /// <param name="config">
-    /// Configuration specifying the transformation parameters, including where to apply the transformation (request, response, or variable),
-    /// the XSL stylesheet to use, content type, and error handling options.
+    /// Configuration specifying the XSL stylesheet to use and its parameters.
     /// </param>
     void XslTransform(XslTransformConfig config);
 }

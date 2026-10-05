@@ -21,8 +21,7 @@ public class CheckHeaderTests
                 Name = "Test",
                 FailCheckHttpCode = 401,
                 FailCheckErrorMessage = "Request do not contain test header",
-                IgnoreCase = false,
-                Values = []
+                IgnoreCase = false
             });
         }
     }

@@ -31,4 +31,97 @@ public class SectionAlignmentTests
         result.Should().BeSuccessful();
         result.Document.Element(section)!.Element(policy).Should().NotBeNull();
     }
+
+    [TestMethod]
+    [DataRow("public void Inbound(IInboundContext context) { context.ForwardRequest(); }", "ForwardRequest")]
+    [DataRow("public void Inbound(IInboundContext context) { context.WithId(\"x\").CacheStore(10, null); }", "CacheStore")]
+    [DataRow("public void Backend(IBackendContext context) { context.EmitMetric(new EmitMetricConfig { Name = \"n\", Dimensions = [] }); }", "EmitMetric")]
+    public void ShouldReportPolicyUsedInSectionThatDoesNotAllowIt(string section, string method)
+    {
+        var result =
+            $$"""
+              [Document]
+              public class PolicyDocument : IDocument
+              {
+                  {{section}}
+              }
+              """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM2031" && error.GetMessage(null).Contains(method));
+    }
+
+    [TestMethod]
+    public void ShouldReportBaseInFragment()
+    {
+        var result =
+            """
+            [Document]
+            public class Fragment : IFragment
+            {
+                public void Fragment(IFragmentContext context) { context.Base(); }
+            }
+            """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2031");
+    }
+
+    [TestMethod]
+    public void ShouldOnlyTreatTheDocumentsOwnSingleParameterMethodsAsSections()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Base();
+                }
+
+                public void Inbound(IInboundContext context, int extra)
+                {
+                    context.SetHeader("X-Overload", "1");
+                }
+
+                public class Nested
+                {
+                    public void Outbound(IOutboundContext context)
+                    {
+                        context.SetHeader("X-Nested", "1");
+                    }
+                }
+            }
+            """;
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <inbound>
+                    <base />
+                </inbound>
+            </policies>
+            """);
+    }
+
+    [TestMethod]
+    public void ShouldReportPolicyAllowedOncePerSectionUsedTwice()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            if (IsGet(context.ExpressionContext))
+            {
+                context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 60 });
+            }
+            else
+            {
+                context.RateLimit(new RateLimitConfig { Calls = 5, RenewalPeriod = 60 });
+            }
+            context.RateLimitByKey(new RateLimitByKeyConfig { Calls = 1, RenewalPeriod = 60, CounterKey = "a" });
+            context.RateLimitByKey(new RateLimitByKeyConfig { Calls = 1, RenewalPeriod = 60, CounterKey = "b" });
+            """.Replace("IsGet(context.ExpressionContext)", "true")).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM2032" && error.GetMessage(null).Contains("'rate-limit'"));
+    }
 }

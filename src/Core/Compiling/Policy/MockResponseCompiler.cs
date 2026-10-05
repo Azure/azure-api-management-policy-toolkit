@@ -43,7 +43,7 @@ public class MockResponseCompiler : IMethodPolicyHandler
                 CompilationErrors.PolicyArgumentIsNotOfRequiredType,
                 value.Node.GetLocation(),
                 "mock-response",
-                nameof(AddressRange)
+                nameof(MockResponseConfig)
             ));
             return;
         }

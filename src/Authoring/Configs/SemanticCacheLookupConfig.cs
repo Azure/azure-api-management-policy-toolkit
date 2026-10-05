@@ -10,11 +10,11 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 public record SemanticCacheLookupConfig
 {
     /// <summary>
-    /// Required. The similarity threshold (between 0 and 1) that determines whether a cached response is returned.<br/>
-    /// Higher values require greater similarity between the current request and cached requests.<br/>
-    /// Recommended values are between 0.7 and 0.9.
+    /// Required. The score threshold (between 0.0 and 1.0) that determines how closely an incoming prompt must match a cached prompt to return its stored response.<br/>
+    /// Lower values require higher semantic similarity for a match.<br/>
+    /// Start with a low value such as 0.05; values above 0.2 may lead to cache mismatches.<br/>
+    /// Policy expressions aren't allowed.
     /// </summary>
-    [ExpressionAllowed]
     public required decimal ScoreThreshold { get; init; }
 
     /// <summary>
@@ -26,7 +26,7 @@ public record SemanticCacheLookupConfig
 
     /// <summary>
     /// Required. Authentication setting for the embeddings backend service.<br/>
-    /// Must be configured as a named value in API Management.
+    /// Must be set to "system-assigned".
     /// </summary>
     [ExpressionAllowed]
     public required string EmbeddingsBackendAuth { get; init; }
@@ -40,11 +40,10 @@ public record SemanticCacheLookupConfig
     public bool? IgnoreSystemMessages { get; init; }
 
     /// <summary>
-    /// Optional. Maximum number of messages to consider when comparing chat completions.<br/>
-    /// Default is 4 messages.
+    /// Optional. If specified, the number of remaining dialog messages after which caching is skipped.
     /// </summary>
     [ExpressionAllowed]
-    public uint MaxMessageCount { get; init; }
+    public int? MaxMessageCount { get; init; }
 
     /// <summary>
     /// Optional. Identifier of a named cache instance to use for semantic cache lookup.<br/>

@@ -48,9 +48,30 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
         }
 
         var name = memberAccess.Name.ToString();
+        if (name == "WithId" && TrySetPendingPolicyId(context, invocation))
+        {
+            // context.WithId("id"); on its own gives the id to the next policy, which lets an
+            // if statement (compiled to choose) carry one
+            return;
+        }
+
         if (_handlers.TryGetValue(name, out var handler))
         {
+            if (IsMissingOnSectionContext(context, memberAccess, name, out var sectionContext))
+            {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.PolicyNotAvailableInSection,
+                    memberAccess.Name.GetLocation(),
+                    name,
+                    sectionContext
+                ));
+                return;
+            }
+
             handler.Handle(context, invocation);
+
+            // A handler that reported an error added no policy. Its id must not move on to the next one.
+            context.PendingPolicyId = null;
         }
         else
         {
@@ -96,6 +117,46 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
         // Return the original invocation unchanged - the caller extracts the
         // method name from invocation.Expression as MemberAccessExpressionSyntax.Name
         return invocation;
+    }
+
+    // Handlers are found by method name, so without this check a policy would compile in any section when the
+    // C# itself isn't compiled first (directory mode): context.ForwardRequest() in Inbound, Base() in a fragment.
+    private static bool IsMissingOnSectionContext(
+        IDocumentCompilationContext context,
+        MemberAccessExpressionSyntax memberAccess,
+        string name,
+        out string sectionContext)
+    {
+        sectionContext = string.Empty;
+        if (!context.Compilation.ContainsSyntaxTree(memberAccess.SyntaxTree))
+        {
+            return false;
+        }
+
+        var model = CompilerUtils.CachedModel(context.Compilation, memberAccess.SyntaxTree);
+        if (model.GetTypeInfo(memberAccess.Expression).Type is not { } receiver ||
+            !PolicyExpressionCompiler.IsAuthoringSectionContext(receiver))
+        {
+            return false;
+        }
+
+        sectionContext = receiver.Name;
+        return receiver.GetMembers(name).IsEmpty &&
+               receiver.AllInterfaces.All(inherited => inherited.GetMembers(name).IsEmpty);
+    }
+
+    private static bool TrySetPendingPolicyId(
+        IDocumentCompilationContext context,
+        InvocationExpressionSyntax withIdInvocation)
+    {
+        if (withIdInvocation.ArgumentList.Arguments.Count != 1 ||
+            ExtractConstantStringValue(context, withIdInvocation.ArgumentList.Arguments[0].Expression) is not { } id)
+        {
+            return false;
+        }
+
+        context.PendingPolicyId = id;
+        return true;
     }
 
     /// <summary>

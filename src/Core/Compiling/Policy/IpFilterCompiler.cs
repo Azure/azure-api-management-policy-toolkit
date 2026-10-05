@@ -37,7 +37,7 @@ public class IpFilterCompiler : IMethodPolicyHandler
         bool atLeastOneAddress = false;
         if (values.TryGetValue(nameof(IpFilterConfig.Addresses), out var addresses))
         {
-            foreach (var address in addresses.UnnamedValues!)
+            foreach (var address in addresses.UnnamedValues ?? [])
             {
                 element.Add(new XElement("address", address.Value!));
                 atLeastOneAddress = true;
@@ -47,7 +47,7 @@ public class IpFilterCompiler : IMethodPolicyHandler
         bool atLeastOneRange = false;
         if (values.TryGetValue(nameof(IpFilterConfig.AddressRanges), out var ranges))
         {
-            foreach (var range in ranges.UnnamedValues!)
+            foreach (var range in ranges.UnnamedValues ?? [])
             {
                 if (range.Type != nameof(AddressRange))
                 {
@@ -63,7 +63,13 @@ public class IpFilterCompiler : IMethodPolicyHandler
                 var rangeValues = range.NamedValues;
                 if (rangeValues is null)
                 {
-                    return;
+                    context.Report(Diagnostic.Create(
+                        CompilationErrors.PolicyArgumentIsNotOfRequiredType,
+                        range.Node.GetLocation(),
+                        "ip-filter.address-range",
+                        nameof(AddressRange)
+                    ));
+                    continue;
                 }
 
                 var rangeElement = new XElement("address-range");

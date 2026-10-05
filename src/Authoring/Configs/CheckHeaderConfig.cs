@@ -33,8 +33,9 @@ public record CheckHeaderConfig
     public required bool IgnoreCase { get; init; }
 
     /// <summary>
-    /// Array of expected header values. Policy expressions are allowed.
+    /// Array of allowed header values. When omitted, only the presence of the header is checked.
+    /// Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public required string[] Values { get; init; }
+    public string[]? Values { get; init; }
 }

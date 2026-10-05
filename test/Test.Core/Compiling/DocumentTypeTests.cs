@@ -84,7 +84,7 @@ public class DocumentTypeTests
             public void Fragment(IFragmentContext context)
             {
                 context.SetHeader("X-Named-Fragment", "named-value");
-                context.Base();
+                context.RemoveHeader("X-Test");
             }
         }
         """,
@@ -93,7 +93,7 @@ public class DocumentTypeTests
             <set-header name="X-Named-Fragment">
                 <value>named-value</value>
             </set-header>
-            <base />
+            <set-header name="X-Test" exists-action="delete" />
         </fragment>
         """,
         DisplayName = "Should compile named policy fragment with multiple policies using Fragment method"
@@ -111,7 +111,7 @@ public class DocumentTypeTests
         {
             public void Fragment(IFragmentContext context)
             {
-                context.Base();
+                context.RemoveHeader("X-Test");
             }
         }
 
@@ -131,7 +131,7 @@ public class DocumentTypeTests
 
             public void Fragment(IFragmentContext context)
             {
-                context.Base();
+                context.RemoveHeader("X-Test");
             }
         }
         """,
@@ -146,7 +146,7 @@ public class DocumentTypeTests
 
             public void Fragment(IFragmentContext context)
             {
-                context.Base();
+                context.RemoveHeader("X-Test");
             }
         }
         """,
@@ -181,7 +181,7 @@ public class DocumentTypeTests
             {
                 public void Fragment(IFragmentContext context)
                 {
-                    context.Base();
+                    context.RemoveHeader("X-Test");
                 }
             }
             """;

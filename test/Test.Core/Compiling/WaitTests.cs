@@ -14,6 +14,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -23,6 +25,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -32,6 +36,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -41,6 +47,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -51,22 +59,34 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
             <backend>
                 <wait>
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </backend>
             <outbound>
                 <wait>
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </outbound>
             <on-error>
                 <wait>
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </on-error>
         </policies>
@@ -83,6 +103,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     },
@@ -94,7 +116,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait for="any">
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -111,6 +136,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     },
@@ -123,7 +150,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait for="@(context.Variables.ContainsKey("any") ? "any" : "all")">
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -149,6 +179,8 @@ public class WaitTests
                         if(RequestCondition(context.ExpressionContext))
                         {
                             context.SendRequest(new SendRequestConfig {
+                                Url = "https://example.com/api",
+                                Method = "GET",
                                 ResponseVariableName = "request"
                             });
                         }
@@ -169,7 +201,10 @@ public class WaitTests
                     </choose>
                     <choose>
                         <when condition="@(!context.Variables.ContainsKey("request"))">
-                            <send-request response-variable-name="request" />
+                            <send-request response-variable-name="request">
+                                <set-url>https://example.com/api</set-url>
+                                <set-method>GET</set-method>
+                            </send-request>
                         </when>
                     </choose>
                 </wait>

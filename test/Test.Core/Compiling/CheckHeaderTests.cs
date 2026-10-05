@@ -196,4 +196,45 @@ public class CheckHeaderTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldCompileExistenceOnlyCheck()
+    {
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.CheckHeader(new CheckHeaderConfig
+            {
+                Name = "X-Required",
+                FailCheckHttpCode = 400,
+                FailCheckErrorMessage = "Missing header",
+                IgnoreCase = true
+            });
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(CompilerTestInitialize.InboundXml(
+            """
+            <check-header name="X-Required" failed-check-httpcode="400" failed-check-error-message="Missing header" ignore-case="true" />
+            """));
+    }
+
+    [TestMethod]
+    public void ShouldCompileDefaultOfAValueTypeAsItsValue()
+    {
+        // default is false here, not "not set"
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.CheckHeader(new CheckHeaderConfig
+            {
+                Name = "X-Required",
+                FailCheckHttpCode = 400,
+                FailCheckErrorMessage = "Missing header",
+                IgnoreCase = default
+            });
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(CompilerTestInitialize.InboundXml(
+            """
+            <check-header name="X-Required" failed-check-httpcode="400" failed-check-error-message="Missing header" ignore-case="false" />
+            """));
+    }
 }

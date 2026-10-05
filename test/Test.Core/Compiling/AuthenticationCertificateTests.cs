@@ -155,4 +155,15 @@ public class AuthenticationCertificateTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldReportCollectionGivenForScalarProperty()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.AuthenticationCertificate(new CertificateAuthenticationConfig { Body = new byte[] { 1, 2 } });
+            """).CompileDocument();
+
+        result.Errors.Should().Contain(error => error.Id == "APIM2005");
+    }
 }

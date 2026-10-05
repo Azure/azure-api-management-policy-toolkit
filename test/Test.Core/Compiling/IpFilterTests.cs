@@ -72,4 +72,15 @@ public class IpFilterTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldReportNonInlineIpFilterAddresses()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.IpFilter(new IpFilterConfig { Action = "allow", Addresses = GetAddresses() });
+            """).CompileDocument();
+
+        result.Errors.Should().NotBeEmpty();
+    }
 }
