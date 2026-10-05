@@ -34,7 +34,7 @@ public class SectionAlignmentTests
 
     [TestMethod]
     [DataRow("public void Inbound(IInboundContext context) { context.ForwardRequest(); }", "ForwardRequest")]
-    [DataRow("public void Inbound(IInboundContext context) { context.WithId(\"x\").CacheStore(10, null); }", "CacheStore")]
+    [DataRow("public void Inbound(IInboundContext context) { context.WithId(\"x\").CacheStore(10, null); context.Base(); }", "CacheStore")]
     [DataRow("public void Backend(IBackendContext context) { context.EmitMetric(new EmitMetricConfig { Name = \"n\", Dimensions = [] }); }", "EmitMetric")]
     public void ShouldReportPolicyUsedInSectionThatDoesNotAllowIt(string section, string method)
     {
@@ -49,6 +49,8 @@ public class SectionAlignmentTests
 
         result.Errors.Should().ContainSingle(error =>
             error.Id == "APIM2031" && error.GetMessage(null).Contains(method));
+        // the id of the rejected policy doesn't move on to the next one
+        result.Document.Descendants().Where(element => element.Attribute("id") is not null).Should().BeEmpty();
     }
 
     [TestMethod]

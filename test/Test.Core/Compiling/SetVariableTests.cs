@@ -164,6 +164,7 @@ public class SetVariableTests
     [DataRow("object", "System.Tuple.Create(1, \"a\")")]
     [DataRow("object", "new System.Collections.Generic.Dictionary<string, string>()")]
     [DataRow("int[]", "new[] { 1 }")]
+    [DataRow("object", "Inner(context)")]
     public void ShouldReportVariableValueOfATypeTheGatewayRejects(string returnType, string expression)
     {
         var result =
@@ -177,6 +178,8 @@ public class SetVariableTests
                   }
 
                   {{returnType}} Value(IExpressionContext context) => {{expression}};
+
+                  object Inner(IExpressionContext context) => new { a = 1 };
               }
               """.CompileDocument();
 

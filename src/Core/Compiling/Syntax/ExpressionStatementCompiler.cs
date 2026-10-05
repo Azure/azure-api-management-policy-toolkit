@@ -65,6 +65,7 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
                     name,
                     sectionContext
                 ));
+                context.PendingPolicyId = null;
                 return;
             }
 

@@ -183,8 +183,8 @@ public static class CompilerUtils
         };
     }
 
-    // null, or a constant such as default for a reference or nullable type. default for a value type is
-    // zero or false and is a value like any other.
+    // null, or a constant that is null: default or default(string) for a reference type, (string?)null, a null
+    // const. default for a value type is zero or false and is a value like any other.
     private static bool IsNull(ExpressionSyntax expression, IDocumentCompilationContext context)
     {
         if (expression.IsKind(SyntaxKind.NullLiteralExpression))
@@ -192,8 +192,7 @@ public static class CompilerUtils
             return true;
         }
 
-        return expression.IsKind(SyntaxKind.DefaultLiteralExpression) &&
-               context.Compilation.ContainsSyntaxTree(expression.SyntaxTree) &&
+        return context.Compilation.ContainsSyntaxTree(expression.SyntaxTree) &&
                CachedModel(context.Compilation, expression.SyntaxTree).GetConstantValue(expression) is
                    { HasValue: true, Value: null };
     }

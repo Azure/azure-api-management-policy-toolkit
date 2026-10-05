@@ -87,8 +87,11 @@ public class SetVariableCompiler : IMethodPolicyHandler
     // The gateway types the expression itself, not the helper that holds it, and rejects these as the value
     // of a variable: Uri, enums, anonymous types, tuples, dictionaries and arrays other than string[] and
     // byte[]. It rejects object too, but an expression typed object in C# is often a call to another helper
-    // whose own expression has an accepted type, so that isn't reported.
-    private static ITypeSymbol? FindRejectedValueType(IDocumentCompilationContext context, ExpressionSyntax value)
+    // whose own expression has an accepted type, so that isn't reported: the helper it calls is looked at instead.
+    private static ITypeSymbol? FindRejectedValueType(
+        IDocumentCompilationContext context,
+        ExpressionSyntax value,
+        HashSet<ISymbol>? visited = null)
     {
         if (!context.Compilation.ContainsSyntaxTree(value.SyntaxTree))
         {
@@ -105,7 +108,8 @@ public class SetVariableCompiler : IMethodPolicyHandler
         if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
             method.GetAttributes().Any(attribute => attribute.AttributeClass?.Name == nameof(NamedValueAttribute)) ||
             method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is not MethodDeclarationSyntax declaration ||
-            !context.Compilation.ContainsSyntaxTree(declaration.SyntaxTree))
+            !context.Compilation.ContainsSyntaxTree(declaration.SyntaxTree) ||
+            !(visited ??= new HashSet<ISymbol>(SymbolEqualityComparer.Default)).Add(method))
         {
             return null;
         }
@@ -118,8 +122,10 @@ public class SetVariableCompiler : IMethodPolicyHandler
                 .Select(statement => statement.Expression)
                 .OfType<ExpressionSyntax>() ?? [];
         return returned
-            .Select(expression => declarationModel.GetTypeInfo(expression).Type)
-            .FirstOrDefault(IsRejectedValueType);
+            .Select(expression => declarationModel.GetTypeInfo(expression).Type is { } type && IsRejectedValueType(type)
+                ? type
+                : expression is InvocationExpressionSyntax ? FindRejectedValueType(context, expression, visited) : null)
+            .FirstOrDefault(type => type is not null);
     }
 
     private static bool IsRejectedValueType(ITypeSymbol? type) => type switch

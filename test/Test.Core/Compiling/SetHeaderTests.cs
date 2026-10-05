@@ -250,12 +250,15 @@ public class SetHeaderCompilationTests
     }
 
     [TestMethod]
-    public void ShouldReportNullPolicyArgument()
+    [DataRow("null")]
+    [DataRow("default(string)")]
+    [DataRow("(string?)null")]
+    public void ShouldReportNullPolicyArgument(string argument)
     {
         var result = CompilerTestInitialize.InboundDocument(
-            """
-            context.SetHeader("X-Null", null);
-            """).CompileDocument();
+            $"""
+             context.SetHeader("X-Null", {argument});
+             """).CompileDocument();
 
         result.Errors.Should().ContainSingle(error => error.Id == "APIM2005");
     }
