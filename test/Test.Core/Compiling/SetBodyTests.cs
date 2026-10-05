@@ -185,7 +185,7 @@ public class SetBodyTests
     {
         var code = CompilerTestInitialize.InboundDocument(
             """
-            context.SetBody("<Envelope><a>1</a>  <b note=\"x &amp; y\">{{body.x}}</b></Envelope>", new SetBodyConfig { Template = "liquid" });
+            context.SetBody("<Envelope><a>1</a>  <b note='x &amp; y'>{{body.x}}</b></Envelope>", new SetBodyConfig { Template = "liquid" });
             context.SetBody("<plain><a>1</a></plain>");
             context.SetBody("{ \"a\": \"{{body.x}}\" }", new SetBodyConfig { Template = "liquid" });
             """);
@@ -202,7 +202,7 @@ public class SetBodyTests
 
         var xml = written.ToString();
         // the gateway returns a liquid template written as escaped text still escaped: it has to be markup,
-        // written verbatim without indentation added inside it
+        // written without indentation added inside it, in the normal form of the markup (double-quoted attributes)
         xml.Should().Contain(
             "<set-body template=\"liquid\"><Envelope><a>1</a>  <b note=\"x &amp; y\">{{body.x}}</b></Envelope></set-body>");
         // and returns a body without a template that is written as markup empty: it has to stay text

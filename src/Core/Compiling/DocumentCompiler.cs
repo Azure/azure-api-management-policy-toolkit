@@ -24,10 +24,10 @@ public class DocumentCompiler
     {
         var semanticModel = compilation.GetSemanticModel(document.SyntaxTree);
         var documentType = document.ExtractDocumentType(semanticModel);
-        // Only the document's own section methods: not those of nested classes, nor overloads taking more
-        // than the section context, which would otherwise each become another section.
+        // Only the document's own section methods: not those of nested classes, nor overloads taking anything
+        // other than the section context, which would otherwise each become another section.
         var methods = document.Members.OfType<MethodDeclarationSyntax>()
-            .Where(method => method.ParameterList.Parameters.Count == 1);
+            .Where(TakesSectionContext);
         var rootElement = new XElement(documentType == DocumentType.Fragment ? "fragment" : "policies");
         var context = new DocumentCompilationContext(compilation, document, rootElement);
         document.ValidateDocumentName(semanticModel, context);
@@ -38,6 +38,29 @@ public class DocumentCompiler
             CompilePolicy(context, methods);
 
         return context;
+    }
+
+    private static readonly HashSet<string> SectionContexts =
+    [
+        nameof(IInboundContext), nameof(IBackendContext), nameof(IOutboundContext), nameof(IOnErrorContext),
+        nameof(IFragmentContext)
+    ];
+
+    // A section takes one section context, by the name as written: an overload such as Inbound(int) isn't one.
+    private static bool TakesSectionContext(MethodDeclarationSyntax method)
+    {
+        if (method.ParameterList.Parameters is not [{ Type: { } type }])
+        {
+            return false;
+        }
+
+        var name = type switch
+        {
+            QualifiedNameSyntax qualified => qualified.Right,
+            AliasQualifiedNameSyntax aliased => aliased.Name,
+            _ => type as SimpleNameSyntax
+        };
+        return name is not null && SectionContexts.Contains(name.Identifier.ValueText);
     }
 
     private void CompilePolicy(DocumentCompilationContext context, IEnumerable<MethodDeclarationSyntax> methods)

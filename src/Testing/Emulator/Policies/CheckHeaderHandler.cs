@@ -24,9 +24,11 @@ internal class CheckHeaderHandler : PolicyHandler<CheckHeaderConfig>
     protected override void Handle(GatewayContext context, CheckHeaderConfig config)
     {
         bool pass = false;
-        if (context.Request.Headers.TryGetValue(config.Name, out var values) && values.Length == 1)
+        if (context.Request.Headers.TryGetValue(config.Name, out var values))
         {
-            pass = config.Values is null || config.Values.Length == 0 || config.Values.Contains(values[0], ValueComparer(config));
+            // Without allowed values only the presence of the header is checked.
+            pass = config.Values is null || config.Values.Length == 0 ||
+                   values.Length == 1 && config.Values.Contains(values[0], ValueComparer(config));
         }
 
         if (pass)

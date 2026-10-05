@@ -139,6 +139,26 @@ public class SetVariableTests
     }
 
     [TestMethod]
+    public void ShouldReportVariableValueWrittenInPlaceOfATypeTheGatewayRejects()
+    {
+        var result =
+            """
+            public enum Mode { On }
+
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetVariable("v", Mode.On);
+                }
+            }
+            """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2034");
+    }
+
+    [TestMethod]
     // Uri and enum values are reported too; the references of this test compilation don't resolve them
     [DataRow("object", "new { a = 1 }")]
     [DataRow("object", "System.Tuple.Create(1, \"a\")")]

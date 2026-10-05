@@ -42,7 +42,7 @@ public class WaitTests
                         });
                     });
             }
-            public void OnError(OnErrorContext context)
+            public void OnError(IOnErrorContext context)
             {
                 context.Wait(() =>
                     {

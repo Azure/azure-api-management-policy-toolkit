@@ -45,7 +45,7 @@ public class CheckHeaderTests
     public void CheckHeader_PassExistenceCheck()
     {
         var test = new SimpleCheckHeader().AsTestDocument();
-        test.Context.Request.Headers["Test"] = ["test"];
+        test.Context.Request.Headers["Test"] = ["test", "other"];
 
         test.RunInbound();
 

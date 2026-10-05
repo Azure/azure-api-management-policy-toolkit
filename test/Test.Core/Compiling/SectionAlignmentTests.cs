@@ -67,7 +67,7 @@ public class SectionAlignmentTests
     }
 
     [TestMethod]
-    public void ShouldOnlyTreatTheDocumentsOwnSingleParameterMethodsAsSections()
+    public void ShouldOnlyTreatTheDocumentsOwnSectionContextMethodsAsSections()
     {
         var code =
             """
@@ -82,6 +82,10 @@ public class SectionAlignmentTests
                 public void Inbound(IInboundContext context, int extra)
                 {
                     context.SetHeader("X-Overload", "1");
+                }
+
+                public void Outbound(int notASectionContext)
+                {
                 }
 
                 public class Nested

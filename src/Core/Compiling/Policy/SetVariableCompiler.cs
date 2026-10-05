@@ -90,13 +90,18 @@ public class SetVariableCompiler : IMethodPolicyHandler
     // whose own expression has an accepted type, so that isn't reported.
     private static ITypeSymbol? FindRejectedValueType(IDocumentCompilationContext context, ExpressionSyntax value)
     {
-        if (value is not InvocationExpressionSyntax invocation ||
-            !context.Compilation.ContainsSyntaxTree(value.SyntaxTree))
+        if (!context.Compilation.ContainsSyntaxTree(value.SyntaxTree))
         {
             return null;
         }
 
         var model = CompilerUtils.CachedModel(context.Compilation, value.SyntaxTree);
+        if (value is not InvocationExpressionSyntax invocation)
+        {
+            // A value written in place, such as DayOfWeek.Monday, would otherwise be emitted as plain text.
+            return model.GetTypeInfo(value).Type is { } type && IsRejectedValueType(type) ? type : null;
+        }
+
         if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
             method.GetAttributes().Any(attribute => attribute.AttributeClass?.Name == nameof(NamedValueAttribute)) ||
             method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is not MethodDeclarationSyntax declaration ||

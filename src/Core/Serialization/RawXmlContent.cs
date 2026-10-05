@@ -22,8 +22,8 @@ public static class RawXmlContent
         element.HasElements;
 
     /// <summary>
-    /// Adds the value to a liquid set-body as markup when it is well-formed XML with at least one element and
-    /// writing it back gives the same text; otherwise as plain text.
+    /// Adds the value to a liquid set-body as markup when it is well-formed XML with at least one element;
+    /// otherwise as plain text. Markup is written back in its normal form, such as double-quoted attributes.
     /// </summary>
     public static void AddTo(XElement element, string value)
     {
@@ -50,8 +50,7 @@ public static class RawXmlContent
         {
             var wrapper = XElement.Parse($"<wrapper>{value}</wrapper>", LoadOptions.PreserveWhitespace);
             nodes = wrapper.Nodes().ToList();
-            return nodes.OfType<XElement>().Any() &&
-                   string.Concat(nodes.Select(node => node.ToString(SaveOptions.DisableFormatting))) == value;
+            return nodes.OfType<XElement>().Any();
         }
         catch (XmlException)
         {
