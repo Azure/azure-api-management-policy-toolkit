@@ -85,7 +85,8 @@ public class SendRequestCompiler : IMethodPolicyHandler
         string policy)
     {
         // SendRequestConfig and SendOneWayRequestConfig name these properties the same
-        if (values.TryGetValue(nameof(SendRequestConfig.Mode), out var mode) && mode.Value != "new")
+        if (values.TryGetValue(nameof(SendRequestConfig.Mode), out var mode) &&
+            (mode.Value == "copy" || mode.Value is { } written && (written.StartsWith('@') || written.Contains("{{"))))
         {
             return false;
         }
