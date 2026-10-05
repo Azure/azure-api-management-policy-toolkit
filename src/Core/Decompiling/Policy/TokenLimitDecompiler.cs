@@ -30,7 +30,14 @@ public abstract class BaseTokenLimitDecompiler : IPolicyDecompiler
         context.AddRequiredExprStringProp(props, element, "counter-key", "CounterKey");
         context.AddRequiredBoolExprProp(props, element, "estimate-prompt-tokens", "EstimatePromptTokens");
         context.AddOptionalIntProp(props, element, "tokens-per-minute", "TokensPerMinute");
-        context.AddOptionalIntProp(props, element, "token-quota", "TokenQuota");
+        // an expression for token-quota has to return a long
+        if (element.Attribute("token-quota")?.Value is { } quota)
+        {
+            var quotaValue = context.IsExpression(quota)
+                ? context.CreateExpressionMethodReference(quota, "TokenQuota", "long")
+                : context.HandleIntValue(quota, "TokenQuota");
+            props.Add($"TokenQuota = {quotaValue}");
+        }
         context.AddOptionalStringProp(props, element, "token-quota-period", "TokenQuotaPeriod");
         context.AddOptionalStringProp(props, element, "retry-after-header-name", "RetryAfterHeaderName");
         context.AddOptionalStringProp(props, element, "retry-after-variable-name", "RetryAfterVariableName");

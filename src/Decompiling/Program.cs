@@ -7,6 +7,8 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 var sourceOption = new Option<string?>("--s", "--source")
 {
@@ -72,7 +74,7 @@ var fragmentSuffixOption = new Option<string>("--fragment-suffix")
 
 var noValidateOption = new Option<bool>("--no-validate")
 {
-    Description = "Skip validation"
+    Description = "Skip checking that the generated C# is syntactically valid"
 };
 
 var verboseOption = new Option<bool>("--verbose", "-v")
@@ -120,6 +122,7 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
     var docIdRoot = parseResult.GetValue(docIdRootOption);
     var documentSuffix = parseResult.GetValue(documentSuffixOption)!;
     var fragmentSuffix = parseResult.GetValue(fragmentSuffixOption)!;
+    var noValidate = parseResult.GetValue(noValidateOption);
     var verbose = parseResult.GetValue(verboseOption);
 
     // Discover XML files
@@ -187,8 +190,17 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
     int failed = 0;
     int skipped = 0;
 
+    // Policies that share a directory can't all be named after it; those get the file name added.
+    var filesPerDirectory = xmlFiles
+        .Select(file => file.fullPath)
+        .Distinct()
+        .GroupBy(file => Path.GetDirectoryName(file)!)
+        .ToDictionary(group => group.Key, group => group.Count());
+    var usedTypeNames = new HashSet<string>(StringComparer.Ordinal);
+
     foreach (var (fullPath, basePath) in xmlFiles)
     {
+        var sharesDirectory = filesPerDirectory[Path.GetDirectoryName(fullPath)!] > 1;
         var relativePath = Path.GetRelativePath(basePath, fullPath);
         var relativeDir = Path.GetDirectoryName(relativePath) ?? "";
 
@@ -237,8 +249,9 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
             string result;
             if (rootElement == "fragment")
             {
-                var fragmentId = GetFragmentId(fullPath, basePath);
-                var className = BuildClassName(fullPath, basePath, fragmentSuffix);
+                var fragmentId = GetFragmentId(fullPath, basePath, sharesDirectory);
+                var className = MakeUnique(
+                    BuildClassName(fullPath, basePath, fragmentSuffix, sharesDirectory), namespaceName, usedTypeNames);
                 if (verbose)
                 {
                     await Console.Out.WriteLineAsync($"Processing: {relativePath}");
@@ -249,7 +262,8 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
             }
             else
             {
-                var className = BuildClassName(fullPath, basePath, documentSuffix);
+                var className = MakeUnique(
+                    BuildClassName(fullPath, basePath, documentSuffix, sharesDirectory), namespaceName, usedTypeNames);
                 if (verbose)
                 {
                     await Console.Out.WriteLineAsync($"Processing: {relativePath}");
@@ -261,6 +275,25 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
 
             Directory.CreateDirectory(outputDir);
             await File.WriteAllTextAsync(outputFile, result);
+
+            if (!noValidate)
+            {
+                var syntaxErrors = CSharpSyntaxTree.ParseText(result).GetDiagnostics()
+                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                    .ToList();
+                if (syntaxErrors.Count > 0)
+                {
+                    failed++;
+                    await Console.Error.WriteLineAsync(
+                        $"Error validating {relativePath}: the generated C# in {outputFile} has syntax errors (use --no-validate to skip this check):");
+                    foreach (var error in syntaxErrors)
+                    {
+                        await Console.Error.WriteLineAsync($"  {error}");
+                    }
+                    continue;
+                }
+            }
+
             succeeded++;
 
             if (verbose)
@@ -306,7 +339,7 @@ static string SanitizeIdentifier(string name)
     return result;
 }
 
-static string BuildClassName(string fullPath, string basePath, string suffix)
+static string BuildClassName(string fullPath, string basePath, string suffix, bool sharesDirectory)
 {
     var relativePath = Path.GetRelativePath(basePath, fullPath);
     var relativeDir = Path.GetDirectoryName(relativePath) ?? "";
@@ -327,11 +360,26 @@ static string BuildClassName(string fullPath, string basePath, string suffix)
     }
 
     var sanitized = SanitizeIdentifier(nameBasis);
+    if (sharesDirectory && segments.Length > 0)
+    {
+        sanitized += SanitizeIdentifier(Path.GetFileNameWithoutExtension(fullPath)).TrimStart('_');
+    }
     if (!sanitized.EndsWith(suffix, StringComparison.Ordinal))
     {
         sanitized += suffix;
     }
     return sanitized;
+}
+
+// Different files can still map to one name (e.g. a-b.xml and a_b.xml); later ones get a number.
+static string MakeUnique(string className, string namespaceName, HashSet<string> usedTypeNames)
+{
+    var candidate = className;
+    for (var number = 2; !usedTypeNames.Add($"{namespaceName}.{candidate}"); number++)
+    {
+        candidate = $"{className}{number}";
+    }
+    return candidate;
 }
 
 static string BuildNamespace(string baseNamespace, string relativeDir)
@@ -346,8 +394,14 @@ static string BuildNamespace(string baseNamespace, string relativeDir)
     return baseNamespace + "." + string.Join(".", segments);
 }
 
-static string GetFragmentId(string fullPath, string basePath)
+static string GetFragmentId(string fullPath, string basePath, bool sharesDirectory)
 {
+    // Several fragments in one directory can't all take the directory's name
+    if (sharesDirectory)
+    {
+        return Path.GetFileNameWithoutExtension(fullPath);
+    }
+
     var relativePath = Path.GetRelativePath(basePath, fullPath);
     var relativeDir = Path.GetDirectoryName(relativePath) ?? "";
     var segments = relativeDir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)

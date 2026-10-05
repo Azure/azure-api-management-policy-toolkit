@@ -15,6 +15,7 @@ public class ValidateAzureAdTokenDecompiler : IPolicyDecompiler
         var props = new List<string>();
 
         context.AddRequiredExprStringProp(props, element, "tenant-id", "TenantId");
+        context.AddOptionalStringProp(props, element, "authentication-endpoint", "AuthenticationEndpoint");
         context.AddOptionalStringProp(props, element, "header-name", "HeaderName");
         context.AddOptionalStringProp(props, element, "query-parameter-name", "QueryParameterName");
         context.AddOptionalStringProp(props, element, "token-value", "TokenValue");

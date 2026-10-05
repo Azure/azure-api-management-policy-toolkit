@@ -54,11 +54,7 @@ public class ValidateContentDecompiler : IPolicyDecompiler
                         typeProps.Add($"From = {PolicyDecompilerContext.Literal(from)}");
                     }
 
-                    var when = t.Attribute("when")?.Value;
-                    if (when != null)
-                    {
-                        typeProps.Add($"When = {when.ToLower()}");
-                    }
+                    context.AddOptionalBoolProp(typeProps, t, "when", "When");
 
                     return $"new ContentTypeMap {{ {string.Join(", ", typeProps)} }}";
                 });
@@ -104,17 +100,10 @@ public class ValidateContentDecompiler : IPolicyDecompiler
                     contentProps.Add($"SchemaRef = {PolicyDecompilerContext.Literal(schemaRef)}");
                 }
 
-                var allowAdditional = c.Attribute("allow-additional-properties")?.Value;
-                if (allowAdditional != null)
-                {
-                    contentProps.Add($"AllowAdditionalProperties = {allowAdditional.ToLower()}");
-                }
-
-                var caseInsensitive = c.Attribute("case-insensitive-property-names")?.Value;
-                if (caseInsensitive != null)
-                {
-                    contentProps.Add($"CaseInsensitivePropertyNames = {caseInsensitive.ToLower()}");
-                }
+                context.AddOptionalBoolProp(contentProps, c, "allow-additional-properties",
+                    "AllowAdditionalProperties");
+                context.AddOptionalBoolProp(contentProps, c, "case-insensitive-property-names",
+                    "CaseInsensitivePropertyNames");
 
                 return $"new ValidateContent {{ {string.Join(", ", contentProps)} }}";
             });

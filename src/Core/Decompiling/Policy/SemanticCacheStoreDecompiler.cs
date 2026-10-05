@@ -27,6 +27,15 @@ public abstract class BaseSemanticCacheStoreDecompiler : IPolicyDecompiler
         var prefix = PolicyDecompilerContext.GetContextPrefix(element, contextVar);
         var duration = element.Attribute("duration")?.Value ?? "0";
         var durationExpr = context.HandleUintValue(duration, "Duration");
-        writer.AppendLine($"{prefix}{_methodName}({durationExpr});");
+        var cacheResponse = element.Attribute("cache-response")?.Value;
+        if (cacheResponse != null)
+        {
+            var cacheResponseExpr = context.HandleBoolValue(cacheResponse, "CacheResponse");
+            writer.AppendLine($"{prefix}{_methodName}({durationExpr}, {cacheResponseExpr});");
+        }
+        else
+        {
+            writer.AppendLine($"{prefix}{_methodName}({durationExpr});");
+        }
     }
 }

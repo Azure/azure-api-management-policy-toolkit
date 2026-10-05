@@ -30,13 +30,15 @@ public abstract class BaseSemanticCacheLookupDecompiler : IPolicyDecompiler
         var scoreValue = element.Attribute("score-threshold")?.Value ?? "0";
         if (context.IsExpression(scoreValue))
             props.Add($"ScoreThreshold = {context.HandleValue(scoreValue, "ScoreThreshold", "decimal")}");
+        else if (PolicyDecompilerContext.ContainsNamedValueToken(scoreValue))
+            props.Add($"ScoreThreshold = {context.NamedValueCall(scoreValue, "decimal")}");
         else
-            props.Add($"ScoreThreshold = {scoreValue}");
+            props.Add($"ScoreThreshold = {scoreValue}m");
 
         context.AddRequiredExprStringProp(props, element, "embeddings-backend-id", "EmbeddingsBackendId");
         context.AddRequiredExprStringProp(props, element, "embeddings-backend-auth", "EmbeddingsBackendAuth");
         context.AddOptionalBoolExprProp(props, element, "ignore-system-messages", "IgnoreSystemMessages");
-        context.AddOptionalUIntProp(props, element, "max-message-count", "MaxMessageCount");
+        context.AddOptionalIntProp(props, element, "max-message-count", "MaxMessageCount");
         context.AddOptionalStringProp(props, element, "cache-id", "CacheId");
 
         var varyByElements = element.Elements("vary-by").ToList();

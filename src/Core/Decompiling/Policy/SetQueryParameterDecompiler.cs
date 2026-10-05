@@ -16,6 +16,15 @@ public class SetQueryParameterDecompiler : IPolicyDecompiler
         var existsAction = element.Attribute("exists-action")?.Value ?? "override";
         var values = element.Elements("value").ToList();
 
+        // An exists-action that isn't one of the known literals (e.g. an expression), or a set without
+        // values, has no method form; the element is kept as written.
+        if (existsAction is not ("override" or "append" or "skip" or "delete") ||
+            (existsAction != "delete" && values.Count == 0))
+        {
+            new InlinePolicyDecompiler().Decompile(writer, element, contextVar, context);
+            return;
+        }
+
         string methodName = existsAction switch
         {
             "append" => "AppendQueryParameter",

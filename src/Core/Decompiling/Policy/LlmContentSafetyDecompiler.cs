@@ -16,6 +16,9 @@ public class LlmContentSafetyDecompiler : IPolicyDecompiler
 
         context.AddRequiredStringProp(props, element, "backend-id", "BackendId");
         context.AddOptionalBoolProp(props, element, "shield-prompt", "ShieldPrompt");
+        context.AddOptionalBoolProp(props, element, "enforce-on-completions", "EnforceOnCompletions");
+        context.AddOptionalIntProp(props, element, "window-size", "WindowSize");
+        context.AddOptionalIntProp(props, element, "window-overlap-size", "WindowOverlapSize");
 
         var categoriesElement = element.Element("categories");
         if (categoriesElement != null)
@@ -34,7 +37,7 @@ public class LlmContentSafetyDecompiler : IPolicyDecompiler
                 var categoryConfigs = categories.Select(c =>
                 {
                     var name = c.Attribute("name")?.Value ?? "";
-                    var threshold = c.Attribute("threshold")?.Value ?? "0";
+                    var threshold = context.HandleIntValue(c.Attribute("threshold")?.Value ?? "0", "Threshold");
                     return $"new ContentSafetyCategory {{ Name = {PolicyDecompilerContext.Literal(name)}, Threshold = {threshold} }}";
                 });
                 catProps.Add($"Categories = new ContentSafetyCategory[] {{ {string.Join(", ", categoryConfigs)} }}");
@@ -43,7 +46,7 @@ public class LlmContentSafetyDecompiler : IPolicyDecompiler
             props.Add($"Categories = new ContentSafetyCategories {{ {string.Join(", ", catProps)} }}");
         }
 
-        var blockListsElement = element.Element("block-lists");
+        var blockListsElement = element.Element("blocklists") ?? element.Element("block-lists");
         if (blockListsElement != null)
         {
             var ids = blockListsElement.Elements("id")

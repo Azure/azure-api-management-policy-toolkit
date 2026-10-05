@@ -11,7 +11,8 @@ public class InlinePolicyDecompiler : IPolicyDecompiler
 
     public void Decompile(CodeWriter writer, XElement element, string contextVar, PolicyDecompilerContext context)
     {
-        var xmlString = element.ToString(SaveOptions.DisableFormatting);
+        // Raw policy text: expressions are written as code, not XML-escaped, which is what InlinePolicy expects.
+        var xmlString = PolicyDecompilerContext.ToRawXml(element);
         var escaped = PolicyDecompilerContext.EscapeStringForVerbatim(xmlString);
         writer.AppendLine($"{contextVar}.InlinePolicy(@\"{escaped}\");");
     }

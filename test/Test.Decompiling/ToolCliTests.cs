@@ -125,6 +125,68 @@ public class ToolCliTests
         }
     }
 
+    [TestMethod]
+    public async Task Decompiler_GivesPoliciesInOneDirectoryDistinctClassNames()
+    {
+        var temp = CreateTempDirectory();
+        try
+        {
+            var orders = Path.Combine(temp, "source", "orders");
+            Directory.CreateDirectory(orders);
+            const string xml = "<policies><inbound><base /></inbound></policies>";
+            await File.WriteAllTextAsync(Path.Combine(orders, "policy.xml"), xml);
+            await File.WriteAllTextAsync(Path.Combine(orders, "get-order.xml"), xml);
+            await File.WriteAllTextAsync(Path.Combine(orders, "get_order.xml"), xml);
+            var single = Path.Combine(temp, "source", "single");
+            Directory.CreateDirectory(single);
+            await File.WriteAllTextAsync(Path.Combine(single, "policy.xml"), xml);
+
+            var output = Path.Combine(temp, "out");
+            var result = await RunToolAsync("Decompiling", "--source", Path.Combine(temp, "source"), "--out", output);
+
+            Assert.AreEqual(0, result.ExitCode, result.Error);
+            var classNames = new[] { "policy.cs", "get-order.cs", "get_order.cs" }
+                .Select(file => File.ReadAllText(Path.Combine(output, "orders", file)))
+                .Select(code => code.Split('\n').Single(line => line.StartsWith("public class ")).Trim())
+                .ToList();
+            CollectionAssert.AllItemsAreUnique(classNames);
+            CollectionAssert.Contains(classNames, "public class OrdersPolicy : IDocument");
+            CollectionAssert.Contains(classNames, "public class OrdersGetOrderPolicy : IDocument");
+            StringAssert.Contains(await File.ReadAllTextAsync(Path.Combine(output, "single", "policy.cs")),
+                "public class SinglePolicy : IDocument");
+        }
+        finally
+        {
+            Directory.Delete(temp, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task Decompiler_ValidatesGeneratedCode_UnlessNoValidate()
+    {
+        var temp = CreateTempDirectory();
+        try
+        {
+            // "1 2" is not a number, so the generated C# does not parse.
+            var policy = Path.Combine(temp, "policy.xml");
+            await File.WriteAllTextAsync(policy,
+                """<policies><inbound><rate-limit calls="1 2" renewal-period="60" /></inbound></policies>""");
+
+            var validated = await RunToolAsync("Decompiling", "--source", policy, "--out", Path.Combine(temp, "a"));
+            var notValidated = await RunToolAsync("Decompiling", "--source", policy, "--out", Path.Combine(temp, "b"),
+                "--no-validate");
+
+            Assert.AreNotEqual(0, validated.ExitCode);
+            StringAssert.Contains(validated.Error, "syntax errors");
+            Assert.AreEqual(0, notValidated.ExitCode, notValidated.Error);
+            Assert.IsTrue(File.Exists(Path.Combine(temp, "b", "policy.cs")));
+        }
+        finally
+        {
+            Directory.Delete(temp, recursive: true);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), $"policy-toolkit-cli-{Guid.NewGuid():N}");

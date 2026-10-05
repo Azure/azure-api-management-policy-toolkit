@@ -11,13 +11,26 @@ public class JsonToXmlDecompiler : IPolicyDecompiler
 
     public void Decompile(CodeWriter writer, XElement element, string contextVar, PolicyDecompilerContext context)
     {
+        var nsSep = element.Attribute("namespace-separator")?.Value;
+        var nsSepIsCode = nsSep != null &&
+                          (context.IsExpression(nsSep) || PolicyDecompilerContext.ContainsNamedValueToken(nsSep));
+        if (nsSep != null && !nsSepIsCode && nsSep.Length != 1)
+        {
+            // The config's NamespaceSeparator is a single char; any other literal has no typed representation.
+            new InlinePolicyDecompiler().Decompile(writer, element, contextVar, context);
+            return;
+        }
+
         var prefix = PolicyDecompilerContext.GetContextPrefix(element, contextVar);
         var props = new List<string>();
         context.AddRequiredStringProp(props, element, "apply", "Apply");
         context.AddOptionalBoolProp(props, element, "consider-accept-header", "ConsiderAcceptHeader");
         context.AddOptionalBoolProp(props, element, "parse-date", "ParseDate");
-        var nsSep = element.Attribute("namespace-separator")?.Value;
-        if (nsSep != null && nsSep.Length > 0)
+        if (nsSepIsCode)
+        {
+            props.Add($"NamespaceSeparator = {context.HandleValue(nsSep!, "NamespaceSeparator", "char")}");
+        }
+        else if (nsSep != null)
         {
             props.Add($"NamespaceSeparator = '{PolicyDecompilerContext.EscapeChar(nsSep[0])}'");
         }

@@ -47,8 +47,7 @@ public class PolicyDecompiler
     {
         _context.Reset();
 
-        var preprocessed = PreprocessXml(xml);
-        var doc = XDocument.Parse(preprocessed);
+        var doc = ParsePolicyXml(xml);
         var policies = doc.Root
             ?? throw new ArgumentException("Invalid XML: missing root element.");
 
@@ -89,7 +88,7 @@ public class PolicyDecompiler
         writer.DecreaseIndent();
         writer.AppendLine("}");
 
-        return writer.ToString();
+        return RequiredUsings.AddTo(writer.ToString(), _context.ExpressionMethods);
     }
 
     public string DecompileFragment(
@@ -101,8 +100,7 @@ public class PolicyDecompiler
     {
         _context.Reset();
 
-        var preprocessed = PreprocessXml(xml);
-        var doc = XDocument.Parse(preprocessed);
+        var doc = ParsePolicyXml(xml);
         var fragment = doc.Root
             ?? throw new ArgumentException("Invalid XML: missing root element.");
 
@@ -125,7 +123,7 @@ public class PolicyDecompiler
         writer.DecreaseIndent();
         writer.AppendLine("}");
 
-        return writer.ToString();
+        return RequiredUsings.AddTo(writer.ToString(), _context.ExpressionMethods);
     }
 
     #region Setup and Structure
@@ -260,6 +258,28 @@ public class PolicyDecompiler
     #region XML Preprocessing
 
     /// <summary>
+    /// Parses policy XML into a document. Whitespace between elements is dropped, except inside a
+    /// set-body that carries markup (e.g. a liquid template), where it is part of the body content.
+    /// </summary>
+    private static XDocument ParsePolicyXml(string xml)
+    {
+        var doc = XDocument.Parse(PreprocessXml(xml), LoadOptions.PreserveWhitespace);
+        var insignificant = doc.DescendantNodes()
+            .OfType<XText>()
+            .Where(text => text is not XCData && string.IsNullOrWhiteSpace(text.Value) && !IsInMarkupBody(text))
+            .ToList();
+        foreach (var text in insignificant)
+        {
+            text.Remove();
+        }
+
+        return doc;
+    }
+
+    private static bool IsInMarkupBody(XText text) =>
+        text.Ancestors("set-body").FirstOrDefault() is { HasElements: true } body && body.Element("value") is null;
+
+    /// <summary>
     /// Preprocesses APIM policy XML to handle C# expressions that contain characters
     /// invalid in raw XML (unescaped quotes, angle brackets, ampersands inside @(...) and @{...}).
     /// Uses a placeholder approach matching ApimPolicyHarness: extracts expressions,
@@ -274,7 +294,7 @@ public class PolicyDecompiler
         try
         {
             XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
-            return xml;
+            return PreserveAttributeLineBreaks(xml);
         }
         catch (XmlException)
         {
@@ -341,6 +361,42 @@ public class PolicyDecompiler
         }
 
         return doc.ToString(SaveOptions.DisableFormatting);
+    }
+
+    /// <summary>
+    /// XML parsing normalizes line breaks and tabs in attribute values to spaces, which would join the lines
+    /// of a multi-line expression (so a line comment would swallow the code after it). When an attribute
+    /// spans lines, the document is re-read without normalization and written back with the line breaks
+    /// as character references, which survive parsing.
+    /// </summary>
+    private static string PreserveAttributeLineBreaks(string xml)
+    {
+        if (xml.IndexOfAny(['\n', '\r', '\t']) < 0)
+        {
+            return xml;
+        }
+
+        XDocument doc;
+        try
+        {
+            using var sr = new StringReader(xml);
+            using var xr = new XmlTextReader(sr)
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                Normalization = false,
+                WhitespaceHandling = WhitespaceHandling.All
+            };
+            doc = XDocument.Load(xr, LoadOptions.PreserveWhitespace);
+        }
+        catch (XmlException)
+        {
+            return xml;
+        }
+
+        var spansLines = doc.Descendants()
+            .SelectMany(element => element.Attributes())
+            .Any(attribute => attribute.Value.IndexOfAny(['\n', '\r', '\t']) >= 0);
+        return spansLines ? doc.ToString(SaveOptions.DisableFormatting) : xml;
     }
 
     /// <summary>
@@ -412,7 +468,7 @@ public class PolicyDecompiler
     /// Uses a state machine that correctly handles strings, comments, char literals,
     /// and nested braces within C# expressions.
     /// </summary>
-    private static List<(int start, int length)> CollectExpressionSpans(string text)
+    internal static List<(int start, int length)> CollectExpressionSpans(string text)
     {
         var spans = new List<(int, int)>();
         for (int i = 0; i < text.Length - 1; i++)
@@ -440,7 +496,7 @@ public class PolicyDecompiler
     /// Handles nested braces, string literals (regular, verbatim, interpolated),
     /// char literals, line comments, and block comments.
     /// </summary>
-    private static bool TryScanBalanced(string text, int startAt, char open, char close, out int length)
+    internal static bool TryScanBalanced(string text, int startAt, char open, char close, out int length)
     {
         length = 0;
         int i = startAt;

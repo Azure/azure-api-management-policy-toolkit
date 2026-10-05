@@ -17,6 +17,21 @@ public class ValidateHeadersDecompiler : IPolicyDecompiler
         context.AddRequiredStringProp(props, element, "unspecified-header-action", "UnspecifiedHeaderAction");
         context.AddOptionalStringProp(props, element, "errors-variable-name", "ErrorsVariableName");
 
+        var headers = element.Elements("header").ToList();
+        if (headers.Count > 0)
+        {
+            var headerConfigs = headers.Select(h =>
+            {
+                var headerProps = new List<string>
+                {
+                    $"Name = {PolicyDecompilerContext.Literal(h.Attribute("name")?.Value ?? "")}"
+                };
+                context.AddOptionalStringProp(headerProps, h, "action", "Action");
+                return $"new ValidateHeader {{ {string.Join(", ", headerProps)} }}";
+            });
+            props.Add($"Headers = new ValidateHeader[] {{ {string.Join(", ", headerConfigs)} }}");
+        }
+
         PolicyDecompilerContext.EmitConfigCall(writer, prefix, "ValidateHeaders", "ValidateHeadersConfig", props);
     }
 }

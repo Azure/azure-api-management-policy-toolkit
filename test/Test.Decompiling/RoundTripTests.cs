@@ -437,6 +437,268 @@ public class RoundTripTests
         AssertRoundTrip($"<policies>{sections}</policies>");
     }
 
+    [TestMethod]
+    [DataRow("""<inbound><validate-parameters specified-parameter-action="prevent" unspecified-parameter-action="ignore" errors-variable-name="errors"><headers specified-parameter-action="detect" unspecified-parameter-action="ignore"><parameter name="Authorization" action="prevent" /></headers><query specified-parameter-action="prevent" unspecified-parameter-action="detect"><parameter name="id" action="ignore" /><parameter name="filter" action="detect" /></query><path specified-parameter-action="prevent"><parameter name="orderId" action="detect" /></path></validate-parameters></inbound>""",
+        DisplayName = "validate-parameters with headers, query and path")]
+    [DataRow("""<inbound><validate-parameters specified-parameter-action="prevent" unspecified-parameter-action="ignore"><query specified-parameter-action="@(&quot;detect&quot;)" unspecified-parameter-action="{{action}}" /></validate-parameters></inbound>""",
+        DisplayName = "validate-parameters group with expression and named value actions")]
+    [DataRow("""<outbound><validate-headers specified-header-action="ignore" unspecified-header-action="prevent" errors-variable-name="errors"><header name="X-One" action="detect" /><header name="X-Two" action="prevent" /></validate-headers></outbound>""",
+        DisplayName = "validate-headers with headers")]
+    [DataRow("""<inbound><authentication-certificate body="@(context.Variables.GetValueOrDefault&lt;byte[]&gt;(&quot;cert&quot;))" password="secret" /></inbound>""",
+        DisplayName = "authentication-certificate with body")]
+    [DataRow("""<inbound><authentication-certificate body="not-an-expression" /></inbound>""",
+        DisplayName = "authentication-certificate with literal body")]
+    [DataRow("""<backend><set-backend-service base-url="{{scheme}}://{{host}}" /></backend>""",
+        DisplayName = "Two named values in one value")]
+    [DataRow("""<inbound><set-variable name="my var" value="@(1 + 1)" /><set-variable name="9 lives!" value="@(2 + 2)" /></inbound>""",
+        DisplayName = "set-variable names that are not identifiers")]
+    [DataRow("""<inbound><json-to-xml apply="always" namespace-separator="@(':')" /></inbound>""",
+        DisplayName = "json-to-xml namespace-separator expression")]
+    [DataRow("""<inbound><json-to-xml apply="always" namespace-separator="{{separator}}" /></inbound>""",
+        DisplayName = "json-to-xml namespace-separator named value")]
+    [DataRow("""<inbound><json-to-xml apply="always" namespace-separator=":" /></inbound>""",
+        DisplayName = "json-to-xml namespace-separator char")]
+    [DataRow("""<inbound><json-to-xml apply="always" namespace-separator="::" /></inbound>""",
+        DisplayName = "json-to-xml namespace-separator longer than a char")]
+    [DataRow("""<inbound><cors><allowed-origins><origin>*</origin></allowed-origins><allowed-headers><header>*</header></allowed-headers><allowed-methods preflight-result-max-age="@((uint)300)"><method>GET</method></allowed-methods></cors></inbound>""",
+        DisplayName = "cors preflight-result-max-age expression")]
+    [DataRow("""<inbound><cors><allowed-origins><origin>*</origin></allowed-origins><allowed-headers><header>*</header></allowed-headers><allowed-methods preflight-result-max-age="{{max-age}}"><method>GET</method></allowed-methods></cors></inbound>""",
+        DisplayName = "cors preflight-result-max-age named value")]
+    [DataRow("""<inbound><validate-content unspecified-content-type-action="prevent" max-size="1024" size-exceeded-action="detect"><content-type-map><type to="application/json" from="a/b" when="@(context.Request.Method == &quot;POST&quot;)" /><type to="application/json" from="c/d" when="{{map-enabled}}" /></content-type-map><content validate-as="json" action="detect" allow-additional-properties="{{allow}}" case-insensitive-property-names="true" /></validate-content></inbound>""",
+        DisplayName = "validate-content bool attributes as expression and named value")]
+    [DataRow("""<inbound><set-header name="X-Mode" exists-action="@(context.Request.Method == &quot;GET&quot; ? &quot;override&quot; : &quot;skip&quot;)"><value>v</value></set-header></inbound>""",
+        DisplayName = "set-header with expression exists-action")]
+    [DataRow("""<inbound><set-header name="X-Empty" exists-action="override" /></inbound>""",
+        DisplayName = "set-header override without values")]
+    [DataRow("""<inbound><set-query-parameter name="mode" exists-action="{{action}}"><value>v</value></set-query-parameter></inbound>""",
+        DisplayName = "set-query-parameter with named value exists-action")]
+    [DataRow("""<inbound><set-query-parameter name="empty" exists-action="skip" /></inbound>""",
+        DisplayName = "set-query-parameter skip without values")]
+    [DataRow("""<inbound><set-header name="X-Trace"><value>@(context.Request.IpAddress)-@(context.Request.Method)</value></set-header></inbound>""",
+        DisplayName = "Two expressions in one element value")]
+    [DataRow("""<inbound><set-variable name="pair" value="@(context.Request.Method) and @{return context.Request.IpAddress;}" /></inbound>""",
+        DisplayName = "Two expressions in one attribute value")]
+    [DataRow("""<inbound><choose id="route"><when condition="@(1 &gt; 0)"><set-variable name="matched" value="true" /></when><otherwise><set-variable name="matched" value="false" /></otherwise></choose></inbound>""",
+        DisplayName = "choose with id")]
+    [DataRow("""<inbound><choose><when condition="true"><set-variable name="matched" value="true" /></when></choose></inbound>""",
+        DisplayName = "choose with condition true")]
+    [DataRow("""<inbound><choose><when condition="false"><set-variable name="matched" value="true" /></when><otherwise><base /></otherwise></choose></inbound>""",
+        DisplayName = "choose with condition false")]
+    [DataRow("""<inbound><choose><when condition="{{flag}}"><set-variable name="matched" value="true" /></when><when condition="{{a}}{{b}}"><set-variable name="matched" value="maybe" /></when></choose></inbound>""",
+        DisplayName = "choose with named value conditions")]
+    [DataRow("""<inbound><unknown-policy check="@(context.Request.Headers.GetValueOrDefault(&quot;a&quot;, &quot;&quot;).Length &gt; 1 &amp;&amp; 1 &lt; 2)" note="a &amp; b"><item>@(context.Variables.ContainsKey(&quot;x&quot;) &amp;&amp; 1 &lt; 2)</item></unknown-policy></inbound>""",
+        DisplayName = "Inline policy with characters XML escapes in expressions")]
+    [DataRow("""<inbound><choose><when condition="true" /></choose></inbound>""",
+        DisplayName = "choose with an empty when")]
+    [DataRow("""<inbound><choose><when condition="@(1 &gt; 0)"><base /></when><otherwise /></choose></inbound>""",
+        DisplayName = "choose with an empty otherwise")]
+    [DataRow("""<inbound><send-request mode="new" response-variable-name="r"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="AAECAw==" password="p" /></send-request></inbound>""",
+        DisplayName = "send-request with a literal certificate body")]
+    [DataRow("""<inbound><llm-semantic-cache-lookup score-threshold="{{threshold}}" embeddings-backend-id="embeddings" embeddings-backend-auth="system-assigned" /></inbound>""",
+        DisplayName = "semantic cache lookup score threshold from a named value")]
+    [DataRow("""<inbound><send-request response-variable-name="r" mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="{{certificate}}" /></send-request></inbound>""",
+        DisplayName = "send-request with a certificate body from a named value")]
+    public void ConformancePolicy_RoundTrips(string sections)
+    {
+        var xml = $"<policies>{sections}</policies>";
+        AssertRoundTrip(xml);
+        AssertValidCSharpSyntax(s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest"));
+    }
+
+    [TestMethod]
+    [DataRow("""<send-request response-variable-name="r" mode="new"><set-url>https://api.example.com</set-url><set-method>GET</set-method><authentication-certificate thumbprint="ABCDEF" password="{{cert-password}}" /></send-request>""",
+        DisplayName = "send-request certificate password")]
+    [DataRow("""<send-request response-variable-name="r" mode="new"><set-url>https://api.example.com</set-url><set-method>GET</set-method><authentication-certificate body="@(context.Variables.GetValueOrDefault&lt;byte[]&gt;(&quot;cert&quot;))" password="secret" /></send-request>""",
+        DisplayName = "send-request certificate body")]
+    [DataRow("""<send-request response-variable-name="r" mode="new"><set-url>https://api.example.com</set-url><set-method>GET</set-method><authentication-managed-identity resource="https://vault.azure.net" output-token-variable-name="token" ignore-error="true" /></send-request>""",
+        DisplayName = "send-request managed identity token variable and ignore-error")]
+    [DataRow("""<send-one-way-request mode="new"><set-url>https://api.example.com</set-url><set-method>POST</set-method><authentication-managed-identity resource="https://vault.azure.net" client-id="abc" output-token-variable-name="token" ignore-error="false" /></send-one-way-request>""",
+        DisplayName = "send-one-way-request managed identity token variable and ignore-error")]
+    public void NestedAuthentication_RoundTrips(string policy)
+    {
+        AssertRoundTripSemantic($"<policies><inbound>{policy}</inbound></policies>");
+    }
+
+    [TestMethod]
+    public void ChooseWithNamedValueCondition_DecompilesToIfStatement()
+    {
+        var xml = """<policies><inbound><choose><when condition="{{flag}}"><base /></when></choose></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("if (NamedValue_Flag0(context.ExpressionContext))");
+        csharp.Should().NotContain("InlinePolicy");
+    }
+
+    [TestMethod]
+    public void ChooseWithIdAndConstantCondition_DecompilesToIfStatement()
+    {
+        var xml = """<policies><inbound><choose id="route"><when condition="true"><base /></when><when condition="false"><base /></when></choose></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("context.WithId(\"route\");");
+        csharp.Should().Contain("if (true)");
+        csharp.Should().Contain("else if (false)");
+        csharp.Should().NotContain("InlinePolicy");
+    }
+
+    [TestMethod]
+    public void ChooseWithPaddedConstantCondition_DecompilesToIfStatement()
+    {
+        var xml = """<policies><inbound><choose><when condition=" true "><base /></when></choose></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("if (true)");
+        csharp.Should().NotContain("InlinePolicy");
+    }
+
+    [TestMethod]
+    [DataRow("""<choose><when condition="True"><base /></when></choose>""")]
+    [DataRow("""<choose><when><base /></when></choose>""")]
+    [DataRow("""<choose><otherwise><base /></otherwise></choose>""")]
+    public void ChooseTheGatewayRejects_IsKeptAsWritten(string choose)
+    {
+        var csharp = s_decompiler.DecompileDocument(
+            $"<policies><inbound>{choose}</inbound></policies>", "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("InlinePolicy");
+    }
+
+    [TestMethod]
+    public void SetBodyWithMarkup_KeepsInnerXml()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <set-body template="liquid">
+                        <Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+                            <s:Body note="a &amp; b"><a>{{body.x}}</a></s:Body>
+                        </Envelope>
+                    </set-body>
+                </inbound>
+            </policies>
+            """;
+        var body = XDocument.Parse(xml, LoadOptions.PreserveWhitespace).Descendants("set-body").Single();
+        var expected = string.Concat(body.Nodes().Select(n => n.ToString(SaveOptions.DisableFormatting)))
+            .ReplaceLineEndings("\n");
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        var result = CompileCSharp(csharp);
+
+        AssertValidCSharpSyntax(csharp);
+        result.Errors.Should().BeEmpty("the decompiled C# should compile.\nGenerated C#:\n{0}", csharp);
+        var compiled = result.Document.Descendants("set-body").Single();
+        compiled.Attribute("template")!.Value.Should().Be("liquid");
+        compiled.Elements().Should().ContainSingle(child => child.Name.LocalName == "Envelope");
+        string.Concat(compiled.Nodes().Select(n => n.ToString(SaveOptions.DisableFormatting)))
+            .ReplaceLineEndings("\n").Should().Be(expected, "Generated C#:\n{0}", csharp);
+    }
+
+    [TestMethod]
+    public void MultiLineAttributeExpression_KeepsCodeAfterLineComment()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <set-variable name="total" value="@{
+                        // a comment on the first line
+                        var a = 1;
+                        return a + 41;
+                    }" />
+                    <choose>
+                        <when condition="@{
+                            // another comment
+                            return context.Request.Method == &quot;GET&quot;;
+                        }">
+                            <base />
+                        </when>
+                    </choose>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        var result = CompileCSharp(csharp);
+
+        AssertValidCSharpSyntax(csharp);
+        result.Errors.Should().BeEmpty("the decompiled C# should compile.\nGenerated C#:\n{0}", csharp);
+        var value = result.Document.Descendants("set-variable").Single().Attribute("value")!.Value;
+        value.Should().Contain("var a = 1;").And.Contain("return a + 41;");
+        var condition = result.Document.Descendants("when").Single().Attribute("condition")!.Value;
+        condition.Should().Contain("context.Request.Method == \"GET\"");
+    }
+
+    [TestMethod]
+    public void TypesNamedInExpressions_GetTheirUsingDirectives()
+    {
+        var xml = """<policies><inbound><set-variable name="a" value="@(context.Request.Body.As&lt;JObject&gt;())" /><set-variable name="b" value="@(Regex.IsMatch(context.Request.Method, &quot;GET&quot;))" /><set-variable name="c" value="@(Encoding.UTF8.GetBytes(&quot;x&quot;).Length)" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("using Newtonsoft.Json.Linq;")
+            .And.Contain("using System.Text.RegularExpressions;")
+            .And.Contain("using System.Text;")
+            .And.NotContain("using System.Xml.Linq;");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void DocumentWithoutSuchTypes_GetsNoExtraUsingDirectives()
+    {
+        var csharp = s_decompiler.DecompileDocument(
+            """<policies><inbound><set-header name="X"><value>@(context.Request.Method)</value></set-header></inbound></policies>""",
+            "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().StartWith("using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;");
+    }
+
+    [TestMethod]
+    public void BaseInFragment_IsDecompiledAsWrittenSoCompilingReportsIt()
+    {
+        // the gateway saves <base /> in a fragment, but an API that includes the fragment fails when called
+        var csharp = s_decompiler.DecompileFragment(
+            "<fragment><base /><set-header name=\"X\"><value>1</value></set-header></fragment>",
+            "fragment-id", "RoundTripFragment", "RoundTripTest");
+
+        csharp.Should().Contain("context.Base();").And.NotContain("InlinePolicy");
+        CompileCSharp(csharp).Errors.Should().ContainSingle(error => error.Id == "APIM2031");
+    }
+
+    [TestMethod]
+    public void InlinePolicyFallback_EmitsRawExpressions()
+    {
+        var xml = """<policies><inbound><unknown-policy check="@(context.Variables.ContainsKey(&quot;x&quot;) &amp;&amp; 1 &lt; 2)" note="a &amp; &quot;b&quot;" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain(
+            """context.InlinePolicy(@"<unknown-policy check=""@(context.Variables.ContainsKey(""x"") && 1 < 2)"" note=""a &amp; &quot;b&quot;"" />");""");
+    }
+
+    [TestMethod]
+    [DataRow("@(a)", true)]
+    [DataRow("@{return a;}", true)]
+    [DataRow("@(a)-@(b)", false)]
+    [DataRow("@(a) @{return b;}", false)]
+    [DataRow("@(\")\" + a)", true)]
+    [DataRow("@(')' + a)", true)]
+    [DataRow("@(a /* ) */ + b)", true)]
+    [DataRow("@(a", false)]
+    [DataRow("text @(a)", false)]
+    public void IsExpression_RequiresOneBalancedExpression(string value, bool expected)
+    {
+        new PolicyDecompilerContext().IsExpression(value).Should().Be(expected);
+    }
+
+    private static void AssertValidCSharpSyntax(string csharp)
+    {
+        CSharpSyntaxTree.ParseText(csharp).GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Should().BeEmpty("the decompiled C# should be syntactically valid.\nGenerated C#:\n{0}", csharp);
+    }
+
     private static void AssertRoundTrip(string originalXml)
     {
         // Step 1: Normalize the original XML through the same serialization pipeline
