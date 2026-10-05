@@ -36,14 +36,65 @@ public static class SyntaxExtensions
             .Any(attribute => attribute.AttributeClass?.ToFullyQualifiedString() == ExpressionAttribute);
     }
 
-    // A node inside an [Expression] method, or inside any method of an expression helper library (by symbol, so
-    // every part of a partial class is included).
+    // A node inside an [Expression] method, inside any method of an expression helper library (by symbol, so
+    // every part of a partial class is included), or inside a helper of a policy document or fragment, which the
+    // compiler turns into a policy expression without the attribute.
     public static bool IsPartOfPolicyExpressionMethod(this SyntaxNode syntax, SemanticModel model)
     {
         return syntax.Ancestors()
             .OfType<MethodDeclarationSyntax>()
-            .Any(method => method.AttributeLists.ContainsExpressionAttribute(model) ||
-                           model.GetDeclaredSymbol(method)?.IsExpressionLibraryMember() == true);
+            .Any(method => IsMarkedExpressionMethod(method, model) ||
+                           model.GetDeclaredSymbol(method) is IMethodSymbol symbol &&
+                           symbol.IsDocumentMember() && !IsSectionOrConfigurationFactory(symbol));
+    }
+
+    // A node inside a method that is expression code because it, or its class, is marked [Expression].
+    public static bool IsPartOfMarkedPolicyExpressionMethod(this SyntaxNode syntax, SemanticModel model)
+    {
+        return syntax.Ancestors()
+            .OfType<MethodDeclarationSyntax>()
+            .Any(method => IsMarkedExpressionMethod(method, model));
+    }
+
+    private static bool IsMarkedExpressionMethod(MethodDeclarationSyntax method, SemanticModel model)
+    {
+        return method.AttributeLists.ContainsExpressionAttribute(model) ||
+               model.GetDeclaredSymbol(method)?.IsExpressionLibraryMember() == true;
+    }
+
+    private const string Authoring = "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring";
+    private const string SectionContext = Authoring + ".IHaveExpressionContext";
+
+    // The methods of a document that hold policies rather than expression code: sections and fragments return
+    // nothing and take a section context, policy configuration factories return a configuration.
+    private static bool IsSectionOrConfigurationFactory(IMethodSymbol method)
+    {
+        return method.ReturnsVoid ||
+               method.ReturnType.ContainingNamespace?.ToDisplayString() == Authoring ||
+               method.Parameters.Any(parameter =>
+                   parameter.Type.AllInterfaces.Any(type => type.ToFullyQualifiedString() == SectionContext));
+    }
+
+    private const string Document = Authoring + ".IDocument";
+    private const string Fragment = Authoring + ".IFragment";
+
+    // A member declared in the source of a policy document or fragment class, or of a class nested in one.
+    public static bool IsDocumentMember(this ISymbol symbol)
+    {
+        if (symbol.DeclaringSyntaxReferences.IsDefaultOrEmpty)
+        {
+            return false;
+        }
+
+        for (var type = symbol.ContainingType; type is not null; type = type.ContainingType)
+        {
+            if (type.AllInterfaces.Any(implemented => implemented.ToFullyQualifiedString() is Document or Fragment))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // A member of a class marked [Expression] (an expression helper library), from source or metadata.

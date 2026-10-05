@@ -27,6 +27,35 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             SyntaxKind.ObjectCreationExpression,
             SyntaxKind.ObjectInitializerExpression,
             SyntaxKind.AnonymousObjectCreationExpression);
+        context.RegisterSyntaxNodeAction(AnalyzeTypeName, SyntaxKind.IdentifierName);
+    }
+
+    // API Management resolves type names against every namespace it imports, so a name declared in two of them is
+    // rejected unless it is written with its namespace, whatever the using directives of the source file are.
+    private readonly static IReadOnlyDictionary<string, IReadOnlyCollection<string>> AmbiguousTypeNames =
+        new Dictionary<string, IReadOnlyCollection<string>>()
+        {
+            { "Formatting", new HashSet<string>() { "Newtonsoft.Json.Formatting", "System.Xml.Formatting" } },
+        };
+
+    private static void AnalyzeTypeName(SyntaxNodeAnalysisContext context)
+    {
+        var name = (IdentifierNameSyntax)context.Node;
+        if (!AmbiguousTypeNames.TryGetValue(name.Identifier.ValueText, out var candidates) ||
+            name.Parent is MemberAccessExpressionSyntax memberAccess && memberAccess.Name == name ||
+            name.Parent is QualifiedNameSyntax qualifiedName && qualifiedName.Right == name ||
+            name.Parent is AliasQualifiedNameSyntax ||
+            !IsPartOfPolicyExpression(context))
+        {
+            return;
+        }
+
+        if (context.SemanticModel.GetSymbolInfo(name).Symbol is INamedTypeSymbol type &&
+            candidates.Contains(type.ToFullyQualifiedString()))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.AmbiguousTypeName, name.GetLocation(),
+                name.Identifier.ValueText, type.ToFullyQualifiedString()));
+        }
     }
 
     private readonly static IReadOnlyCollection<string> AllowedTypes = new HashSet<string>()
@@ -174,12 +203,21 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
 
         #region Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
 
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.Authorization",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.BasicAuthCredentials",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ByteArrayExtensions",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.CarbonIntensityCategory",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.DictionaryExtensions",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IFoundry",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ISustainabilityInfo",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.X509Certificate2Extensions",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IApi",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IExpressionContext",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IContextApi",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IBackend",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IDeployment",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IGateway",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IWorkspace",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IGroup",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.Jwt",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ILastError",
@@ -188,6 +226,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IOperation",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IPrivateEndpointConnection",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IProduct",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ProductState",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IRequest",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IResponse",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ISubscription",
@@ -204,6 +243,9 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         new Dictionary<string, IReadOnlyCollection<string>>()
         {
             { "Newtonsoft.Json.JsonConvert", new HashSet<string>() { "SerializeObject", "DeserializeObject" } },
+            // The gateway accepts the type but none of its members: ToString(), Equals() or GetType() called on
+            // a value typed object, or on a type that doesn't declare them itself, is rejected.
+            { "System.Object", new HashSet<string>() },
             {
                 "System.DateTime", new HashSet<string>()
                 {
@@ -287,10 +329,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
     {
         var node = context.Node;
 
-        var underUnderExpressionMethod = node.IsPartOfPolicyExpressionMethod(context.SemanticModel);
-        var underUnderExpressionLambda = node.IsPartOfPolicyExpressionDelegate(context.SemanticModel);
-
-        if (!underUnderExpressionMethod && !underUnderExpressionLambda)
+        if (!IsPartOfPolicyExpression(context))
         {
             return;
         }
@@ -307,6 +346,16 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        // Invoking a delegate typed member, like context.Trace("message"), is a use of that member and not of the
+        // delegate type.
+        if (nodeSymbol is IMethodSymbol { MethodKind: MethodKind.DelegateInvoke } &&
+            node is InvocationExpressionSyntax delegateInvocation &&
+            context.SemanticModel.GetSymbolInfo(delegateInvocation.Expression).Symbol is
+                { Kind: SymbolKind.Property or SymbolKind.Field } delegateMember)
+        {
+            nodeSymbol = delegateMember;
+        }
+
         // Members of an expression helper library ([Expression] on the class) are analysed in their own project, so
         // calls to its methods and uses of its constants are allowed, from source or a referenced assembly.
         if (nodeSymbol.IsExpressionLibraryMember() &&
@@ -316,10 +365,15 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Calls to [Expression] helpers (also from a referenced assembly) are expanded by the compiler, and source
-        // constants are folded into literals, except values of source enums, which don't exist in API Management. A
-        // helper passed as a method group isn't expanded.
-        if (nodeSymbol is IMethodSymbol && node is InvocationExpressionSyntax && nodeSymbol.HasExpressionAttribute() ||
+        // Calls to [Expression] helpers (also from a referenced assembly) and to the helpers of a policy document are
+        // expanded by the compiler, and source constants are folded into literals, except values of source enums,
+        // which don't exist in API Management. A helper passed as a method group isn't expanded. A document helper
+        // that isn't marked [Expression] may call any helper declared in source, as it could before it was analysed.
+        if (nodeSymbol is IMethodSymbol && node is InvocationExpressionSyntax &&
+            (nodeSymbol.HasExpressionAttribute() || nodeSymbol.IsDocumentMember() ||
+             !nodeSymbol.DeclaringSyntaxReferences.IsDefaultOrEmpty &&
+             !node.IsPartOfMarkedPolicyExpressionMethod(context.SemanticModel) &&
+             !node.IsPartOfPolicyExpressionDelegate(context.SemanticModel)) ||
             !nodeSymbol.DeclaringSyntaxReferences.IsDefaultOrEmpty &&
             nodeSymbol is IFieldSymbol { IsConst: true, ContainingType.TypeKind: not TypeKind.Enum } field &&
             !(field.Type.TypeKind == TypeKind.Enum && !field.Type.DeclaringSyntaxReferences.IsDefaultOrEmpty))
@@ -333,9 +387,15 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        // API Management accepts anonymous types: new { a = 1 }.a
+        if (symbol.IsAnonymousType)
+        {
+            return;
+        }
+
         // Indexers are named "this[]" in Roslyn; the allow lists use their metadata name ("Item").
         var memberName = nodeSymbol is IPropertySymbol { IsIndexer: true } ? nodeSymbol.MetadataName : nodeSymbol.Name;
-        var typeName = (symbol.IsGenericType ? symbol.OriginalDefinition : symbol)?.ToFullyQualifiedString() ?? "";
+        var typeName = GetTypeName(symbol);
         if (AllowedTypes.Contains(typeName))
         {
             if (AllowedInTypes.TryGetValue(typeName, out var allowed) && !allowed.Contains(memberName))
@@ -354,5 +414,25 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         {
             context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.DisallowedType, node.GetLocation(), typeName));
         }
+    }
+
+    private static bool IsPartOfPolicyExpression(SyntaxNodeAnalysisContext context)
+    {
+        return context.Node.IsPartOfPolicyExpressionMethod(context.SemanticModel) ||
+               context.Node.IsPartOfPolicyExpressionDelegate(context.SemanticModel);
+    }
+
+    private static string GetTypeName(INamedTypeSymbol symbol)
+    {
+        if (!symbol.IsGenericType)
+        {
+            return symbol.ToFullyQualifiedString();
+        }
+
+        // System.Nullable and System.Tuple are listed without type parameters and are allowed with any number of them.
+        var nameWithoutTypeParameters = symbol.OriginalDefinition.ToFullyQualifiedStringWithoutTypeParameters();
+        return AllowedTypes.Contains(nameWithoutTypeParameters)
+            ? nameWithoutTypeParameters
+            : symbol.OriginalDefinition.ToFullyQualifiedString();
     }
 }

@@ -357,6 +357,49 @@ public class TypeUsedTests
     }
 
     [TestMethod]
+    public async Task ShouldAnalyseUnattributedHelpersOfDocument()
+    {
+        await VerifyAsync(
+            """
+            public class Document : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Tenant", Tenant(context.ExpressionContext));
+                    System.Environment.GetEnvironmentVariable("NotAnExpression");
+                }
+
+                static string Tenant(IExpressionContext context) =>
+                    Tidy(context.Request.Headers.GetValueOrDefault("X-Tenant", "")) + {|#0:System.Environment.MachineName|};
+
+                static string Tidy(string value) => Text.Trim(value) + Nested.Line() + {|#1:System.Environment.NewLine|};
+
+                static RateLimitConfig Limits() => new RateLimitConfig { Calls = 1, RenewalPeriod = 1 };
+
+                static RateLimitConfig Limits(IInboundContext context) =>
+                    new RateLimitConfig { Calls = 1, RenewalPeriod = System.Environment.ProcessorCount };
+
+                static class Nested
+                {
+                    public static string Line() => {|#2:System.Environment.NewLine|};
+                }
+            }
+
+            public static class Text
+            {
+                public static string Trim(string value) => value.Trim();
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(2)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
     public async Task ShouldAllowDictionaryExtensions()
     {
         await VerifyAsync(

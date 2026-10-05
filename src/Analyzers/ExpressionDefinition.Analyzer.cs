@@ -26,6 +26,10 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
             SyntaxKind.ParenthesizedLambdaExpression);
     }
 
+    // The types an expression helper can be declared to return. The gateway types the expression itself and
+    // does not convert its value, so this follows the types it accepts as the value of a variable. object is
+    // here because the decompiler declares the helper of a set-variable value as object. Nullable and array
+    // forms and enums are handled in IsAllowedReturnType.
     private readonly static IReadOnlyCollection<string> AllowedExpressionReturnTypes = new HashSet<string>()
     {
         "System.Boolean",
@@ -39,13 +43,41 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
         "System.Int16",
         "System.Int32",
         "System.Int64",
+        "System.Object",
+        "System.SByte",
+        "System.Single",
         "System.String",
+        "System.TimeSpan",
         "System.UInt16",
         "System.UInt32",
         "System.UInt64",
         "System.Uri",
+        "Newtonsoft.Json.Linq.JArray",
+        "Newtonsoft.Json.Linq.JConstructor",
+        "Newtonsoft.Json.Linq.JContainer",
         "Newtonsoft.Json.Linq.JObject",
+        "Newtonsoft.Json.Linq.JProperty",
+        "Newtonsoft.Json.Linq.JRaw",
+        "Newtonsoft.Json.Linq.JToken",
+        "Newtonsoft.Json.Linq.JValue",
     };
+
+    private static bool IsAllowedReturnType(ITypeSymbol type)
+    {
+        switch (type)
+        {
+            case { TypeKind: TypeKind.Enum }:
+                return true;
+            // the gateway accepts string[] and byte[] as the value of an expression, but not int[]
+            case IArrayTypeSymbol { Rank: 1 } array:
+                return array.ElementType.SpecialType is
+                    SpecialType.System_String or SpecialType.System_Byte or SpecialType.System_SByte;
+            case INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable:
+                return IsAllowedReturnType(nullable.TypeArguments[0]);
+            default:
+                return AllowedExpressionReturnTypes.Contains(type.ToFullyQualifiedString());
+        }
+    }
 
     private const string ContextParamType =
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IExpressionContext";
@@ -74,7 +106,7 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
         else
         {
             var fullTypeName = type.ToFullyQualifiedString();
-            if (!AllowedExpressionReturnTypes.Contains(fullTypeName))
+            if (!IsAllowedReturnType(type))
             {
                 var diagnostic = Diagnostic.Create(Rules.Expression.ReturnTypeNotAllowed,
                     method.ReturnType.GetLocation(), fullTypeName);

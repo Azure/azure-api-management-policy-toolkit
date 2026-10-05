@@ -94,6 +94,36 @@ public static class TextHelpers
 Helpers are inlined from source, so the library must be a project reference. Calling a helper, property or
 non-constant field of a compiled library is reported, although its constants can still be used.
 
+## What the analyzer checks
+
+The analyzer reports code that API Management rejects when the policy is saved: types and members outside the set it
+allows in policy expressions (`APIM001`, `APIM002`), and type names it can't resolve on their own (`APIM003`).
+
+It checks:
+
+- every helper of a policy document or fragment class, including helpers in a class nested inside it. A helper is any
+  method that returns a value, other than a policy configuration factory and a method that takes a policy section
+  context. The `[Expression]` attribute isn't needed for these.
+- methods marked `[Expression]` and every method of a class marked `[Expression]`.
+- expression lambdas passed to a policy.
+
+A helper in any other class is only checked when its class is marked `[Expression]`. Code marked `[Expression]` may
+only call document helpers and other marked helpers, while an unmarked document helper may call any helper declared in
+source.
+
+A method of a document class that isn't an expression helper is checked as well, so keep such methods in another
+class. Properties declared in source can't be used as helpers; the compiler reports them.
+
+### Ambiguous type names
+
+API Management resolves type names against all the namespaces it imports, whatever the `using` directives of the
+source file are. `Formatting` exists in both `Newtonsoft.Json` and `System.Xml`, so it has to be written with its
+namespace:
+
+```csharp
+JsonConvert.SerializeObject(value, Newtonsoft.Json.Formatting.Indented)
+```
+
 ## Named values
 
 `context.NamedValue("name")` compiles to a raw `{{name}}` token, so the named value is used as code.
