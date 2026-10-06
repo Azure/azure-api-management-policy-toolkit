@@ -609,6 +609,8 @@ public class SendRequestTests
     [DataRow("context.SendOneWayRequest(new SendOneWayRequestConfig { Mode = \"new\" });", 2)]
     [DataRow("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\", Mode = \"copy\" });", 0)]
     [DataRow("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\", Mode = \"typo\" });", 2)]
+    // an empty value is missing too
+    [DataRow("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\", Url = \"\", Method = \" \" });", 2)]
     public void ShouldRequireUrlAndMethodUnlessTheRequestIsCopied(string policy, int errors)
     {
         CompilerTestInitialize.InboundDocument(policy).CompileDocument().Errors.Where(error => error.Id == "APIM2006").Should().HaveCount(errors);

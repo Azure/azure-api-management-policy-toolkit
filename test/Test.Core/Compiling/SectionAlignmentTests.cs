@@ -36,6 +36,8 @@ public class SectionAlignmentTests
     [DataRow("public void Inbound(IInboundContext context) { context.ForwardRequest(); }", "ForwardRequest")]
     [DataRow("public void Inbound(IInboundContext context) { context.WithId(\"x\").CacheStore(10, null); context.Base(); }", "CacheStore")]
     [DataRow("public void Backend(IBackendContext context) { context.EmitMetric(new EmitMetricConfig { Name = \"n\", Dimensions = [] }); }", "EmitMetric")]
+    // the section is on-error whatever context the method takes, and the gateway rejects an outbound-only policy in it
+    [DataRow("public void OnError(IOutboundContext context) { context.LlmSemanticCacheStore(10); }", "LlmSemanticCacheStore")]
     public void ShouldReportPolicyUsedInSectionThatDoesNotAllowIt(string section, string method)
     {
         var result =
@@ -51,6 +53,22 @@ public class SectionAlignmentTests
             error.Id == "APIM2031" && error.GetMessage(null).Contains(method));
         // the id of the rejected policy doesn't move on to the next one
         result.Document.Descendants().Where(element => element.Attribute("id") is not null).Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public void ShouldNameTheSectionsContextWhenAPolicyIsNotAvailableInIt()
+    {
+        var result =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void OnError(IOutboundContext context) { context.LlmSemanticCacheStore(10); }
+            }
+            """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM2031" && error.GetMessage(null).Contains("IOnErrorContext"));
     }
 
     [TestMethod]

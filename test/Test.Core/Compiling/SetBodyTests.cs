@@ -191,6 +191,7 @@ public class SetBodyTests
             context.SetBody("{% if body.n < 2 && body.m %}<p>{{body.x}} & co<![CDATA[a & b < c]]><!-- d & e < f --></p>{% endif %}", new SetBodyConfig { Template = "liquid" });
             context.SetBody("@(context.RequestId)<a />", new SetBodyConfig { Template = "liquid" });
             context.SetBody("@(1 < 2 ? \"<a>\" : \"b\")", new SetBodyConfig { Template = "liquid", UseValueElement = true });
+            context.SetBody("{% if body.n < 2 %}<_item>{{body.x}}</_item><élément/>{% endif %}", new SetBodyConfig { Template = "liquid" });
             """);
 
         var result = code.CompileDocument();
@@ -218,5 +219,8 @@ public class SetBodyTests
         // a comparison in a liquid tag doesn't stop the body from being markup: the gateway reads &lt; in a tag
         xml.Should().Contain(
             "<set-body template=\"liquid\">{% if body.n &lt; 2 &amp;&amp; body.m %}<p>{{body.x}} &amp; co<![CDATA[a & b < c]]><!-- d & e < f --></p>{% endif %}</set-body>");
+        // a tag may start with _ or a letter outside ASCII
+        xml.Should().Contain(
+            "<set-body template=\"liquid\">{% if body.n &lt; 2 %}<_item>{{body.x}}</_item><élément />{% endif %}</set-body>");
     }
 }

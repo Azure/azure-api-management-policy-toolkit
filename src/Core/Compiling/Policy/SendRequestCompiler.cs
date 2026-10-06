@@ -94,7 +94,8 @@ public class SendRequestCompiler : IMethodPolicyHandler
         var missing = false;
         foreach (var name in new[] { nameof(SendRequestConfig.Url), nameof(SendRequestConfig.Method) })
         {
-            if (!values.ContainsKey(name))
+            // an empty <set-url /> or <set-method /> is as much missing as none
+            if (!values.TryGetValue(name, out var value) || string.IsNullOrWhiteSpace(value.Value))
             {
                 context.Report(Diagnostic.Create(
                     CompilationErrors.RequiredParameterNotDefined,

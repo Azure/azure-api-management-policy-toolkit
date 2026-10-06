@@ -67,9 +67,10 @@ public static class RawXmlContent
         return TryParseXml(value, out nodes) || TryParseXml(StrayCharacter.Replace(value, Escape), out nodes);
     }
 
-    // A CDATA section or a comment, which is kept as it is, or a < or & that starts neither a tag nor an entity.
+    // A CDATA section or a comment, which is kept as it is, or a < or & that starts neither a tag nor an entity. A
+    // tag starts with a letter of any script, _ or :.
     private static readonly Regex StrayCharacter = new(
-        @"<!\[CDATA\[.*?\]\]>|<!--.*?-->|<(?![A-Za-z_/!?])|&(?!(?:[A-Za-z][A-Za-z0-9]*|#[0-9]+|#x[0-9A-Fa-f]+);)",
+        @"<!\[CDATA\[.*?\]\]>|<!--.*?-->|<(?![\p{L}_:/!?])|&(?!(?:[A-Za-z][A-Za-z0-9]*|#[0-9]+|#x[0-9A-Fa-f]+);)",
         RegexOptions.Compiled | RegexOptions.Singleline);
 
     private static string Escape(Match match) => match.Value switch

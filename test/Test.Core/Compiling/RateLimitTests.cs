@@ -327,6 +327,10 @@ public class RateLimitTests
     [DataRow("context.RateLimitByKey(new RateLimitByKeyConfig { Calls = 1, RenewalPeriod = 0, CounterKey = \"k\" });", true)]
     [DataRow("context.QuotaByKey(new QuotaByKeyConfig { Calls = 1, RenewalPeriod = 299, CounterKey = \"k\" });", true)]
     [DataRow("context.QuotaByKey(new QuotaByKeyConfig { Calls = 1, RenewalPeriod = 300, CounterKey = \"k\" });", false)]
+    // the api and operation limits have the same range
+    [DataRow("context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 10, Apis = [new ApiRateLimit { Name = \"a\", Calls = 1, RenewalPeriod = 301 }] });", true)]
+    [DataRow("context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 10, Apis = [new ApiRateLimit { Name = \"a\", Calls = 1, RenewalPeriod = 10, Operations = [new OperationRateLimit { Name = \"o\", Calls = 1, RenewalPeriod = 0 }] }] });", true)]
+    [DataRow("context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 10, Apis = [new ApiRateLimit { Name = \"a\", Calls = 1, RenewalPeriod = 300, Operations = [new OperationRateLimit { Name = \"o\", Calls = 1, RenewalPeriod = 1 }] }] });", false)]
     public void ShouldValidateRenewalPeriodRange(string policy, bool rejected)
     {
         var errors = CompilerTestInitialize.InboundDocument(policy).CompileDocument().Errors;

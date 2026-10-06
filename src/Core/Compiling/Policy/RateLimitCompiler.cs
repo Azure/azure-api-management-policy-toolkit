@@ -134,6 +134,7 @@ public class RateLimitCompiler : IMethodPolicyHandler
             return false;
         }
 
-        return true;
+        // the same range as the policy's own renewal period
+        return !context.ReportIfOutOfRange(values, nameof(EntityLimitConfig.RenewalPeriod), name, 1, 300);
     }
 }

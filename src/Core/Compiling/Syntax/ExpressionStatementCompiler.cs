@@ -145,9 +145,29 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
             return false;
         }
 
-        sectionContext = receiver.Name;
-        return receiver.GetMembers(name).IsEmpty &&
-               receiver.AllInterfaces.All(inherited => inherited.GetMembers(name).IsEmpty);
+        // A section is compiled by its name whatever context it takes: OnError(IOutboundContext context) is
+        // on-error, so its policies are checked against IOnErrorContext, not against what it is written with.
+        var section = SectionContextOf(context, memberAccess) ?? receiver;
+        sectionContext = section.Name;
+        return section.GetMembers(name).IsEmpty &&
+               section.AllInterfaces.All(inherited => inherited.GetMembers(name).IsEmpty);
+    }
+
+    private static INamedTypeSymbol? SectionContextOf(IDocumentCompilationContext context, SyntaxNode node)
+    {
+        var contextName = node.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault()?.Identifier.ValueText switch
+        {
+            "Inbound" => "IInboundContext",
+            "Outbound" => "IOutboundContext",
+            "Backend" => "IBackendContext",
+            "OnError" => "IOnErrorContext",
+            "Fragment" => "IFragmentContext",
+            _ => null
+        };
+        return contextName is null
+            ? null
+            : context.Compilation.GetTypeByMetadataName(
+                $"Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.{contextName}");
     }
 
     private static bool TrySetPendingPolicyId(
