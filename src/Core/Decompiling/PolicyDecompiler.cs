@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using System.Xml;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling.Policy;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
 
@@ -47,7 +49,7 @@ public class PolicyDecompiler
     {
         _context.Reset();
 
-        var doc = ParsePolicyXml(xml);
+        var doc = ParsePolicyXml(xml, options?.PolicyFormat ?? PolicyFormat.RawXml);
         var policies = doc.Root
             ?? throw new ArgumentException("Invalid XML: missing root element.");
 
@@ -100,7 +102,7 @@ public class PolicyDecompiler
     {
         _context.Reset();
 
-        var doc = ParsePolicyXml(xml);
+        var doc = ParsePolicyXml(xml, options?.PolicyFormat ?? PolicyFormat.RawXml);
         var fragment = doc.Root
             ?? throw new ArgumentException("Invalid XML: missing root element.");
 
@@ -261,9 +263,9 @@ public class PolicyDecompiler
     /// Parses policy XML into a document. Whitespace between elements is dropped, except inside a
     /// set-body that carries markup (e.g. a liquid template), where it is part of the body content.
     /// </summary>
-    private static XDocument ParsePolicyXml(string xml)
+    private static XDocument ParsePolicyXml(string xml, PolicyFormat format)
     {
-        var doc = XDocument.Parse(PreprocessXml(xml), LoadOptions.PreserveWhitespace);
+        var doc = XDocument.Parse(PreprocessXml(xml, format), LoadOptions.PreserveWhitespace);
         var insignificant = doc.DescendantNodes()
             .OfType<XText>()
             .Where(text => text is not XCData && string.IsNullOrWhiteSpace(text.Value) && !IsInMarkupBody(text))
@@ -277,7 +279,8 @@ public class PolicyDecompiler
     }
 
     private static bool IsInMarkupBody(XText text) =>
-        text.Ancestors("set-body").FirstOrDefault() is { HasElements: true } body && body.Element("value") is null;
+        text.Ancestors("set-body").FirstOrDefault() is { } body && !RawXmlContent.IsValueElementBody(body) &&
+        (body.HasElements || RawXmlContent.IsMarkupBody(body));
 
     /// <summary>
     /// Preprocesses APIM policy XML to handle C# expressions that contain characters
@@ -288,22 +291,28 @@ public class PolicyDecompiler
     /// producing output that is parseable by XDocument.Parse() while preserving
     /// expression content verbatim in the parsed DOM.
     /// </summary>
-    public static string PreprocessXml(string xml)
+    public static string PreprocessXml(string xml) => PreprocessXml(xml, PolicyFormat.RawXml);
+
+    /// <summary>
+    /// Preprocesses policy text of the given format. As rawxml every expression is taken out before the text
+    /// is parsed and put back as it was written; as xml the text has to be well-formed and is parsed as it is.
+    /// </summary>
+    public static string PreprocessXml(string xml, PolicyFormat format)
     {
-        // Fast path: if the XML parses as-is, return it
-        try
+        if (!Enum.IsDefined(format))
+        {
+            throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown policy format.");
+        }
+
+        if (format == PolicyFormat.Xml)
         {
             XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
             return PreserveAttributeLineBreaks(xml);
         }
-        catch (XmlException)
-        {
-            // Fall through to expression extraction
-        }
 
         // Scan for all @(...) and @{...} expression spans
         var spans = CollectExpressionSpans(xml);
-        if (spans.Count == 0) return xml;
+        if (spans.Count == 0) return PreserveAttributeLineBreaks(xml);
 
         // Replace expressions with XML-safe placeholders
         var exprMap = new Dictionary<string, string>(spans.Count, StringComparer.Ordinal);
@@ -357,7 +366,7 @@ public class PolicyDecompiler
         // in expressions, making the output valid and re-parseable XML.
         if (exprMap.Count > 0 && doc.Root != null)
         {
-            RestorePlaceholders(doc.Root, exprMap);
+            RestorePlaceholders(doc.Root, exprMap, format);
         }
 
         return doc.ToString(SaveOptions.DisableFormatting);
@@ -401,48 +410,66 @@ public class PolicyDecompiler
 
     /// <summary>
     /// Walks the DOM tree and replaces placeholder tokens with original expression text
-    /// in attribute values and leaf-element text content.
-    /// Decodes XML entities in restored expressions since the original text was extracted
-    /// from raw XML before entity decoding.
+    /// in attribute values, text, CDATA sections and comments. An expression a value begins with was written as
+    /// code and is kept as it was; one anywhere else was XML-escaped text and its entities are decoded.
     /// </summary>
-    private static void RestorePlaceholders(XElement root, Dictionary<string, string> map)
+    private static void RestorePlaceholders(XElement root, Dictionary<string, string> map, PolicyFormat format)
     {
         foreach (var element in root.DescendantsAndSelf())
         {
             foreach (var attribute in element.Attributes().ToList())
             {
-                var value = attribute.Value;
-                foreach (var kvp in map)
-                {
-                    if (value.Contains(kvp.Key, StringComparison.Ordinal))
-                    {
-                        value = value.Replace(kvp.Key, DecodeXmlEntities(kvp.Value), StringComparison.Ordinal);
-                    }
-                }
-
-                if (!ReferenceEquals(value, attribute.Value))
-                {
-                    attribute.Value = value;
-                }
-            }
-
-            if (!element.HasElements && !string.IsNullOrEmpty(element.Value))
-            {
-                var inner = element.Value;
-                foreach (var kvp in map)
-                {
-                    if (inner.Contains(kvp.Key, StringComparison.Ordinal))
-                    {
-                        inner = inner.Replace(kvp.Key, DecodeXmlEntities(kvp.Value), StringComparison.Ordinal);
-                    }
-                }
-
-                if (!ReferenceEquals(inner, element.Value))
-                {
-                    element.Value = inner;
-                }
+                attribute.Value = Restore(attribute.Value, map, format, IsInLiquidMarkup(element));
             }
         }
+
+        // Text is restored node by node, so text next to child elements is covered and a CDATA section or a
+        // comment stays what it is. Their content isn't parsed, so an entity in it is not decoded.
+        foreach (var node in root.DescendantNodes().ToList())
+        {
+            switch (node)
+            {
+                case XCData cdata:
+                    cdata.Value = Restore(cdata.Value, map, format: null);
+                    break;
+                case XText text:
+                    text.Value = Restore(text.Value, map, format, IsInLiquidMarkup(text.Parent));
+                    break;
+                case XComment comment:
+                    comment.Value = Restore(comment.Value, map, format: null);
+                    break;
+            }
+        }
+    }
+
+    private static readonly Regex Entity =
+        new(@"&(lt|gt|amp|quot|apos|#[0-9]+|#x[0-9A-Fa-f]+);", RegexOptions.Compiled);
+
+    // The markup of a liquid body is template text: an @(...) in it is XML-escaped like the rest, in rawxml too.
+    private static bool IsInLiquidMarkup(XElement? element) =>
+        element is not null && element.AncestorsAndSelf().Any(RawXmlContent.IsMarkupBody);
+
+    // Without a format the content is not parsed (a CDATA section, a comment) and nothing is decoded. A value
+    // that begins with an expression was written as code and is kept; an @(...) further into a value, or
+    // anywhere in the markup of a liquid body, is text like the rest of it, which is XML-escaped in rawxml too,
+    // and is decoded.
+    private static string Restore(string value, Dictionary<string, string> map, PolicyFormat? format, bool isText = false)
+    {
+        var start = value.TrimStart();
+        var decode = format is not null &&
+                     (isText || !map.Keys.Any(key => start.StartsWith(key, StringComparison.Ordinal)));
+        foreach (var kvp in map)
+        {
+            if (value.Contains(kvp.Key, StringComparison.Ordinal))
+            {
+                value = value.Replace(
+                    kvp.Key,
+                    decode ? DecodeXmlEntities(kvp.Value) : kvp.Value,
+                    StringComparison.Ordinal);
+            }
+        }
+
+        return value;
     }
 
     /// <summary>
@@ -455,12 +482,35 @@ public class PolicyDecompiler
         if (!text.Contains('&'))
             return text;
 
-        return text
-            .Replace("&quot;", "\"")
-            .Replace("&apos;", "'")
-            .Replace("&lt;", "<")
-            .Replace("&gt;", ">")
-            .Replace("&amp;", "&");
+        // one pass, so the text an entity stands for is not decoded again: &amp;lt; is &lt;
+        return Entity.Replace(text, match => match.Groups[1].Value switch
+        {
+            "quot" => "\"",
+            "apos" => "'",
+            "lt" => "<",
+            "gt" => ">",
+            "amp" => "&",
+            var reference => DecodeCharacterReference(reference) ?? match.Value
+        });
+    }
+
+    // #65 or #x41; a number that is no character is left as it was written
+    private static string? DecodeCharacterReference(string reference)
+    {
+        var isHex = reference[1] == 'x';
+        if (!int.TryParse(
+                reference.Substring(isHex ? 2 : 1),
+                isHex ? NumberStyles.AllowHexSpecifier : NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var code) ||
+            code is < 0 or > 0x10FFFF or (>= 0xD800 and <= 0xDFFF) ||
+            // a character XML doesn't allow, such as a control character, can't be written back to the document
+            code <= char.MaxValue && !XmlConvert.IsXmlChar((char)code))
+        {
+            return null;
+        }
+
+        return char.ConvertFromUtf32(code);
     }
 
     /// <summary>

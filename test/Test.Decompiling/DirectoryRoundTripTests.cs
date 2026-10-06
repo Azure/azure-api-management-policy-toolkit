@@ -37,7 +37,7 @@ public class DirectoryRoundTripTests
     private static readonly IEnumerable<MetadataReference> References = GetReferences();
     private static ServiceProvider s_serviceProvider = null!;
     private static DocumentCompiler s_compiler = null!;
-    private static PolicyDecompiler s_decompiler = null!;
+    private static TestDecompiler s_decompiler = null!;
     private static string? s_policyDirectory;
 
     private static MetadataReference[] GetReferences()
@@ -98,7 +98,7 @@ public class DirectoryRoundTripTests
             .SetupCompiler()
             .BuildServiceProvider();
         s_compiler = s_serviceProvider.GetRequiredService<DocumentCompiler>();
-        s_decompiler = new PolicyDecompiler();
+        s_decompiler = new TestDecompiler();
     }
 
     [ClassCleanup]
@@ -396,7 +396,7 @@ public class DirectoryRoundTripTests
 
     private static (string xml, bool isFragment) PreprocessAndParse(string rawXml)
     {
-        var preprocessed = PolicyDecompiler.PreprocessXml(rawXml);
+        var preprocessed = TestDecompiler.Preprocess(rawXml);
         var doc = XDocument.Parse(preprocessed);
         doc.DescendantNodes().OfType<XComment>().Remove();
         var isFragment = doc.Root?.Name.LocalName == "fragment";

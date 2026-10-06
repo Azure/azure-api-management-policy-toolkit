@@ -72,7 +72,7 @@ public class RoundTripTests
 
     private static ServiceProvider s_serviceProvider = null!;
     private static DocumentCompiler s_compiler = null!;
-    private static PolicyDecompiler s_decompiler = null!;
+    private static TestDecompiler s_decompiler = null!;
 
     [ClassInitialize]
     public static void ClassInit(TestContext context)
@@ -82,7 +82,7 @@ public class RoundTripTests
             .SetupCompiler()
             .BuildServiceProvider();
         s_compiler = s_serviceProvider.GetRequiredService<DocumentCompiler>();
-        s_decompiler = new PolicyDecompiler();
+        s_decompiler = new TestDecompiler();
     }
 
     [ClassCleanup]
@@ -358,7 +358,7 @@ public class RoundTripTests
         var filePath = Path.Combine("TestData", fileName);
         var rawXml = File.ReadAllText(filePath);
         // Preprocess to escape C# expressions, making it valid XML
-        var preprocessed = PolicyDecompiler.PreprocessXml(rawXml);
+        var preprocessed = TestDecompiler.Preprocess(rawXml);
         // Strip XML comments (decompiler doesn't preserve them)
         var doc = XDocument.Parse(preprocessed);
         doc.DescendantNodes().OfType<XComment>().Remove();
@@ -378,7 +378,7 @@ public class RoundTripTests
     {
         var filePath = Path.Combine("TestData", fileName);
         var rawXml = File.ReadAllText(filePath);
-        var preprocessed = PolicyDecompiler.PreprocessXml(rawXml);
+        var preprocessed = TestDecompiler.Preprocess(rawXml);
         var doc = XDocument.Parse(preprocessed);
         doc.DescendantNodes().OfType<XComment>().Remove();
         var xml = doc.ToString(SaveOptions.DisableFormatting);
@@ -416,7 +416,7 @@ public class RoundTripTests
     {
         var filePath = Path.Combine("TestData", fileName);
         var rawXml = File.ReadAllText(filePath);
-        var preprocessed = PolicyDecompiler.PreprocessXml(rawXml);
+        var preprocessed = TestDecompiler.Preprocess(rawXml);
         var doc = XDocument.Parse(preprocessed);
         doc.DescendantNodes().OfType<XComment>().Remove();
         var xml = doc.ToString(SaveOptions.DisableFormatting);
@@ -494,6 +494,14 @@ public class RoundTripTests
         DisplayName = "liquid body with expression-like text in its markup")]
     [DataRow("""<inbound><return-response><set-body template="liquid"><E>@(context.Request.Method == "GET" &amp;&amp; 1 &lt; 2)</E></set-body></return-response></inbound>""",
         DisplayName = "nested liquid body with expression-like text in its markup")]
+    [DataRow("""<inbound><set-body template="liquid"><![CDATA[<a>{{body.x}} & b</a>]]></set-body></inbound>""",
+        DisplayName = "liquid body that is one CDATA section")]
+    [DataRow("""<inbound><set-body template="liquid"><item><value>{{body.x}}</value></item><value>{{body.y}}</value> tail <cors>1</cors><cors>2</cors></set-body></inbound>""",
+        DisplayName = "liquid body whose template has a value element among other content")]
+    [DataRow("""<inbound><set-variable name="a" value="@(Convert.ToBase64String(new SHA256Managed().ComputeHash(Encoding.UTF8.GetBytes(&quot;x&quot;))))" /><set-variable name="b" value="@(context.Deployment.Certificates[&quot;c&quot;].GetRSAPrivateKey() != null)" /></inbound>""",
+        DisplayName = "types and extension methods that need a using directive")]
+    [DataRow("""<inbound><set-variable name="a" value="@(((Authorization)context.Variables[&quot;auth&quot;]).AccessToken)" /><set-variable name="b" value="@(IPAddress.Parse(context.Request.IpAddress).ToString())" /></inbound>""",
+        DisplayName = "Authorization next to a System.Net type")]
     [DataRow("""<inbound><retry condition="@(context.Response.StatusCode == 500)" count="3" interval="1"><base /></retry></inbound>""",
         DisplayName = "retry with an expression condition")]
     [DataRow("""<inbound><choose><when condition="@(1 &gt; 0)"><base /></when><otherwise /></choose></inbound>""",
@@ -664,6 +672,136 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void LiquidBody_KeepsTheWhitespaceAroundACDataSection()
+    {
+        var xml = "<policies><inbound><set-body template=\"liquid\">\n   <![CDATA[{\"a\": \"{{body.x}}\"}]]>\n</set-body></inbound></policies>";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        var body = CompileCSharp(csharp).Document.Descendants("set-body").Single();
+
+        string.Concat(body.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting)))
+            .Should().Be("\n   <![CDATA[{\"a\": \"{{body.x}}\"}]]>\n");
+    }
+
+    [TestMethod]
+    public void RawPolicy_RestoresExpressionsNextToChildElementsAndKeepsCData()
+    {
+        // the unescaped quotes make this document one that is read through the raw policy fallback
+        var xml = """
+                  <policies><inbound><set-variable name="a" value="@(context.Request.Headers.GetValueOrDefault("x",""))" /><return-response><set-body><html><body>Hello @(context.Request.Method) <b>!</b></body></html></set-body></return-response><set-body template="liquid"><![CDATA[<a>{{body.x}} & b</a>]]></set-body></inbound></policies>
+                  """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().NotContain("__APIM_EXPR_").And.Contain("Hello @(context.Request.Method) <b>!</b>");
+        var body = CompileCSharp(csharp).Document.Elements("inbound").Elements("set-body").Single();
+        body.Nodes().Should().ContainSingle().Which.Should().BeOfType<XCData>()
+            .Which.Value.Should().Be("<a>{{body.x}} & b</a>");
+    }
+
+    [TestMethod]
+    public void RawPolicy_KeepsAnEntityThatIsPartOfAnExpressionWrittenAsCode()
+    {
+        // what the compiler writes in the rawxml format for an expression that escapes text itself
+        var xml = """
+                  <policies><inbound><set-variable name="a" value="@(context.Request.Method.Replace("&", "&amp;").Replace("<", "&lt;"))" /></inbound></policies>
+                  """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("""Replace("&", "&amp;").Replace("<", "&lt;")""");
+    }
+
+    [TestMethod]
+    [DataRow(PolicyFormat.Xml, """context.Request.Method + "&";""")]
+    [DataRow(PolicyFormat.RawXml, """context.Request.Method + "&amp;";""")]
+    public void PolicyFormat_DecidesHowAWellFormedExpressionIsRead(PolicyFormat format, string expected)
+    {
+        // what the compiler writes as rawxml for a helper returning Method + "&amp;" is also well-formed XML
+        var xml = """<policies><inbound><set-header name="h" exists-action="override"><value>@(context.Request.Method + "&amp;")</value></set-header></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest",
+            format: format);
+
+        csharp.Should().Contain(expected);
+    }
+
+    [TestMethod]
+    public void PolicyFormat_RawXmlKeepsEveryExpressionAndXmlNeedsWellFormedText()
+    {
+        var raw = """<policies><inbound><set-variable name="a" value="@(context.Request.Method == "GET" &amp;&amp; true)" /></inbound></policies>""";
+
+        s_decompiler.DecompileDocument(raw, "RoundTripPolicy", "RoundTripTest",
+                format: PolicyFormat.RawXml)
+            .Should().Contain("""== "GET" &amp;&amp; true""");
+        var asXml = () => s_decompiler.DecompileDocument(raw, "RoundTripPolicy", "RoundTripTest",
+            format: PolicyFormat.Xml);
+        asXml.Should().Throw<XmlException>();
+        var asUnknown = () => s_decompiler.DecompileDocument(raw, "RoundTripPolicy", "RoundTripTest",
+            format: (PolicyFormat)7);
+        asUnknown.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [TestMethod]
+    public void PolicyFormat_RawXmlRoundTripsWhatTheCompilerWrites()
+    {
+        // the rawxml the compiler writes: expressions as code, the markup of a liquid body XML-escaped; the raw
+        // quotes make the document one that is not well-formed XML
+        var xml = "<policies><inbound>" +
+                  """<set-variable name="a" value="@(context.Request.Method.Replace("&", "&amp;"))" />""" +
+                  """<set-body template="liquid"><Envelope n="@(2 &gt; 1)"><a>@(context.Request.Method + "&amp;")</a><![CDATA[a & b]]></Envelope></set-body>""" +
+                  "</inbound></policies>";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest", format: PolicyFormat.RawXml);
+        var result = CompileCSharp(csharp);
+
+        result.Errors.Should().BeEmpty("the decompiled C# should compile.\nGenerated C#:\n{0}", csharp);
+        var written = new StringBuilder();
+        using (var writer = CustomXmlWriter.Create(written, new XmlWriterSettings { OmitXmlDeclaration = true }, rawExpressions: true))
+        {
+            writer.Write(result.Document);
+        }
+
+        written.ToString().Should().Be(xml);
+    }
+
+    [TestMethod]
+    public void PolicyFormat_RawXmlDecodesTheMarkupOfALiquidBody()
+    {
+        // what the compiler writes as rawxml for a liquid body: its markup XML-escaped, an @(...) in it included
+        var xml = "<policies><inbound>" +
+                  """<set-variable name="a" value="@(context.Request.Method + "&amp;")" />""" +
+                  """<set-body template="liquid">@(1 &lt; 2)<Envelope n="@(2 &gt; 1 &amp;&amp; true)"><a>@(context.Request.Method + "&amp;")</a></Envelope></set-body>""" +
+                  "</inbound></policies>";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest", format: PolicyFormat.RawXml);
+
+        csharp.Should().Contain("""context.Request.Method + "&amp;";""")
+            .And.Contain("""@(1 &lt; 2)<Envelope n=\"@(2 &gt; 1 &amp;&amp; true)\"><a>@(context.Request.Method + \"&amp;\")</a></Envelope>""");
+    }
+
+    [TestMethod]
+    public void PolicyFormat_RawXmlDecodesAnExpressionThatIsNotTheStartOfItsValue()
+    {
+        // what the compiler writes as rawxml: a value that begins with an expression as code, any other value
+        // XML-escaped, an @(...) in it included
+        var xml = "<policies><inbound>" +
+                  """<set-variable name="a" value="@(context.Request.Method + "&amp;")" />""" +
+                  """<set-variable name="b" value="text @(1 &amp; 2) &amp; more" />""" +
+                  "</inbound></policies>";
+        // a document without an expression keeps the line break of an attribute, as it does when read as xml
+        var plain = "<policies><inbound><set-variable name=\"c\" value=\"plain &amp; text\n second line\" /></inbound></policies>";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest",
+            format: PolicyFormat.RawXml);
+
+        csharp.Should().Contain("""context.Request.Method + "&amp;";""").And.Contain("text @(1 & 2) & more");
+        s_decompiler.DecompileDocument(plain, "RoundTripPolicy", "RoundTripTest",
+                format: PolicyFormat.RawXml)
+            .Should().Contain("plain & text\n second line");
+    }
+
+    [TestMethod]
     public void QueryExpression_GetsTheLinqUsingDirective()
     {
         var xml = """<policies><inbound><set-variable name="a" value="@(string.Join(&quot;,&quot;, from h in context.Request.Headers select h.Key))" /></inbound></policies>""";
@@ -722,6 +860,28 @@ public class RoundTripTests
         new PolicyDecompilerContext().IsExpression(value).Should().Be(expected);
     }
 
+    private static readonly Lazy<MetadataReference[]> s_buildReferences = new(() =>
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+        .Split(Path.PathSeparator)
+        .Select(path => (MetadataReference)MetadataReference.CreateFromFile(path))
+        .ToArray());
+
+    /// <summary>
+    /// Builds the decompiled C# as a project would, with every assembly of the test run as a reference: the
+    /// policy compiler only reads the syntax it needs and doesn't report a C# type error.
+    /// </summary>
+    private static void AssertBuilds(string csharp)
+    {
+        var compilation = CSharpCompilation.Create(
+            Guid.NewGuid().ToString(),
+            [CSharpSyntaxTree.ParseText(csharp)],
+            s_buildReferences.Value,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        compilation.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Should().BeEmpty("the decompiled C# should build.\nGenerated C#:\n{0}", csharp);
+    }
+
     private static void AssertValidCSharpSyntax(string csharp)
     {
         CSharpSyntaxTree.ParseText(csharp).GetDiagnostics()
@@ -743,6 +903,7 @@ public class RoundTripTests
             "the decompiled C# should compile without errors.\nGenerated C#:\n{0}", csharp);
         compilationResult.Document.Should().NotBeNull(
             "the compilation should produce a document.\nGenerated C#:\n{0}", csharp);
+        AssertBuilds(csharp);
 
         // Step 4: Serialize the compiled XElement through the same pipeline
         var compiledXml = SerializeXElement(compilationResult.Document);
@@ -769,6 +930,7 @@ public class RoundTripTests
             "the decompiled C# should compile without errors.\nGenerated C#:\n{0}", csharp);
         compilationResult.Document.Should().NotBeNull(
             "the compilation should produce a document.\nGenerated C#:\n{0}", csharp);
+        AssertBuilds(csharp);
 
         // Step 3: Normalize both XMLs for semantic comparison
         var originalDoc = XDocument.Parse(originalXml.Trim());
