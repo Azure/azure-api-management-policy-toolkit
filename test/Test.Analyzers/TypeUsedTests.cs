@@ -366,8 +366,20 @@ public class TypeUsedTests
                 public void Inbound(IInboundContext context)
                 {
                     context.SetHeader("X-Tenant", Tenant(context.ExpressionContext));
+                    context.SetHeader("X-Host", Host());
+                    context.SetHeader("X-Name", Limits().ToString());
                     System.Environment.GetEnvironmentVariable("NotAnExpression");
                 }
+
+                // called from a section without the expression context: expanded all the same
+                static string Host() => {|#3:System.Environment.MachineName|};
+
+                // nothing of the document calls these, so they never become a policy expression
+                public override string ToString() => System.Environment.MachineName;
+
+                public static Document Create() => new Document();
+
+                static string Unused(string value) => value + System.Environment.NewLine;
 
                 static string Tenant(IExpressionContext context) =>
                     Tidy(context.Request.Headers.GetValueOrDefault("X-Tenant", "")) + {|#0:System.Environment.MachineName|};
@@ -395,6 +407,102 @@ public class TypeUsedTests
             DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
                 .WithArguments("System.Environment"),
             DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(2)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(3)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldFollowCallsToDocumentHelpersHoweverTheyAreWritten()
+    {
+        await VerifyAsync(
+            """
+            using N = Mielek.Test.Document.Nested;
+
+            public abstract class BaseDocument<T> : IDocument
+            {
+                // expanded where a derived document calls it
+                protected static string Host() => {|#0:System.Environment.MachineName|};
+
+                protected string Name() => {|#4:System.Environment.MachineName|};
+            }
+
+            public class Document : BaseDocument<int>
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                    context.SetHeader("X-Name", base.Name());
+                    context.SetHeader("X-Paren", (this).Paren());
+                    context.SetHeader("X-Cast", ((Document)this).Cast());
+                    context.SetHeader("X-Line", N.Line());
+                    context.SetHeader("X-This", this.Instance());
+                    context.SetHeader("X-Full", global::Mielek.Test.Document.Nested.Full());
+                    context.SetHeader("X-Key", Has(context.ExpressionContext));
+                }
+
+                string Instance() => {|#2:System.Environment.MachineName|};
+
+                string Paren() => {|#5:System.Environment.MachineName|};
+
+                string Cast() => {|#6:System.Environment.MachineName|};
+
+                static string Has(IExpressionContext context) => context.Request.Headers.ContainsKey("a") ? "a" : "b";
+
+                public static class Nested
+                {
+                    public static string Line() => {|#1:System.Environment.NewLine|};
+
+                    public static string Full() => {|#3:System.Environment.NewLine|};
+                }
+
+                // context.Request.Headers.ContainsKey(...) is a call on a value, not on this class
+                public static class Headers
+                {
+                    public static bool ContainsKey(string key) => System.Environment.Is64BitProcess;
+                }
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(2)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(3)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(4)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(5)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(6)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldFollowACallQualifiedWithTheClassADocumentIsNestedIn()
+    {
+        await VerifyAsync(
+            """
+            public static class Outer
+            {
+                public class Document : IDocument
+                {
+                    public void Inbound(IInboundContext context)
+                    {
+                        context.SetHeader("X-Line", Outer.Document.Nested.Line());
+                    }
+
+                    public static class Nested
+                    {
+                        public static string Line() => {|#0:System.Environment.NewLine|};
+                    }
+                }
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
                 .WithArguments("System.Environment")
         );
     }

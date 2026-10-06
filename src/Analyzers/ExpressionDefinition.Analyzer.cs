@@ -27,9 +27,10 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
     }
 
     // The types an expression helper can be declared to return. The gateway types the expression itself and
-    // does not convert its value, so this follows the types it accepts as the value of a variable. object is
-    // here because the decompiler declares the helper of a set-variable value as object. Nullable and array
-    // forms and enums are handled in IsAllowedReturnType.
+    // does not convert its value, so this follows the types it accepts as the value of a variable, with two
+    // additions the set-variable compiler reports there: System.Uri and enums, which a helper may return for use
+    // inside a larger expression. object is here because the decompiler declares the helper of a set-variable
+    // value as object. Nullable and array forms and enums are handled in IsAllowedReturnType.
     private readonly static IReadOnlyCollection<string> AllowedExpressionReturnTypes = new HashSet<string>()
     {
         "System.Boolean",

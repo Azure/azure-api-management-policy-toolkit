@@ -84,7 +84,7 @@ public class TypeUsedAllowListTests
     {
         await VerifyAsync(
             """
-            using Formatting = Newtonsoft.Json.Formatting;
+            using Newtonsoft.Json;
 
             public static class ExpressionLibrary
             {
@@ -103,6 +103,24 @@ public class TypeUsedAllowListTests
                 .WithArguments("Formatting", "Newtonsoft.Json.Formatting"),
             DiagnosticResult.CompilerError(Rules.TypeUsed.AmbiguousTypeName.Id).WithLocation(1)
                 .WithArguments("Formatting", "Newtonsoft.Json.Formatting")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldNotReportAnAliasForAnAmbiguousTypeName()
+    {
+        // the compiler writes a using alias out as the name it stands for
+        await VerifyAsync(
+            """
+            using Formatting = Newtonsoft.Json.Formatting;
+
+            public static class ExpressionLibrary
+            {
+                [Expression]
+                public static string Method(IExpressionContext context) =>
+                    context.Request.Body.As<Newtonsoft.Json.Linq.JObject>().ToString(Formatting.Indented);
+            }
+            """
         );
     }
 

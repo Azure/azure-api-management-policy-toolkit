@@ -101,9 +101,10 @@ allows in policy expressions (`APIM001`, `APIM002`), and type names it can't res
 
 It checks:
 
-- every helper of a policy document or fragment class, including helpers in a class nested inside it. A helper is any
-  method that returns a value, other than a policy configuration factory and a method that takes a policy section
-  context. The `[Expression]` attribute isn't needed for these.
+- every helper declared in a policy document or fragment class, including helpers in a class nested inside it.
+  A helper it inherits is checked when the base class is a document itself, not otherwise. A helper is a method that takes the expression context, or one the
+  document's sections, policy configuration factories or other helpers call. The `[Expression]` attribute isn't
+  needed for these.
 - methods marked `[Expression]` and every method of a class marked `[Expression]`.
 - expression lambdas passed to a policy.
 
@@ -111,8 +112,9 @@ A helper in any other class is only checked when its class is marked `[Expressio
 only call document helpers and other marked helpers, while an unmarked document helper may call any helper declared in
 source.
 
-A method of a document class that isn't an expression helper is checked as well, so keep such methods in another
-class. Properties declared in source can't be used as helpers; the compiler reports them.
+A method of a document class that nothing in the document calls, such as a `ToString()` override, never becomes a
+policy expression and isn't checked. Calls are matched by name, so an overload of a helper is checked with it.
+Properties declared in source can't be used as helpers; the compiler reports them.
 
 ### Ambiguous type names
 
@@ -146,7 +148,9 @@ JsonConvert.SerializeObject(value, Newtonsoft.Json.Formatting.Indented)
   pair of parentheses to keep them.
 - At either end of an interpolation hole a named value is always parenthesized, `{({{name}})}`, so it can't run into
   the hole's braces.
-- An expression that is only a named value compiles to the plain attribute value, `{{name}}`.
+- An expression that is only a named value, returned from a `string` helper or a `[NamedValue]` helper, compiles to
+  the plain attribute value, `{{name}}`. Returned from a helper of another type it stays an expression, `@({{name}})`,
+  which the gateway evaluates as code.
 
 ## C# language version
 

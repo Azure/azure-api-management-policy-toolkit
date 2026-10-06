@@ -50,7 +50,9 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (context.SemanticModel.GetSymbolInfo(name).Symbol is INamedTypeSymbol type &&
+        // The compiler writes a using alias out as the name it stands for, so that is not a bare name.
+        if (context.SemanticModel.GetAliasInfo(name) is null &&
+            context.SemanticModel.GetSymbolInfo(name).Symbol is INamedTypeSymbol type &&
             candidates.Contains(type.ToFullyQualifiedString()))
         {
             context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.AmbiguousTypeName, name.GetLocation(),
