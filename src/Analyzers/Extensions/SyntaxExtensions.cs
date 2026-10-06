@@ -51,130 +51,247 @@ public static class SyntaxExtensions
                            IsDocumentExpressionHelper(symbol, model.Compilation));
     }
 
-    private static readonly ConditionalWeakTable<Compilation, ConcurrentDictionary<INamedTypeSymbol, HashSet<IMethodSymbol>>>
-        DocumentHelpers = new ConditionalWeakTable<Compilation, ConcurrentDictionary<INamedTypeSymbol, HashSet<IMethodSymbol>>>();
+    private static readonly ConditionalWeakTable<Compilation, Lazy<HashSet<IMethodSymbol>>> ReachedMethods =
+        new ConditionalWeakTable<Compilation, Lazy<HashSet<IMethodSymbol>>>();
 
     // The compiler expands a helper of a document only where an expression calls it, so a method of a document is
     // expression code when it takes the expression context or is called, directly or through other helpers, from
-    // a section, a configuration factory or such a method. A method nothing of the document calls, such as a
-    // ToString() override, never becomes a policy expression.
-    private static bool IsDocumentExpressionHelper(IMethodSymbol method, Compilation compilation)
+    // a section, a configuration factory or such a method, of its own document or of another. A method nothing
+    // calls, such as a ToString() override, never becomes a policy expression.
+    private static bool IsDocumentExpressionHelper(IMethodSymbol method, Compilation compilation) =>
+        method.IsDocumentMember() && !IsSectionOrConfigurationFactory(method) &&
+        ReachedMethods.GetValue(compilation, c => new Lazy<HashSet<IMethodSymbol>>(() => FindReachedMethods(c)))
+            .Value.Contains(method);
+
+    // A document with the classes nested in it and the documents derived from it, or an expression helper library:
+    // the methods a bare call from one of them can mean, and the names a qualified call to one of them is written
+    // with.
+    private sealed class Family
     {
-        if (!method.IsDocumentMember() || IsSectionOrConfigurationFactory(method))
+        public List<IMethodSymbol> Methods { get; } = new List<IMethodSymbol>();
+
+        // Nested, Document, Derived: the last name of a qualified receiver
+        public HashSet<string> Receivers { get; } = new HashSet<string>();
+
+        // those, the namespace and the classes the document is nested in: the other names of the receiver
+        public HashSet<string> Qualifiers { get; } = new HashSet<string>();
+    }
+
+    // The methods of every document and expression helper library of the compilation that are reached from a
+    // root, in one pass. Calls are matched by name (Helper(), this.Helper(), Nested.Helper(), Shared.Helper()),
+    // which needs no semantic model for other files; an overload that isn't the one called is included with it.
+    private static HashSet<IMethodSymbol> FindReachedMethods(Compilation compilation)
+    {
+        var types = compilation.GetSymbolsWithName(_ => true, SymbolFilter.Type)
+            .OfType<INamedTypeSymbol>()
+            .Where(type => !type.DeclaringSyntaxReferences.IsDefaultOrEmpty)
+            .ToList();
+        var families = new List<Family>();
+        var familiesOf = new Dictionary<IMethodSymbol, List<Family>>(SymbolEqualityComparer.Default);
+        foreach (var type in types.Where(type => type.ContainingType is null || !IsFamilyMember(type.ContainingType)))
         {
-            return false;
+            // a document, an expression helper library, or a class with an [Expression] method that may call a document
+            if (!type.IsDocument() && !type.HasExpressionAttribute() &&
+                !type.GetMembers().OfType<IMethodSymbol>().Any(HasExpressionAttribute))
+            {
+                continue;
+            }
+
+            var family = new Family();
+            var members = new Stack<INamedTypeSymbol>();
+            members.Push(type);
+            // a helper of a base document is expanded where a derived document calls it
+            foreach (var derived in types.Where(candidate => Derives(candidate, type)))
+            {
+                members.Push(derived);
+            }
+
+            while (members.Count > 0)
+            {
+                var member = members.Pop();
+                family.Receivers.Add(member.Name);
+                // the namespace and the classes each is nested in, which differ for a derived document:
+                // Other.Derived.Helper(), Outer.Document.Nested.Helper()
+                for (var space = member.ContainingNamespace; space is { IsGlobalNamespace: false }; space = space.ContainingNamespace)
+                {
+                    family.Qualifiers.Add(space.Name);
+                }
+
+                for (var outer = member.ContainingType; outer is not null; outer = outer.ContainingType)
+                {
+                    family.Qualifiers.Add(outer.Name);
+                }
+
+                // a section may implement IDocument explicitly: void IDocument.Inbound(IInboundContext context)
+                foreach (var method in member.GetMembers().OfType<IMethodSymbol>().Where(method =>
+                             method.MethodKind is MethodKind.Ordinary or MethodKind.ExplicitInterfaceImplementation))
+                {
+                    family.Methods.Add(method);
+                    if (!familiesOf.TryGetValue(method, out var owners))
+                    {
+                        familiesOf[method] = owners = new List<Family>();
+                    }
+
+                    owners.Add(family);
+                }
+
+                foreach (var nested in member.GetTypeMembers())
+                {
+                    members.Push(nested);
+                }
+            }
+
+            family.Qualifiers.UnionWith(family.Receivers);
+            families.Add(family);
         }
 
-        var document = method.ContainingType;
-        for (var type = document; type is not null; type = type.ContainingType)
+        var reached = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
+        var pending = new Queue<IMethodSymbol>();
+        foreach (var root in familiesOf.Keys.Where(IsRoot))
         {
-            if (type.AllInterfaces.Any(implemented => implemented.ToFullyQualifiedString() is Document or Fragment))
+            if (reached.Add(root))
             {
-                document = type;
+                pending.Enqueue(root);
             }
         }
 
-        return DocumentHelpers
-            .GetValue(compilation, _ => new ConcurrentDictionary<INamedTypeSymbol, HashSet<IMethodSymbol>>(SymbolEqualityComparer.Default))
-            .GetOrAdd(document, type => FindCalledMethods(type, compilation))
-            .Contains(method);
-    }
-
-    // The methods of a document, of the classes nested in it and of the documents derived from it, that are
-    // reached from their sections, factories and expression methods. Calls are matched by name (Helper(),
-    // this.Helper(), Nested.Helper()), which needs no semantic model for the other files of a partial class; an
-    // overload that isn't the one called is included with it.
-    private static HashSet<IMethodSymbol> FindCalledMethods(INamedTypeSymbol document, Compilation compilation)
-    {
-        var methods = new List<IMethodSymbol>();
-        var types = new Stack<INamedTypeSymbol>();
-        types.Push(document);
-        // a helper of a base document is expanded where a derived document calls it
-        foreach (var derived in compilation.GetSymbolsWithName(_ => true, SymbolFilter.Type).OfType<INamedTypeSymbol>())
+        var aliasesByTree = new Dictionary<SyntaxTree, Dictionary<string, string>>();
+        while (pending.Count > 0)
         {
-            for (var type = derived.BaseType; type is not null; type = type.BaseType)
+            var caller = pending.Dequeue();
+            var own = familiesOf[caller];
+            foreach (var reference in caller.DeclaringSyntaxReferences)
             {
-                // Derived : Base<int> has the constructed type as its base
-                if (SymbolEqualityComparer.Default.Equals(type.OriginalDefinition, document.OriginalDefinition))
+                var aliases = AliasesOf(reference.SyntaxTree, aliasesByTree);
+                foreach (var invocation in reference.GetSyntax().DescendantNodes().OfType<InvocationExpressionSyntax>())
                 {
-                    types.Push(derived);
-                    break;
+                    IEnumerable<IMethodSymbol> candidates;
+                    string name;
+                    switch (invocation.Expression)
+                    {
+                        // Helper(), this.Helper(), base.Helper(): a method of the caller's own document
+                        case SimpleNameSyntax simple:
+                            name = simple.Identifier.ValueText;
+                            candidates = own.SelectMany(family => family.Methods);
+                            break;
+                        case MemberAccessExpressionSyntax access when Unparenthesized(access.Expression) is
+                            ThisExpressionSyntax or BaseExpressionSyntax:
+                            name = access.Name.Identifier.ValueText;
+                            candidates = own.SelectMany(family => family.Methods);
+                            break;
+                        // Nested.Helper(), Shared.Helper(), Ns.Shared.Nested.Helper(): the families the receiver names;
+                        // value.ToString() is a call on something else
+                        case MemberAccessExpressionSyntax access when Segments(access.Expression, aliases) is { } segments:
+                            name = access.Name.Identifier.ValueText;
+                            candidates = families.Where(family => IsReceiver(segments, family)).SelectMany(family => family.Methods);
+                            break;
+                        default:
+                            continue;
+                    }
+
+                    foreach (var method in candidates.Where(method => method.Name == name && reached.Add(method)))
+                    {
+                        pending.Enqueue(method);
+                    }
                 }
             }
         }
 
-        var receivers = new HashSet<string>();
-        while (types.Count > 0)
-        {
-            var type = types.Pop();
-            receivers.Add(type.Name);
-            methods.AddRange(type.GetMembers().OfType<IMethodSymbol>()
-                .Where(member => member.MethodKind == MethodKind.Ordinary));
-            foreach (var nested in type.GetTypeMembers())
-            {
-                types.Push(nested);
-            }
-        }
-
-        // A receiver is one of those types, written with or without its namespace, or a using alias.
-        var qualifiers = new HashSet<string>(receivers);
-        for (var space = document.ContainingNamespace; space is { IsGlobalNamespace: false }; space = space.ContainingNamespace)
-        {
-            qualifiers.Add(space.Name);
-        }
-
-        foreach (var alias in methods.SelectMany(method => method.DeclaringSyntaxReferences)
-                     .Select(reference => reference.SyntaxTree).Distinct()
-                     .SelectMany(tree => tree.GetRoot().DescendantNodes(node => node is not TypeDeclarationSyntax))
-                     .OfType<UsingDirectiveSyntax>()
-                     .Where(directive => directive.Alias is not null))
-        {
-            receivers.Add(alias.Alias!.Name.Identifier.ValueText);
-        }
-
-        // a document nested in another class: Outer.Document.Nested.Helper()
-        for (var outer = document.ContainingType; outer is not null; outer = outer.ContainingType)
-        {
-            qualifiers.Add(outer.Name);
-        }
-
-        qualifiers.UnionWith(receivers);
-        var reached = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
-        var pending = new Queue<IMethodSymbol>(methods.Where(method =>
-            IsSectionOrConfigurationFactory(method) || method.HasExpressionAttribute() ||
-            method.IsExpressionLibraryMember() ||
-            method.Parameters.Any(parameter => parameter.Type.ToFullyQualifiedString() == ExpressionContext)));
-        foreach (var root in pending)
-        {
-            reached.Add(root);
-        }
-
-        while (pending.Count > 0)
-        {
-            var called = pending.Dequeue().DeclaringSyntaxReferences
-                .SelectMany(reference => reference.GetSyntax().DescendantNodes())
-                .OfType<InvocationExpressionSyntax>()
-                .Select(invocation => invocation.Expression switch
-                {
-                    // Helper(), this.Helper(), base.Helper() or Nested.Helper(); value.ToString() is a call on
-                    // something else
-                    MemberAccessExpressionSyntax access when Unparenthesized(access.Expression) is
-                        ThisExpressionSyntax or BaseExpressionSyntax => access.Name,
-                    MemberAccessExpressionSyntax access when IsReceiver(access.Expression, receivers, qualifiers) =>
-                        access.Name,
-                    _ => invocation.Expression as SimpleNameSyntax
-                })
-                .Where(name => name is not null)
-                .Select(name => name!.Identifier.ValueText)
-                .ToImmutableHashSet();
-            foreach (var method in methods.Where(method => called.Contains(method.Name) && reached.Add(method)))
-            {
-                pending.Enqueue(method);
-            }
-        }
-
         return reached;
+
+        static bool IsFamilyMember(INamedTypeSymbol type)
+        {
+            for (var outer = type; outer is not null; outer = outer.ContainingType)
+            {
+                if (outer.IsDocument() || outer.HasExpressionAttribute() ||
+                    outer.GetMembers().OfType<IMethodSymbol>().Any(HasExpressionAttribute))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static bool Derives(INamedTypeSymbol candidate, INamedTypeSymbol type)
+        {
+            for (var baseType = candidate.BaseType; baseType is not null; baseType = baseType.BaseType)
+            {
+                // Derived : Base<int> has the constructed type as its base
+                if (SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, type.OriginalDefinition))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // The methods the compiler starts from: sections and factories that take a section context, configuration
+        // factories and expression methods. A factory is a root wherever it is called from. A void method that
+        // takes no section context isn't a section and nothing is compiled from it.
+        static bool IsRoot(IMethodSymbol method) =>
+            TakesSectionContext(method) || IsConfigurationFactory(method) || method.HasExpressionAttribute() ||
+            method.IsExpressionLibraryMember() ||
+            method.Parameters.Any(parameter => parameter.Type.ToFullyQualifiedString() == ExpressionContext);
     }
+
+    // using S = Some.Namespace.Shared; gives the name S the meaning of Shared in the file
+    private static Dictionary<string, string> AliasesOf(SyntaxTree tree, Dictionary<SyntaxTree, Dictionary<string, string>> cache)
+    {
+        if (!cache.TryGetValue(tree, out var aliases))
+        {
+            cache[tree] = aliases = tree.GetRoot().DescendantNodes(node => node is not TypeDeclarationSyntax)
+                .OfType<UsingDirectiveSyntax>()
+                .Where(directive => directive.Alias is not null && directive.Name is not null)
+                .GroupBy(directive => directive.Alias!.Name.Identifier.ValueText)
+                .ToDictionary(group => group.Key, group => LastName(group.First().Name!));
+        }
+
+        return aliases;
+    }
+
+    private static string LastName(NameSyntax name) => name switch
+    {
+        QualifiedNameSyntax qualified => qualified.Right.Identifier.ValueText,
+        AliasQualifiedNameSyntax aliased => aliased.Name.Identifier.ValueText,
+        SimpleNameSyntax simple => simple.Identifier.ValueText,
+        _ => name.ToString()
+    };
+
+    // The names of a receiver made of names only, Ns.Shared.Nested or global::Shared, with an alias replaced by
+    // what it stands for; null for a receiver with anything else in it, such as a call or an index. A value's
+    // members, context.Request.Headers, are names too and match no family.
+    private static List<string>? Segments(ExpressionSyntax receiver, Dictionary<string, string> aliases)
+    {
+        var segments = new List<string>();
+        while (true)
+        {
+            switch (receiver)
+            {
+                case MemberAccessExpressionSyntax access:
+                    segments.Add(access.Name.Identifier.ValueText);
+                    receiver = access.Expression;
+                    continue;
+                case AliasQualifiedNameSyntax aliased:
+                    segments.Add(aliased.Name.Identifier.ValueText);
+                    break;
+                case SimpleNameSyntax simple:
+                    segments.Add(aliases.TryGetValue(simple.Identifier.ValueText, out var target) ? target : simple.Identifier.ValueText);
+                    break;
+                default:
+                    return null;
+            }
+
+            segments.Reverse();
+            return segments;
+        }
+    }
+
+    // The last name is a type of the family, the others its namespace, the classes it is nested in or its types.
+    private static bool IsReceiver(List<string> segments, Family family) =>
+        family.Receivers.Contains(segments[segments.Count - 1]) &&
+        segments.All(family.Qualifiers.Contains);
 
     private static ExpressionSyntax Unparenthesized(ExpressionSyntax expression)
     {
@@ -192,34 +309,6 @@ public static class SyntaxExtensions
                 default:
                     return expression;
             }
-        }
-    }
-
-    // Nested, Document.Nested, Namespace.Document or global::Document: names all the way, ending in a type of
-    // the document. context.Request.Headers ends in a name that may match but starts with a value.
-    private static bool IsReceiver(ExpressionSyntax receiver, HashSet<string> receivers, HashSet<string> qualifiers)
-    {
-        var last = true;
-        while (true)
-        {
-            var name = receiver switch
-            {
-                MemberAccessExpressionSyntax access => access.Name,
-                AliasQualifiedNameSyntax aliased => aliased.Name,
-                _ => receiver as SimpleNameSyntax
-            };
-            if (name is null || !(last ? receivers : qualifiers).Contains(name.Identifier.ValueText))
-            {
-                return false;
-            }
-
-            if (receiver is not MemberAccessExpressionSyntax qualified)
-            {
-                return true;
-            }
-
-            receiver = qualified.Expression;
-            last = false;
         }
     }
 
@@ -243,18 +332,32 @@ public static class SyntaxExtensions
     private const string Authoring = "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring";
     private const string SectionContext = Authoring + ".IHaveExpressionContext";
 
-    // The methods of a document that hold policies rather than expression code: sections and fragments return
-    // nothing and take a section context, policy configuration factories return a configuration.
-    private static bool IsSectionOrConfigurationFactory(IMethodSymbol method)
-    {
-        return method.ReturnsVoid ||
-               method.ReturnType.ContainingNamespace?.ToDisplayString() == Authoring ||
-               method.Parameters.Any(parameter =>
-                   parameter.Type.AllInterfaces.Any(type => type.ToFullyQualifiedString() == SectionContext));
-    }
+    // The methods of a document that hold policies rather than expression code, told apart by their return type,
+    // which approximates how the compiler treats them: a section returns nothing, a policy configuration factory
+    // returns a configuration. A helper returning anything else is expanded into an expression whatever it takes,
+    // a section context included.
+    private static bool IsSectionOrConfigurationFactory(IMethodSymbol method) =>
+        method.ReturnsVoid || IsConfigurationFactory(method);
+
+    private static bool IsConfigurationFactory(IMethodSymbol method) =>
+        method.ReturnType.ContainingNamespace?.ToDisplayString() == Authoring;
+
+    private static bool TakesSectionContext(IMethodSymbol method) =>
+        method.Parameters.Any(parameter => parameter.Type.IsSectionContext());
+
+    // The section context interfaces of the authoring library, IHaveExpressionContext itself included, as for the
+    // compiler; a type of the user's that implements one is not one.
+    public static bool IsSectionContext(this ITypeSymbol type) =>
+        type is INamedTypeSymbol { TypeKind: TypeKind.Interface } &&
+        type.ContainingNamespace?.ToDisplayString() == Authoring &&
+        (type.ToFullyQualifiedString() == SectionContext ||
+         type.AllInterfaces.Any(implemented => implemented.ToFullyQualifiedString() == SectionContext));
 
     private const string Document = Authoring + ".IDocument";
     private const string Fragment = Authoring + ".IFragment";
+
+    public static bool IsDocument(this INamedTypeSymbol type) =>
+        type.AllInterfaces.Any(implemented => implemented.ToFullyQualifiedString() is Document or Fragment);
 
     // A member declared in the source of a policy document or fragment class, or of a class nested in one.
     public static bool IsDocumentMember(this ISymbol symbol)

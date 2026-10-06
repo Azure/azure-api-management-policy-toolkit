@@ -102,9 +102,10 @@ allows in policy expressions (`APIM001`, `APIM002`), and type names it can't res
 It checks:
 
 - every helper declared in a policy document or fragment class, including helpers in a class nested inside it.
-  A helper it inherits is checked when the base class is a document itself, not otherwise. A helper is a method that takes the expression context, or one the
-  document's sections, policy configuration factories or other helpers call. The `[Expression]` attribute isn't
-  needed for these.
+  A helper it inherits is checked when the base class is a document itself, not otherwise. A helper is a method
+  that takes the expression context, or one the document's sections, policy configuration factories or other
+  helpers call; it may take a section context instead, whose `ExpressionContext` is the gateway's `context`. The
+  `[Expression]` attribute isn't needed for these.
 - methods marked `[Expression]` and every method of a class marked `[Expression]`.
 - expression lambdas passed to a policy.
 
@@ -112,9 +113,13 @@ A helper in any other class is only checked when its class is marked `[Expressio
 only call document helpers and other marked helpers, while an unmarked document helper may call any helper declared in
 source.
 
-A method of a document class that nothing in the document calls, such as a `ToString()` override, never becomes a
-policy expression and isn't checked. Calls are matched by name, so an overload of a helper is checked with it.
-Properties declared in source can't be used as helpers; the compiler reports them.
+The starting points are the sections, the configuration factories, the methods marked `[Expression]` and the helpers
+that take the expression context or a section context, of every document and helper library in the project. A
+method of a document that none of them reaches, such as a `ToString()` override or a `void` method that isn't a
+section, never becomes a policy expression and isn't checked, nor are the helpers only it calls. Code of another
+document or library reaches a helper when it names the document, `Shared.Helper()`, directly or through a using alias.
+Calls are matched by name, so an overload of a helper is checked with it. Properties declared in source can't be used
+as helpers; the compiler reports them.
 
 ### Ambiguous type names
 

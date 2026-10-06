@@ -348,6 +348,23 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        // A type named to qualify a member, Shared.Nested.Line() or TimeZoneInfo.AdjustmentRule.X, isn't a use of
+        // its own containing type; it is checked as the type of the member used.
+        if (nodeSymbol is INamedTypeSymbol)
+        {
+            return;
+        }
+
+        // A helper may take a section context and read its ExpressionContext, which the compiler maps to the
+        // gateway's context.
+        // The receiver has to be one of the authoring library's section contexts itself.
+        if (nodeSymbol is IPropertySymbol { Name: "ExpressionContext" } &&
+            node is MemberAccessExpressionSyntax { Expression: var receiver } &&
+            context.SemanticModel.GetTypeInfo(receiver).Type?.IsSectionContext() == true)
+        {
+            return;
+        }
+
         // Invoking a delegate typed member, like context.Trace("message"), is a use of that member and not of the
         // delegate type.
         if (nodeSymbol is IMethodSymbol { MethodKind: MethodKind.DelegateInvoke } &&
