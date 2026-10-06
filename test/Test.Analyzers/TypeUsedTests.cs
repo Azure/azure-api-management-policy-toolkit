@@ -565,6 +565,12 @@ public class TypeUsedTests
                     context.SetHeader("X-Inbound", Secret());
                 }
 
+                // the compiler compiles the first Fragment method only
+                public void Fragment(IInboundContext context)
+                {
+                    context.SetHeader("X-Second", Secret());
+                }
+
                 static string Host() => {|#1:System.Environment.MachineName|};
 
                 static string Secret() => System.Environment.MachineName;
@@ -575,6 +581,47 @@ public class TypeUsedTests
             DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
                 .WithArguments("System.Environment")
         );
+    }
+
+    [TestMethod]
+    public async Task ShouldStartFromTheFirstFragmentMethodOfEachPart()
+    {
+        // the members of a partial class come in file order; the compiler compiles the part marked [Document], so
+        // the first Fragment method of each part is a starting point, whichever file comes first
+        var test = new BaseAnalyzerTest<TypeUsedAnalyzer>(
+            """
+            public partial class Piece
+            {
+                public void Fragment(IInboundContext context)
+                {
+                    context.SetHeader("X-Other", Other());
+                }
+
+                static string Other() => {|#0:System.Environment.MachineName|};
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment"));
+        test.TestState.Sources.Add(
+            """
+            using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+
+            namespace Mielek.Test;
+
+            [Document]
+            public partial class Piece : IFragment
+            {
+                public void Fragment(IFragmentContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                }
+
+                static string Host() => {|#1:System.Environment.MachineName|};
+            }
+            """);
+        await test.RunAsync();
     }
 
     [TestMethod]

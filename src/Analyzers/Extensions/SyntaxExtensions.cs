@@ -242,15 +242,35 @@ public static class SyntaxExtensions
     // kind of document, taking one section context. It may implement the interface explicitly.
     private static bool IsSection(IMethodSymbol method)
     {
-        if (!method.ReturnsVoid || method.Parameters.Length != 1 || !method.Parameters[0].Type.IsSectionContext())
+        if (!method.ReturnsVoid || !TakesOneSectionContext(method))
         {
             return false;
         }
 
-        var name = method.ExplicitInterfaceImplementations.FirstOrDefault()?.Name ?? method.Name;
+        var name = SectionName(method);
         var interfaces = method.ContainingType.AllInterfaces.Select(implemented => implemented.ToFullyQualifiedString()).ToList();
-        return interfaces.Contains(Document) && name is "Inbound" or "Outbound" or "Backend" or "OnError" ||
-               interfaces.Contains(Fragment) && name == "Fragment";
+        if (interfaces.Contains(Document) && name is "Inbound" or "Outbound" or "Backend" or "OnError")
+        {
+            return true;
+        }
+
+        // the compiler compiles the first Fragment method taking a section context of the class declaration it
+        // compiles; an overload taking another is left. Members of a partial class come in file order, so the first
+        // of each part is taken.
+        var part = Part(method);
+        return interfaces.Contains(Fragment) && name == "Fragment" &&
+               SymbolEqualityComparer.Default.Equals(method, method.ContainingType.GetMembers().OfType<IMethodSymbol>()
+                   .First(candidate => SectionName(candidate) == "Fragment" && TakesOneSectionContext(candidate) &&
+                                       Part(candidate) == part));
+
+        static string SectionName(IMethodSymbol method) =>
+            method.ExplicitInterfaceImplementations.FirstOrDefault()?.Name ?? method.Name;
+
+        static SyntaxNode? Part(IMethodSymbol method) =>
+            method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().Parent;
+
+        static bool TakesOneSectionContext(IMethodSymbol method) =>
+            method.Parameters.Length == 1 && method.Parameters[0].Type.IsSectionContext();
     }
 
     // using S = Some.Namespace.Shared; gives the name S the meaning of Shared in the file

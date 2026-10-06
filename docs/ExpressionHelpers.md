@@ -115,7 +115,8 @@ source.
 
 The starting points are the sections, the configuration factories, the methods marked `[Expression]` and the helpers
 that take the expression context or a section context, of every document and helper library in the project. A
-method of a document that none of them reaches, such as a `ToString()` override or a `void` method that isn't a
+section is what the compiler compiles: `Inbound`, `Outbound`, `Backend` or `OnError` of a document, or the first
+`Fragment` method of a fragment, taking one section context. A method of a document that none of them reaches, such as a `ToString()` override or a `void` method that isn't a
 section, never becomes a policy expression and isn't checked, nor are the helpers only it calls. Code of another
 document or library reaches a helper when it names the document, `Shared.Helper()`, directly or through a using alias.
 Calls are matched by name, so an overload of a helper is checked with it. Properties declared in source can't be used
