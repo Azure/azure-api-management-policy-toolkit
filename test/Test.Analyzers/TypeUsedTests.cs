@@ -519,6 +519,65 @@ public class TypeUsedTests
     }
 
     [TestMethod]
+    public async Task ShouldStartFromTheSectionsTheCompilerCompilesOnly()
+    {
+        await VerifyAsync(
+            """
+            public class Document : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                }
+
+                // not named for a section, or taking more than the section context: the compiler compiles neither,
+                // so what only they call isn't checked
+                public void Audit(IInboundContext context)
+                {
+                    context.SetHeader("X-Audit", Secret());
+                }
+
+                public void Inbound(IInboundContext context, int retries)
+                {
+                    context.SetHeader("X-Retries", Secret());
+                }
+
+                // a fragment's section isn't one of a document's
+                public void Fragment(IFragmentContext context)
+                {
+                    context.SetHeader("X-Fragment", Secret());
+                }
+
+                static string Host() => {|#0:System.Environment.MachineName|};
+
+                static string Secret() => System.Environment.MachineName;
+            }
+
+            public class Piece : IFragment
+            {
+                public void Fragment(IFragmentContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                }
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Inbound", Secret());
+                }
+
+                static string Host() => {|#1:System.Environment.MachineName|};
+
+                static string Secret() => System.Environment.MachineName;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
     public async Task ShouldAnalyseWhatAnotherDocumentUsesOfADocument()
     {
         await VerifyAsync(

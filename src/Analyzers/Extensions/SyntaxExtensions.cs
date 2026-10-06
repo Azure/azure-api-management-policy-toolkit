@@ -227,13 +227,30 @@ public static class SyntaxExtensions
             return false;
         }
 
-        // The methods the compiler starts from: sections and factories that take a section context, configuration
-        // factories and expression methods. A factory is a root wherever it is called from. A void method that
-        // takes no section context isn't a section and nothing is compiled from it.
+        // The methods the compiler starts from: the sections, the configuration factories, the expression methods
+        // and the helpers that take a section context or the expression context. A factory is a root wherever it is
+        // called from. A void method that isn't a section, Audit(IInboundContext context), is never compiled, so
+        // nothing is compiled from it either.
         static bool IsRoot(IMethodSymbol method) =>
-            TakesSectionContext(method) || IsConfigurationFactory(method) || method.HasExpressionAttribute() ||
+            IsSection(method) || IsConfigurationFactory(method) || method.HasExpressionAttribute() ||
             method.IsExpressionLibraryMember() ||
-            method.Parameters.Any(parameter => parameter.Type.ToFullyQualifiedString() == ExpressionContext);
+            !method.ReturnsVoid && (TakesSectionContext(method) || method.Parameters.Any(parameter =>
+                parameter.Type.ToFullyQualifiedString() == ExpressionContext));
+    }
+
+    // A section as the compiler finds it: a void method of the document class itself, named for a section of its
+    // kind of document, taking one section context. It may implement the interface explicitly.
+    private static bool IsSection(IMethodSymbol method)
+    {
+        if (!method.ReturnsVoid || method.Parameters.Length != 1 || !method.Parameters[0].Type.IsSectionContext())
+        {
+            return false;
+        }
+
+        var name = method.ExplicitInterfaceImplementations.FirstOrDefault()?.Name ?? method.Name;
+        var interfaces = method.ContainingType.AllInterfaces.Select(implemented => implemented.ToFullyQualifiedString()).ToList();
+        return interfaces.Contains(Document) && name is "Inbound" or "Outbound" or "Backend" or "OnError" ||
+               interfaces.Contains(Fragment) && name == "Fragment";
     }
 
     // using S = Some.Namespace.Shared; gives the name S the meaning of Shared in the file
