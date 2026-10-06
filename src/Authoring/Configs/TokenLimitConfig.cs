@@ -34,7 +34,7 @@ public record TokenLimitConfig
     public long? TokenQuota { get; init; }
 
     /// <summary>
-    /// Specifies the time period for the token quota. Valid values are "day", "week", and "month".
+    /// Specifies the time period for the token quota. Valid values are "Hourly", "Daily", "Weekly", "Monthly" and "Yearly".
     /// </summary>
     [ExpressionAllowed]
     public string? TokenQuotaPeriod { get; init; }

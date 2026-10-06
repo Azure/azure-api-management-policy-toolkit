@@ -717,7 +717,8 @@ public class PolicyDecompilerContext
 
     public string BuildBodyConfigProperty(XElement bodyElement)
     {
-        var valueChild = bodyElement.Element("value");
+        // a value element that is all of the body; one among other content is part of a template
+        var valueChild = RawXmlContent.IsValueElementBody(bodyElement) ? bodyElement.Element("value") : null;
         string content;
         if (valueChild != null)
             content = GetElementTextOrValue(valueChild);
@@ -753,15 +754,16 @@ public class PolicyDecompilerContext
 
     public static string GetElementText(XElement element)
     {
-        if (element.Nodes().All(n => n is XText))
-        {
-            return string.Concat(element.Nodes().OfType<XText>().Select(t => t.Value));
-        }
         if (RawXmlContent.IsMarkupBody(element))
         {
             // The markup of a liquid body is template text and stays XML: an @(...) in it isn't an expression,
-            // and written raw its reserved characters would stop the body from being read back as markup.
+            // and written raw its reserved characters would stop the body from being read back as markup. A
+            // CDATA section stays one too: the gateway returns it differently from the text it holds.
             return string.Concat(element.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting)));
+        }
+        if (element.Nodes().All(n => n is XText))
+        {
+            return string.Concat(element.Nodes().OfType<XText>().Select(t => t.Value));
         }
         if (element.HasElements)
         {

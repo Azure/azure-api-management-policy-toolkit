@@ -366,6 +366,18 @@ public class WithIdCompilationTests
     }
 
     [TestMethod]
+    [DataRow("context.NotAPolicy();")]
+    [DataRow("var x = 5;")]
+    [DataRow("context.ToString;")]
+    public void ShouldNotMoveAnIdPastAStatementThatIsNotAPolicy(string statement)
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            $"""context.WithId("lost"); {statement} context.Base();""").CompileDocument();
+
+        result.Document.Descendants().Where(element => element.Attribute("id") is not null).Should().BeEmpty();
+    }
+
+    [TestMethod]
     public void ShouldNotMoveIdOfAPolicyThatFailedToTheNextPolicy()
     {
         var result = CompilerTestInitialize.InboundDocument(

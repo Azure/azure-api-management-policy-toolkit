@@ -146,4 +146,36 @@ public class SectionAlignmentTests
         result.Errors.Should().ContainSingle(error =>
             error.Id == "APIM2032" && error.GetMessage(null).Contains("'rate-limit'"));
     }
+
+    [TestMethod]
+    public void ShouldNotCountElementsOfALiquidBodyAsPolicies()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 60 });
+            context.SetBody("<order><rate-limit>1</rate-limit><quota>2</quota><quota>{{body.q}}</quota></order>", new SetBodyConfig { Template = "liquid" });
+            """).CompileDocument();
+
+        result.Should().BeSuccessful();
+    }
+
+    [TestMethod]
+    public void ShouldReportPolicyAllowedOnceUsedTwiceInAFragment()
+    {
+        var result =
+            """
+            [Document]
+            public class Limits : IFragment
+            {
+                public void Fragment(IFragmentContext context)
+                {
+                    context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 60 });
+                    context.RateLimit(new RateLimitConfig { Calls = 5, RenewalPeriod = 60 });
+                }
+            }
+            """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM2032" && error.GetMessage(null).Contains("'rate-limit'"));
+    }
 }

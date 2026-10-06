@@ -337,6 +337,92 @@ public class LlmTokenLimitTests
     }
 
     [TestMethod]
+    public void ShouldConvertEveryReturnOfAMultiStatementQuotaHelper()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.LlmTokenLimit(new TokenLimitConfig
+                    {
+                        CounterKey = "counter-key",
+                        EstimatePromptTokens = true,
+                        TokenQuota = GetQuota(context.ExpressionContext),
+                        TokenQuotaPeriod = "Daily"
+                    });
+                }
+
+                int GetQuota(IExpressionContext context)
+                {
+                    if (context.User.Groups.Count() > 1)
+                    {
+                        return 50000;
+                    }
+
+                    var each = context.User.Groups.Select(group => { return 1; }).Sum();
+                    return each * 1000;
+                }
+            }
+            """;
+
+        var result = code.CompileDocument();
+
+        result.Should().BeSuccessful();
+        var quota = result.Document.Descendants("llm-token-limit").Single().Attribute("token-quota")!.Value;
+        quota.Should().Contain("return (long)(50000);").And.Contain("return (long)(each * 1000);")
+            .And.Contain("return 1;");
+    }
+
+    [TestMethod]
+    public void ShouldConvertAQuotaHelperThatReadsANamedValue()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.LlmTokenLimit(new TokenLimitConfig
+                    {
+                        CounterKey = "a",
+                        EstimatePromptTokens = true,
+                        TokenQuota = Block(context.ExpressionContext),
+                        TokenQuotaPeriod = "Daily"
+                    });
+                    context.SetVariable("b", Wide(context.ExpressionContext));
+                }
+
+                int Block(IExpressionContext context)
+                {
+                    if (context.User.Groups.Count() > 1)
+                    {
+                        return 1;
+                    }
+
+                    return (int)context.NamedValue("n");
+                }
+
+                long Wide(IExpressionContext context) => Narrow(context);
+
+                [NamedValue("n")]
+                int Narrow(IExpressionContext context) => context.NamedValue("n");
+            }
+            """;
+
+        var result = code.CompileDocument();
+
+        result.Should().BeSuccessful();
+        var quota = result.Document.Descendants("llm-token-limit").Single().Attribute("token-quota")!.Value;
+        quota.Should().Contain("return (long)(1);").And.Contain("return (long)((int)({{n}}));");
+        // the cast applies to all of the text the named value stands for
+        result.Document.Descendants("set-variable").Single().Attribute("value")!.Value.Should().Contain("(long)({{n}})");
+    }
+
+    [TestMethod]
     public void ShouldReportTokenLimitWithoutRateOrQuota()
     {
         var result = CompilerTestInitialize.InboundDocument(

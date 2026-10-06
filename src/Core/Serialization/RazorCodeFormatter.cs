@@ -153,7 +153,7 @@ public static class RazorCodeFormatter
     }
 
     // Replaces named value tokens with identifiers while the code is reformatted, then restores them.
-    private static string WithNamedValuesProtected(string code, Func<string, string> format)
+    internal static string WithNamedValuesProtected(string code, Func<string, string> format)
     {
         var tokens = new Dictionary<string, string>();
         var protectedCode = NamedValueToken.Replace(code, match =>

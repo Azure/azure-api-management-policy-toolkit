@@ -9,7 +9,7 @@ public interface ISustainabilityInfo
 }
 
 /// <summary>
-/// Carbon intensity of the region's grid, in grams of CO2 equivalent per kWh.
+/// How carbon intensive the grid of the region is, as a category.
 /// </summary>
 public enum CarbonIntensityCategory
 {

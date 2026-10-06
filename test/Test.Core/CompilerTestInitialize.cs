@@ -46,7 +46,7 @@ public static class CompilerTestInitialize
     }
 
     /// <summary>A policy document whose inbound section holds the statements.</summary>
-    public static string InboundDocument(string statements) =>
+    public static string InboundDocument(string statements, string members = "") =>
         $$"""
           [Document]
           public class PolicyDocument : IDocument
@@ -55,6 +55,8 @@ public static class CompilerTestInitialize
               {
                   {{statements}}
               }
+
+              {{members}}
           }
           """;
 

@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
 /// <summary>
@@ -16,14 +18,26 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 public static class RawXmlContent
 {
     /// <summary>
-    /// True for a liquid set-body that holds markup, which the writer must not indent.
+    /// True for a liquid set-body that holds markup (an element or a CDATA section), which the writer must not
+    /// indent.
     /// </summary>
     public static bool IsMarkupBody(XElement element) =>
         element.Name.LocalName == "set-body" && element.Attribute("template")?.Value == "liquid" &&
-        element.HasElements;
+        element.Nodes().Any(IsMarkup) && !IsValueElementBody(element);
 
     /// <summary>
-    /// Adds the value to a liquid set-body as markup when it is well-formed XML with at least one element,
+    /// True for a body given through a value element, which is a policy value and not a template written in
+    /// place: the value element is all there is in it.
+    /// </summary>
+    public static bool IsValueElementBody(XElement element) =>
+        element.Nodes().Where(node => node is not XText text || !string.IsNullOrWhiteSpace(text.Value) || text is XCData)
+            .ToList() is [XElement { Name.LocalName: "value" }];
+
+    private static bool IsMarkup(XNode node) => node is XElement or XCData;
+
+    /// <summary>
+    /// Adds the value to a liquid set-body as markup when it is well-formed XML with at least one element or
+    /// CDATA section,
     /// also when it is apart from a &lt; or &amp; written as text; otherwise as plain text. Markup is written
     /// back in its normal form, such as double-quoted attributes.
     /// </summary>
@@ -42,22 +56,28 @@ public static class RawXmlContent
     private static bool TryParse(string value, out List<XNode> nodes)
     {
         nodes = [];
-        var trimmed = value.TrimStart();
-        if (!value.Contains('<') || trimmed.StartsWith("@(") || trimmed.StartsWith("@{"))
+        // a body that is one policy expression is code, not a template
+        if (!value.Contains('<') || PolicyDecompilerContext.IsSingleExpression(value.Trim()))
         {
             return false;
         }
 
         // A < or & that doesn't start a tag or an entity, as in {% if item.Count < 2 %}, is text; the gateway
         // reads it back from its escaped form inside a liquid tag.
-        return TryParseXml(value, out nodes) ||
-               TryParseXml(StrayAmpersand.Replace(StrayLessThan.Replace(value, "&lt;"), "&amp;"), out nodes);
+        return TryParseXml(value, out nodes) || TryParseXml(StrayCharacter.Replace(value, Escape), out nodes);
     }
 
-    private static readonly Regex StrayLessThan = new(@"<(?![A-Za-z_/!?])", RegexOptions.Compiled);
+    // A CDATA section or a comment, which is kept as it is, or a < or & that starts neither a tag nor an entity.
+    private static readonly Regex StrayCharacter = new(
+        @"<!\[CDATA\[.*?\]\]>|<!--.*?-->|<(?![A-Za-z_/!?])|&(?!(?:[A-Za-z][A-Za-z0-9]*|#[0-9]+|#x[0-9A-Fa-f]+);)",
+        RegexOptions.Compiled | RegexOptions.Singleline);
 
-    private static readonly Regex StrayAmpersand =
-        new(@"&(?!(?:[A-Za-z][A-Za-z0-9]*|#[0-9]+|#x[0-9A-Fa-f]+);)", RegexOptions.Compiled);
+    private static string Escape(Match match) => match.Value switch
+    {
+        "<" => "&lt;",
+        "&" => "&amp;",
+        _ => match.Value
+    };
 
     private static bool TryParseXml(string value, out List<XNode> nodes)
     {
@@ -66,7 +86,7 @@ public static class RawXmlContent
         {
             var wrapper = XElement.Parse($"<wrapper>{value}</wrapper>", LoadOptions.PreserveWhitespace);
             nodes = wrapper.Nodes().ToList();
-            return nodes.OfType<XElement>().Any();
+            return nodes.Any(IsMarkup);
         }
         catch (XmlException)
         {

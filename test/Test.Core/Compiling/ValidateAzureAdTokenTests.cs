@@ -513,8 +513,9 @@ public class ValidateAzureAdTokenTests
                 TenantId = "tenant",
                 DecryptionKeys = [GetKey()]
             });
-            """).CompileDocument();
+            """,
+            """static DecryptionKey GetKey() => new DecryptionKey { CertificateId = "c" };""").CompileDocument();
 
-        result.Errors.Should().NotBeEmpty();
+        result.Errors.Should().Contain(error => error.Id == "APIM2002");
     }
 }

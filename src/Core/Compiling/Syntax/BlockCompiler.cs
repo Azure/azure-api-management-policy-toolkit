@@ -39,6 +39,8 @@ public class BlockCompiler : ISyntaxCompiler
                     statement.GetLocation(),
                     statement.Kind().ToString()
                 ));
+                // an id doesn't move past a statement that isn't a policy
+                context.PendingPolicyId = null;
             }
         }
 

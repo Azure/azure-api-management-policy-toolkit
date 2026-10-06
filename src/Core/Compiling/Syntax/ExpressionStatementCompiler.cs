@@ -30,6 +30,7 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
                 statement.Expression.GetType().Name,
                 nameof(InvocationExpressionSyntax)
             ));
+            context.PendingPolicyId = null;
             return;
         }
 
@@ -44,6 +45,7 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
                 invocation.Expression.GetType().Name,
                 nameof(MemberAccessExpressionSyntax)
             ));
+            context.PendingPolicyId = null;
             return;
         }
 
@@ -81,6 +83,7 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
                 memberAccess.GetLocation(),
                 name
             ));
+            context.PendingPolicyId = null;
         }
     }
 

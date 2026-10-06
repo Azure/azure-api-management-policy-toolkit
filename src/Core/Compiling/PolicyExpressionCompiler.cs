@@ -128,7 +128,7 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
             if (visited is ExpressionSyntax result && body is ExpressionSyntax written &&
                 TryGetImplicitNumericConversion(declarationModel, written, out var returnType))
             {
-                visited = CastTo(returnType, result).Expression;
+                visited = ConvertRawNamedValue(returnType, result) ?? CastTo(returnType, result).Expression;
             }
 
             return rewriter.HasUnsupportedWrite ? null : visited;

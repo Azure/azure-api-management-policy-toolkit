@@ -79,8 +79,9 @@ public class IpFilterTests
         var result = CompilerTestInitialize.InboundDocument(
             """
             context.IpFilter(new IpFilterConfig { Action = "allow", Addresses = GetAddresses() });
-            """).CompileDocument();
+            """,
+            """static string[] GetAddresses() => new[] { "10.0.0.1" };""").CompileDocument();
 
-        result.Errors.Should().NotBeEmpty();
+        result.Errors.Should().Contain(error => error.Id == "APIM2005");
     }
 }

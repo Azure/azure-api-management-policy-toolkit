@@ -354,15 +354,19 @@ public class RateLimitTests
     }
 
     [TestMethod]
-    [DataRow("Apis = GetApis()")]
-    [DataRow("Apis = [GetApi()]")]
-    public void ShouldReportNonInlineRateLimitApis(string apis)
+    [DataRow("Apis = GetApis()", "APIM2005")]
+    [DataRow("Apis = [GetApi()]", "APIM2002")]
+    public void ShouldReportNonInlineRateLimitApis(string apis, string expected)
     {
         var result = CompilerTestInitialize.InboundDocument(
             $$"""
               context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 10, {{apis}} });
-              """).CompileDocument();
+              """,
+            """
+            static ApiRateLimit[] GetApis() => new[] { GetApi() };
+            static ApiRateLimit GetApi() => new ApiRateLimit { Name = "a", Calls = 1, RenewalPeriod = 10 };
+            """).CompileDocument();
 
-        result.Errors.Should().NotBeEmpty();
+        result.Errors.Should().Contain(error => error.Id == expected);
     }
 }

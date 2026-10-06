@@ -3,6 +3,8 @@
 
 using System.Xml.Linq;
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling.Policy;
 
 public class SetBodyDecompiler : IPolicyDecompiler
@@ -13,7 +15,8 @@ public class SetBodyDecompiler : IPolicyDecompiler
     {
         var prefix = PolicyDecompilerContext.GetContextPrefix(element, contextVar);
 
-        var valueChild = element.Element("value");
+        // a value element that is all of the body; one among other content is part of a template
+        var valueChild = RawXmlContent.IsValueElementBody(element) ? element.Element("value") : null;
         string content;
         if (valueChild != null)
         {

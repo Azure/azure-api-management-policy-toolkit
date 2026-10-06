@@ -6,6 +6,7 @@ using System.Xml.Linq;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -92,6 +93,29 @@ public class DocumentCompiler
         if (fragmentMethod != null && ValidateMethodBody(fragmentMethod, context))
         {
             _blockCompiler.Value.Compile(context, fragmentMethod.Body!);
+            ReportPoliciesAllowedOnce(context, context.RootElement, fragmentMethod);
+        }
+    }
+
+    // The gateway accepts these once per section, also when they are in different branches of a choose.
+    private static void ReportPoliciesAllowedOnce(
+        DocumentCompilationContext context,
+        XElement element,
+        MethodDeclarationSyntax method)
+    {
+        foreach (var policy in OncePerSection)
+        {
+            // an element of that name in the markup of a liquid body is content, not a policy
+            var count = element.Descendants(policy)
+                .Count(found => !found.Ancestors().Any(RawXmlContent.IsMarkupBody));
+            if (count > 1)
+            {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.PolicyAllowedOncePerSection,
+                    method.Identifier.GetLocation(),
+                    policy,
+                    count));
+            }
         }
     }
 
@@ -114,19 +138,7 @@ public class DocumentCompiler
                 policyCount));
         }
 
-        // The gateway accepts these once per section, also when they are in different branches of a choose.
-        foreach (var policy in OncePerSection)
-        {
-            var count = sectionElement.Descendants(policy).Count();
-            if (count > 1)
-            {
-                context.Report(Diagnostic.Create(
-                    CompilationErrors.PolicyAllowedOncePerSection,
-                    method.Identifier.GetLocation(),
-                    policy,
-                    count));
-            }
-        }
+        ReportPoliciesAllowedOnce(context, sectionElement, method);
 
         context.AddPolicy(sectionElement);
     }

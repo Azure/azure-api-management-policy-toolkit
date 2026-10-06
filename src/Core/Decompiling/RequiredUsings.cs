@@ -19,13 +19,14 @@ internal static class RequiredUsings
             "Convert", "Guid", "DateTime", "DateTimeOffset", "DateTimeKind", "TimeSpan", "TimeZoneInfo", "Math",
             "String", "StringComparison", "StringSplitOptions", "Uri", "UriKind", "UriPartial", "Random", "Enum",
             "Exception", "Array", "Tuple", "Func", "Action", "Nullable", "Int32", "Int64", "Boolean", "Double",
-            "Decimal", "Byte", "Char", "Object", "DayOfWeek", "Base64FormattingOptions", "BitConverter", "Version"
+            "Decimal", "Byte", "Char", "Object", "DayOfWeek", "Base64FormattingOptions", "BitConverter", "Version",
+            "Int16", "UInt16", "UInt32", "UInt64", "SByte", "Single", "MidpointRounding", "StringComparer", "TimeZone"
         ]),
         ("System.Collections.Generic",
         [
             "List", "Dictionary", "HashSet", "KeyValuePair", "IEnumerable", "IDictionary", "IList", "ICollection",
             "IReadOnlyDictionary", "IReadOnlyList", "IReadOnlyCollection", "Queue", "Stack", "SortedDictionary",
-            "LinkedList", "ISet"
+            "LinkedList", "ISet", "IEnumerator"
         ]),
         ("System.Globalization", ["CultureInfo", "DateTimeStyles", "NumberStyles"]),
         ("System.IO", ["Stream", "MemoryStream", "StreamReader", "StreamWriter", "StringReader", "StringWriter"]),
@@ -45,19 +46,30 @@ internal static class RequiredUsings
         [
             "SHA1", "SHA256", "SHA384", "SHA512", "MD5", "HMACSHA1", "HMACSHA256", "HMACSHA384", "HMACSHA512",
             "HMAC", "HashAlgorithm", "RSA", "RSAParameters", "RSAEncryptionPadding", "RSASignaturePadding",
-            "HashAlgorithmName", "Aes", "SymmetricAlgorithm", "CipherMode", "PaddingMode", "DSA", "KeyedHashAlgorithm"
+            "HashAlgorithmName", "Aes", "SymmetricAlgorithm", "CipherMode", "PaddingMode", "DSA", "KeyedHashAlgorithm",
+            "SHA1Managed", "SHA256Managed", "SHA384Managed", "SHA512Managed", "HMACMD5", "RNGCryptoServiceProvider",
+            "AsymmetricAlgorithm", "Oid"
         ]),
         ("System.Security.Cryptography.X509Certificates",
-            ["X509Certificate2", "X509Certificate", "X509ContentType", "X509NameType"]),
+        [
+            "X509Certificate2", "X509Certificate", "X509ContentType", "X509NameType", "X500DistinguishedName",
+            "PublicKey",
+            // extension methods of RSACertificateExtensions
+            "GetRSAPrivateKey", "GetRSAPublicKey"
+        ]),
         ("System.Text", ["Encoding", "StringBuilder"]),
         ("System.Text.RegularExpressions",
-            ["Regex", "RegexOptions", "Match", "MatchCollection", "Group", "GroupCollection", "Capture"]),
+            [
+                "Regex", "RegexOptions", "Match", "MatchCollection", "Group", "GroupCollection", "Capture",
+                "CaptureCollection"
+            ]),
         ("System.Web", ["HttpUtility"]),
-        ("System.Xml", ["XmlDocument", "XmlNode", "XmlElement", "XmlAttribute", "XmlNodeList", "XmlConvert"]),
+        ("System.Xml", ["XmlDocument", "XmlNode", "XmlElement", "XmlAttribute", "XmlNodeList", "XmlConvert", "XmlNodeType"]),
         ("System.Xml.Linq",
         [
             "XElement", "XDocument", "XAttribute", "XNode", "XName", "XNamespace", "XText", "XComment",
-            "XContainer", "XCData", "XDeclaration", "XProcessingInstruction", "XObject", "SaveOptions", "LoadOptions"
+            "XContainer", "XCData", "XDeclaration", "XProcessingInstruction", "XObject", "SaveOptions", "LoadOptions",
+            "XDocumentType", "XNodeDocumentOrderComparer", "XNodeEqualityComparer"
         ]),
         ("Newtonsoft.Json",
         [
@@ -77,23 +89,36 @@ internal static class RequiredUsings
     /// </summary>
     public static IReadOnlyList<string> For(IEnumerable<ExpressionMethodInfo> methods)
     {
-        var identifiers = methods
-            .SelectMany(method => SyntaxFactory.ParseTokens(method.Body))
-            .Where(token => token.IsKind(SyntaxKind.IdentifierToken))
-            .Select(token => token.ValueText)
-            .ToHashSet();
+        var identifiers = Identifiers(methods);
         return Namespaces
             .Where(entry => entry.Names.Any(identifiers.Contains))
             .Select(entry => entry.Namespace)
             .ToList();
     }
 
+    private static HashSet<string> Identifiers(IEnumerable<ExpressionMethodInfo> methods) =>
+        methods
+            .SelectMany(method => SyntaxFactory.ParseTokens(method.Body))
+            .Where(token => token.IsKind(SyntaxKind.IdentifierToken))
+            .Select(token => token.ValueText)
+            .ToHashSet();
+
     /// <summary>
     /// Puts the using directives the expressions need in front of the generated document.
     /// </summary>
     public static string AddTo(string document, IEnumerable<ExpressionMethodInfo> methods)
     {
-        var usings = string.Concat(For(methods).Select(name => $"using {name};{Environment.NewLine}"));
+        methods = methods.ToList();
+        var namespaces = For(methods);
+        var usings = string.Concat(namespaces.Select(name => $"using {name};{Environment.NewLine}"));
+
+        // System.Net has an Authorization type of its own; in a policy expression the name is the gateway's.
+        if (namespaces.Contains("System.Net") && Identifiers(methods).Contains("Authorization"))
+        {
+            usings += "using Authorization = Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.Authorization;" +
+                      Environment.NewLine;
+        }
+
         return usings.Length == 0 ? document : usings + Environment.NewLine + document;
     }
 }

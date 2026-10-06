@@ -10,6 +10,7 @@ using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -80,10 +81,47 @@ public static class CompilerUtils
     // emitted expression is still typed int, which API Management rejects there. The conversion is written out.
     private static string WithConversionToTarget(string code, ExpressionSyntax helperCall, SemanticModel? model)
     {
-        return model is not null && code.StartsWith("@(", StringComparison.Ordinal) && code.EndsWith(')') &&
-               PolicyExpressionCompiler.TryGetImplicitNumericConversion(model, helperCall, out var target)
-            ? $"@(({target.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)})({code[2..^1]}))"
-            : code;
+        if (model is null ||
+            !PolicyExpressionCompiler.TryGetImplicitNumericConversion(model, helperCall, out var target))
+        {
+            return code;
+        }
+
+        var type = target.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+        if (code.StartsWith("@(", StringComparison.Ordinal) && code.EndsWith(')'))
+        {
+            return $"@(({type})({code[2..^1]}))";
+        }
+
+        // In a multi-statement expression every value it returns is converted. A raw named value, {{name}},
+        // isn't C# and is kept out of the way while the code is read.
+        if (code.StartsWith("@{", StringComparison.Ordinal) && code.EndsWith('}'))
+        {
+            return "@" + RazorCodeFormatter.WithNamedValuesProtected(code[1..], body =>
+                SyntaxFactory.ParseStatement(body) is BlockSyntax block && !block.ContainsDiagnostics
+                    ? new ReturnConversionRewriter(type).Visit(block).ToFullString()
+                    : body);
+        }
+
+        return code;
+    }
+
+    private sealed class ReturnConversionRewriter(string type) : CSharpSyntaxRewriter
+    {
+        public override SyntaxNode? VisitReturnStatement(ReturnStatementSyntax node) =>
+            node.Expression is { } returned
+                ? node.WithExpression(SyntaxFactory.ParseExpression($"({type})({returned.WithoutTrivia().ToFullString()})")
+                    .WithTriviaFrom(returned))
+                : node;
+
+        // a lambda or a local function returns its own value
+        public override SyntaxNode? VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => node;
+
+        public override SyntaxNode? VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => node;
+
+        public override SyntaxNode? VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node) => node;
+
+        public override SyntaxNode? VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node;
     }
 
     public static string FindCode(this InvocationExpressionSyntax syntax, IDocumentCompilationContext context)
