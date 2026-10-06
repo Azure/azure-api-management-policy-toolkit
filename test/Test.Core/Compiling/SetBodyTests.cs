@@ -192,6 +192,7 @@ public class SetBodyTests
             context.SetBody("@(context.RequestId)<a />", new SetBodyConfig { Template = "liquid" });
             context.SetBody("@(1 < 2 ? \"<a>\" : \"b\")", new SetBodyConfig { Template = "liquid", UseValueElement = true });
             context.SetBody("{% if body.n < 2 %}<_item>{{body.x}}</_item><élément/>{% endif %}", new SetBodyConfig { Template = "liquid" });
+            context.SetBody("<p>{{body.x}}&nbsp;&copy;&#160;</p>", new SetBodyConfig { Template = "liquid" });
             """);
 
         var result = code.CompileDocument();
@@ -222,5 +223,7 @@ public class SetBodyTests
         // a tag may start with _ or a letter outside ASCII
         xml.Should().Contain(
             "<set-body template=\"liquid\">{% if body.n &lt; 2 %}<_item>{{body.x}}</_item><élément />{% endif %}</set-body>");
+        // an HTML entity isn't one of XML's: it is text, and doesn't stop the body from being markup
+        xml.Should().Contain("<set-body template=\"liquid\"><p>{{body.x}}&amp;nbsp;&amp;copy;\u00a0</p></set-body>");
     }
 }

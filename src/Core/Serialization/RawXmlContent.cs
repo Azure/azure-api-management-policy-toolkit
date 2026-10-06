@@ -68,9 +68,10 @@ public static class RawXmlContent
     }
 
     // A CDATA section or a comment, which is kept as it is, or a < or & that starts neither a tag nor an entity. A
-    // tag starts with a letter of any script, _ or :.
+    // tag starts with a letter of any script, _ or :. A policy has no DTD, so the only entities are XML's five and
+    // character references; an HTML entity such as &nbsp; is text.
     private static readonly Regex StrayCharacter = new(
-        @"<!\[CDATA\[.*?\]\]>|<!--.*?-->|<(?![\p{L}_:/!?])|&(?!(?:[A-Za-z][A-Za-z0-9]*|#[0-9]+|#x[0-9A-Fa-f]+);)",
+        @"<!\[CDATA\[.*?\]\]>|<!--.*?-->|<(?![\p{L}_:/!?])|&(?!(?:lt|gt|amp|quot|apos|#[0-9]+|#x[0-9A-Fa-f]+);)",
         RegexOptions.Compiled | RegexOptions.Singleline);
 
     private static string Escape(Match match) => match.Value switch

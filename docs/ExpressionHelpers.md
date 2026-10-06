@@ -62,7 +62,7 @@ if (IsCompanyIp(context.ExpressionContext) && !IsHealthCheck(context.ExpressionC
 
 A policy configuration argument may be a call to a factory method, also from a referenced project. The factory must
 return a single `new TConfig { ... }` expression and take no parameters other than policy section contexts, such as
-`IInboundContext`.
+`IInboundContext`, or `IHaveExpressionContext`.
 
 ```csharp
 context.RateLimitByKey(Limits.PerProduct(context));

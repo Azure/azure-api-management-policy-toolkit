@@ -376,7 +376,9 @@ public static class SyntaxExtensions
     private static bool IsSectionOrConfigurationFactory(IMethodSymbol method) =>
         method.ReturnsVoid || IsConfigurationFactory(method);
 
+    // the configurations are the records of the authoring namespace; its interfaces and enums aren't ones
     private static bool IsConfigurationFactory(IMethodSymbol method) =>
+        method.ReturnType is INamedTypeSymbol { TypeKind: TypeKind.Class } &&
         method.ReturnType.ContainingNamespace?.ToDisplayString() == Authoring;
 
     private static bool TakesSectionContext(IMethodSymbol method) =>
