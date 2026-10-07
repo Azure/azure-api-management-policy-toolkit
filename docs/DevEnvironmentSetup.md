@@ -7,7 +7,7 @@ See dev container [website](https://containers.dev/supporting) for more informat
 
 ## Setting up the development environment
 
-* Check that you have latest [.NET SDK 8 sdk](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) version installed.
+* Check that you have the latest [.NET 11 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/11.0) installed.
 * Clone the repository.
 * Run `dotnet restore` to restore the dependencies.
 * Run `dotnet build` to build the project.

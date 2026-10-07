@@ -189,7 +189,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 10.0.x
+        dotnet-version: 11.0.x
 
     - name: Restore dependencies
       run: dotnet restore
@@ -257,7 +257,7 @@ steps:
   - task: UseDotNet@2
     displayName: 'Setup .NET'
     inputs:
-      version: 10.x
+      version: 11.x
       performMultiLevelLookup: true
       includePreviewVersions: true
 

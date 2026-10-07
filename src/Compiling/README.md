@@ -5,7 +5,7 @@ policy documents.
 
 ## Install
 
-The compiler requires the .NET 10 runtime.
+The compiler requires the .NET 11 runtime.
 
 Install the Microsoft Azure Api Management Policy Toolkit compiler CLI tool with [NuGet][nuget]:
 

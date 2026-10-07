@@ -22,7 +22,7 @@ dotnet new install Microsoft.Azure.ApiManagement.PolicyToolkit.Templates
 dotnet new policytoolkitsolution 
 ```
 
-The generated projects target .NET 10 by default. Pass `--Framework net9.0` or `--Framework net8.0` to
+The generated projects target .NET 11 by default. Pass `--Framework net10.0`, `--Framework net9.0`, or `--Framework net8.0` to
 generate projects for an earlier runtime. The template package itself is framework-independent.
 
 ### Create a new policy document

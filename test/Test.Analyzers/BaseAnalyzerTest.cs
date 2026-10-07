@@ -14,8 +14,8 @@ public class BaseAnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, MSTestV
 {
     public BaseAnalyzerTest(string source, params DiagnosticResult[] diags)
     {
-        ReferenceAssemblies = new ReferenceAssemblies("net10.0",
-            new PackageIdentity("Microsoft.NETCore.App.Ref", "10.0.0"), Path.Combine("ref", "net10.0"));
+        ReferenceAssemblies = new ReferenceAssemblies("net11.0",
+            new PackageIdentity("Microsoft.NETCore.App.Ref", "11.0.0-rc.1.26425.128"), Path.Combine("ref", "net11.0"));
         TestState.AdditionalReferences.Add(
             MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location));
         TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Expression<>).Assembly.Location));

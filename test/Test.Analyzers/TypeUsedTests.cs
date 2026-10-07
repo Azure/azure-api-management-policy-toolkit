@@ -193,7 +193,7 @@ public class TypeUsedTests
                     }
                     """)
             ],
-            [.. Net100.References.All, MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location)],
+            [.. Net110.References.All, MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         using var image = new MemoryStream();
         Assert.IsTrue(library.Emit(image).Success);
@@ -275,7 +275,7 @@ public class TypeUsedTests
                     }
                     """)
             ],
-            [.. Net100.References.All, MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location)],
+            [.. Net110.References.All, MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         using var image = new MemoryStream();
         Assert.IsTrue(library.Emit(image).Success);
