@@ -6,7 +6,7 @@ platform-as-a-service, API Management supports the complete API lifecycle.
 This library contains interfaces and classes required for creating policies in C# for API's in Microsoft Azure Api
 Management.
 
-The NuGet package includes assemblies for .NET 8, .NET 9, and .NET 10.
+The NuGet package includes assemblies for .NET 8, .NET 9, .NET 10, and .NET 11.
 
 ## Getting started
 

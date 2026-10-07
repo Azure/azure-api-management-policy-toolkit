@@ -21,7 +21,7 @@ policy, or migrating legacy XML policies into C#-based source control workflows.
 
 ## Install
 
-The decompiler requires the .NET 10 runtime.
+The decompiler requires the .NET 11 runtime.
 
 Install the Microsoft Azure API Management Policy Toolkit decompiler CLI tool with [NuGet][nuget]:
 

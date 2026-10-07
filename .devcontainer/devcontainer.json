@@ -3,7 +3,7 @@
 {
     "name": "C# (.NET)",
     // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-    "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm",
+    "image": "mcr.microsoft.com/devcontainers/dotnet:2-11.0-preview",
     "features": {
         "ghcr.io/stuartleeks/dev-container-features/shell-history:0": {}
     },

@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <ExampleTargetFramework Condition="'$(ExampleTargetFramework)' == ''">net10.0</ExampleTargetFramework>
+    <ExampleTargetFramework Condition="'$(ExampleTargetFramework)' == ''">net11.0</ExampleTargetFramework>
     <TargetFramework>$(ExampleTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>

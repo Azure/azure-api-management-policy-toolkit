@@ -25,6 +25,7 @@ jobs:
             8.0.x
             9.0.x
             10.0.x
+            11.0.100-rc.1.26425.128
       - name: Restore dependencies
         run: dotnet restore
       - name: Build with dotnet
@@ -62,9 +63,10 @@ jobs:
             8.0.x
             9.0.x
             10.0.x
+            11.0.100-rc.1.26425.128
       - name: Create new packages
         run: dotnet pack
-      - name: Verify generated .NET 9 and .NET 10 solutions
+      - name: Verify generated .NET 9, .NET 10, and .NET 11 solutions
         shell: bash
         run: |
           dotnet new install ./output/Microsoft.Azure.ApiManagement.PolicyToolkit.Templates.1.0.0.nupkg
@@ -72,6 +74,8 @@ jobs:
           dotnet build ./template-net9
           dotnet new policytoolkitsolution --Framework net10.0 --output ./template-net10
           dotnet build ./template-net10
+          dotnet new policytoolkitsolution --Framework net11.0 --output ./template-net11
+          dotnet build ./template-net11
       - name: Rename example project
         working-directory: ./example
         run: mv Example.sln.example Example.sln
@@ -109,11 +113,17 @@ jobs:
       matrix:
         include:
           - sdk: "8.0"
+            sdk-version: "8.0.100"
             framework: net8.0
           - sdk: "9.0"
+            sdk-version: "9.0.100"
             framework: net9.0
           - sdk: "10.0"
+            sdk-version: "10.0.100"
             framework: net10.0
+          - sdk: "11.0"
+            sdk-version: "11.0.100-rc.1.26425.128"
+            framework: net11.0
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -124,6 +134,7 @@ jobs:
             8.0.x
             9.0.x
             10.0.x
+            11.0.100-rc.1.26425.128
       - name: Create packages
         run: dotnet pack
       - name: Prepare example source
@@ -131,7 +142,7 @@ jobs:
         run: |
           mv ./example/source/Source.Example.csproj.example ./example/source/Source.Example.csproj
           dotnet new globaljson \
-            --sdk-version "${{ matrix.sdk }}.100" \
+            --sdk-version "${{ matrix.sdk-version }}" \
             --roll-forward latestFeature \
             --output ./example \
             --force
