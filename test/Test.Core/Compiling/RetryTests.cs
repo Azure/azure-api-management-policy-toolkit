@@ -51,6 +51,8 @@ public class RetryTests
                     () =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -67,6 +69,8 @@ public class RetryTests
                     () =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -89,12 +93,18 @@ public class RetryTests
             </backend>
             <outbound>
                 <retry condition="@(context.Variables.ContainsKey("retry"))" count="10" interval="1">
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </retry>
             </outbound>
             <on-error>
                 <retry condition="@(context.Variables.ContainsKey("retry"))" count="10" interval="1">
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </retry>
             </on-error>
         </policies>
@@ -379,5 +389,18 @@ public class RetryTests
     public void ShouldCompileRetryPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(51)]
+    public void ShouldReportRetryCountOutOfRange(int count)
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            $$"""
+              context.Retry(new RetryConfig { Condition = true, Count = {{count}}, Interval = 1 }, () => { });
+              """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2020");
     }
 }

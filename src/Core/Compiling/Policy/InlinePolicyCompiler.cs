@@ -58,32 +58,52 @@ public class InlinePolicyCompiler : IMethodPolicyHandler
         }
     }
 
-    private static XElement CreateRazorFromString(LiteralExpressionSyntax literal)
+    // The policy is read as API Management's rawxml format, whether or not it happens to be well-formed XML:
+    // an expression is C# as it is written, so characters reserved in XML are not escaped in it and an
+    // entity such as &amp; in it is not unescaped.
+    private static XElement CreateRazorFromString(LiteralExpressionSyntax literal) =>
+        CreateFromRawXml(literal.Token.ValueText);
+
+    // Razor-like rawxml: expressions are written unescaped, so they are replaced with markers
+    // for the XML reader and put back afterwards.
+    private static XElement CreateFromRawXml(string text)
     {
-        var cleanXml = RazorCodeFormatter.ToCleanXml(literal.Token.ValueText, out var markerToCode);
+        var cleanXml = RazorCodeFormatter.ToCleanXml(text, out var markerToCode);
         var xml = XElement.Parse(cleanXml);
 
-        foreach (XElement element in xml.DescendantsAndSelf())
+        foreach (var attribute in xml.DescendantsAndSelf().Attributes())
         {
-            if (element.HasAttributes)
-            {
-                foreach (var a in element.Attributes())
-                {
-                    if (markerToCode.TryGetValue(a.Value, out var attributeCode))
-                    {
-                        a.Value = attributeCode;
-                    }
-                }
-            }
+            attribute.Value = RestoreExpressions(attribute.Value, markerToCode);
+        }
 
-            // Only replace text on leaf elements — setting .Value on a parent
-            // removes all child elements and replaces them with a text node.
-            if (!element.HasElements && markerToCode.TryGetValue(element.Value, out var valueCode))
+        foreach (var node in xml.DescendantNodes())
+        {
+            if (node is XText textNode)
             {
-                element.Value = valueCode;
+                textNode.Value = RestoreExpressions(textNode.Value, markerToCode);
+            }
+            else if (node is XComment comment)
+            {
+                comment.Value = RestoreExpressions(comment.Value, markerToCode);
             }
         }
 
         return xml;
+    }
+
+    // A value is not always exactly one expression, so every marker in it is replaced.
+    private static string RestoreExpressions(string value, IReadOnlyDictionary<string, string> markerToCode)
+    {
+        if (!value.Contains("__expression__", StringComparison.Ordinal))
+        {
+            return value;
+        }
+
+        foreach (var (marker, code) in markerToCode)
+        {
+            value = value.Replace(marker, code, StringComparison.Ordinal);
+        }
+
+        return value;
     }
 }

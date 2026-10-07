@@ -72,4 +72,16 @@ public class IpFilterTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldReportNonInlineIpFilterAddresses()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.IpFilter(new IpFilterConfig { Action = "allow", Addresses = GetAddresses() });
+            """,
+            """static string[] GetAddresses() => new[] { "10.0.0.1" };""").CompileDocument();
+
+        result.Errors.Should().Contain(error => error.Id == "APIM2005");
+    }
 }

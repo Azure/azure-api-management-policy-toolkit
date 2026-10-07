@@ -72,7 +72,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// <summary>
     /// Emits metrics about token usage from Azure OpenAI service calls.<br/>
     /// This policy can be used to monitor and analyze token usage patterns.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-emit-token-metric-policy">azure-openai-emit-token-metric</a> policy.
+    /// Compiled to the <c>azure-openai-emit-token-metric</c> policy, an earlier name of <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-emit-token-metric-policy">llm-emit-token-metric</a> that the gateway still accepts.
     /// </summary>
     /// <param name="config">
     /// Configuration specifying the dimensions to include with the metric and optionally the namespace to use.
@@ -83,7 +83,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// Searches a cache for semantically similar Azure OpenAI prompts and returns cached responses if found.<br/>
     /// Uses vector embeddings to match prompt similarity against cached items based on a threshold.<br/>
     /// When a match is found, the policy short-circuits the request and returns the cached response.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-semantic-cache-lookup-policy">azure-openai-semantic-cache-lookup</a> policy.
+    /// Compiled to the <c>azure-openai-semantic-cache-lookup</c> policy, an earlier name of <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-semantic-cache-lookup-policy">llm-semantic-cache-lookup</a> that the gateway still accepts.
     /// </summary>
     /// <param name="config">
     /// Configuration specifying the similarity threshold, embedding backend, and other cache parameters.
@@ -95,7 +95,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// This policy can enforce rate limits (tokens per minute) and/or quotas (tokens per period).<br/>
     /// Helps protect backend services and manage costs by controlling token usage.<br/>
     /// Can estimate prompt token count and track consumption via custom headers or variables.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-token-limit-policy">azure-openai-token-limit</a> policy.
+    /// Compiled to the <c>azure-openai-token-limit</c> policy, an earlier name of <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-token-limit-policy">llm-token-limit</a> that the gateway still accepts.
     /// </summary>
     /// <param name="config">
     /// Configuration specifying the counter key, rate limits, quotas, and optional header/variable names for tracking token usage.
@@ -152,7 +152,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// Provides a unified caching solution with stampede protection by combining cache lookup and store operations.<br/>
     /// On cache hit, the cached value is assigned to the specified variable. On cache miss, the nested value block is executed
     /// and the resulting variable value is stored in the cache.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cache-value-policy">cache-value</a> policy.
+    /// Compiled to the <c>cache-value</c> policy, which is not part of the public policy reference.
     /// </summary>
     /// <param name="config">
     /// Configuration specifying the cache key, variable name, expiration, refresh interval, default value, and optional caching type.
@@ -186,6 +186,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// Enables cross-domain calls from Adobe Flash and Microsoft Silverlight browser-based clients.<br/>
     /// This policy adds appropriate CORS headers to allow browser-based clients to make cross-domain requests.<br/>
     /// It creates a cross-domain policy XML document that is consumed by Silverlight and Flash clients.<br/>
+    /// API Management accepts this policy only at global scope.<br/>
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/cross-domain-policy">cross-domain</a> policy.
     /// </summary>
     /// <param name="policy">
@@ -260,7 +261,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/ip-filter-policy">ip-filter</a> policy.
     /// </summary>
     /// <param name="config">
-    /// Configuration specifying the action to take (allow or deny), IP addresses, and/or IP address ranges.
+    /// Configuration specifying the action to take ("allow" or "forbid"), IP addresses, and/or IP address ranges.
     /// </param>
     void IpFilter(IpFilterConfig config);
 
@@ -300,7 +301,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// Emits metrics about token usage from Language Model service calls.<br/>
     /// This policy captures and records token usage information for monitoring and analysis purposes.<br/>
     /// Use this policy to track token consumption across LLM operations with custom dimensions.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-emit-token-metric-policy">llm-emit-token-metric</a> policy.
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-emit-token-metric-policy">llm-emit-token-metric</a> policy.
     /// </summary>
     /// <param name="config">
     /// Configuration specifying the dimensions to include with the metric and optionally the namespace to use.
@@ -311,7 +312,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// Searches a cache for semantically similar LLM prompts and returns cached responses if found.<br/>
     /// Uses vector embeddings to match prompt similarity against cached items based on a threshold.<br/>
     /// When a match is found, the policy short-circuits the request and returns the cached response.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-semantic-cache-lookup-policy">llm-semantic-cache-lookup</a> policy.
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-semantic-cache-lookup-policy">llm-semantic-cache-lookup</a> policy.
     /// </summary>
     /// <param name="config">
     /// Configuration specifying the similarity threshold, embedding backend, and other cache parameters.
@@ -323,7 +324,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// This policy can enforce rate limits (tokens per minute) and/or quotas (tokens per period).<br/>
     /// Helps protect backend services and manage costs by controlling token usage.<br/>
     /// Can estimate prompt token count and track consumption via custom headers or variables.<br/>
-    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/azure-openai-token-limit-policy">llm-token-limit</a> policy.
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/llm-token-limit-policy">llm-token-limit</a> policy.
     /// </summary>
     /// <param name="config">
     /// Configuration specifying the counter key, rate limits, quotas, and optional header/variable names for tracking token usage.
@@ -346,7 +347,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/mock-response-policy">mock-response</a> policy.
     /// </summary>
     /// <param name="config">
-    /// Optional configuration specifying status code, content type, headers, and other response characteristics.
+    /// Optional configuration specifying the status code and content type used to select the mocked response.
     /// When null, returns a default empty 200 OK response.
     /// </param>
     void MockResponse(MockResponseConfig? config = null);
@@ -587,7 +588,7 @@ public interface IInboundContext : IHaveExpressionContext
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/set-variable-policy">set-variable</a> policy.
     /// </summary>
     /// <param name="name">
-    /// Specifies the name of the variable to be set. Policy expressions are allowed.
+    /// Specifies the name of the variable to be set. Policy expressions are not allowed.
     /// </param>
     /// <param name="value">
     /// Specifies the value of the variable to be set. Policy expressions are allowed.
@@ -682,12 +683,10 @@ public interface IInboundContext : IHaveExpressionContext
 
     /// <summary>
     /// Transforms XML in request or response body using XSL transform (XSLT).<br/>
-    /// Can transform XML in the request body, response body, or a context variable.<br/>
     /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/xsl-transform-policy">xsl-transform</a> policy.
     /// </summary>
     /// <param name="config">
-    /// Configuration specifying the transformation parameters, including where to apply the transformation (request, response, or variable),
-    /// the XSL stylesheet to use, content type, and error handling options.
+    /// Configuration specifying the XSL stylesheet to use and its parameters.
     /// </param>
     void XslTransform(XslTransformConfig config);
 }

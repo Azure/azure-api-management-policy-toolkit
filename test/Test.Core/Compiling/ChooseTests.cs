@@ -149,4 +149,54 @@ public class ChooseTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldCompileConstantConditionsAndIdOnIfStatement()
+    {
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.WithId("route");
+            if (true)
+            {
+                context.SetHeader("X-A", "1");
+            }
+            else if (false)
+            {
+                context.SetHeader("X-B", "1");
+            }
+            else
+            {
+                context.WithId("inner").SetHeader("X-C", "1");
+            }
+            context.SetHeader("X-D", "1");
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <inbound>
+                    <choose id="route">
+                        <when condition="true">
+                            <set-header name="X-A">
+                                <value>1</value>
+                            </set-header>
+                        </when>
+                        <when condition="false">
+                            <set-header name="X-B">
+                                <value>1</value>
+                            </set-header>
+                        </when>
+                        <otherwise>
+                            <set-header id="inner" name="X-C">
+                                <value>1</value>
+                            </set-header>
+                        </otherwise>
+                    </choose>
+                    <set-header name="X-D">
+                        <value>1</value>
+                    </set-header>
+                </inbound>
+            </policies>
+            """);
+    }
 }

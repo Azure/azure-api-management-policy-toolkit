@@ -16,6 +16,12 @@ public record ValidateAzureAdTokenConfig
     public required string TenantId { get; init; }
 
     /// <summary>
+    /// Microsoft Entra endpoint used to acquire tokens in environments such as national clouds,
+    /// for example "https://login.microsoftonline.us". The "https://" prefix is optional.
+    /// </summary>
+    public string? AuthenticationEndpoint { get; init; }
+
+    /// <summary>
     /// The name of the header containing the token.
     /// </summary>
     [ExpressionAllowed]
@@ -61,8 +67,9 @@ public record ValidateAzureAdTokenConfig
     public string[]? ClientApplicationIds { get; init; }
 
     /// <summary>
-    /// The expected audiences for the token.
+    /// The expected audiences for the token. Policy expressions are allowed.
     /// </summary>
+    [ExpressionAllowed]
     public string[]? Audiences { get; init; }
 
     /// <summary>

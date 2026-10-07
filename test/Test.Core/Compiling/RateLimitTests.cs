@@ -320,4 +320,57 @@ public class RateLimitTests
 
         result.Errors.Should().ContainSingle(error => error.Id == "APIM2002");
     }
+
+    [TestMethod]
+    [DataRow("context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 301 });", true)]
+    [DataRow("context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 300 });", false)]
+    [DataRow("context.RateLimitByKey(new RateLimitByKeyConfig { Calls = 1, RenewalPeriod = 0, CounterKey = \"k\" });", true)]
+    [DataRow("context.QuotaByKey(new QuotaByKeyConfig { Calls = 1, RenewalPeriod = 299, CounterKey = \"k\" });", true)]
+    [DataRow("context.QuotaByKey(new QuotaByKeyConfig { Calls = 1, RenewalPeriod = 300, CounterKey = \"k\" });", false)]
+    // the api and operation limits have the same range
+    [DataRow("context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 10, Apis = [new ApiRateLimit { Name = \"a\", Calls = 1, RenewalPeriod = 301 }] });", true)]
+    [DataRow("context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 10, Apis = [new ApiRateLimit { Name = \"a\", Calls = 1, RenewalPeriod = 10, Operations = [new OperationRateLimit { Name = \"o\", Calls = 1, RenewalPeriod = 0 }] }] });", true)]
+    [DataRow("context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 10, Apis = [new ApiRateLimit { Name = \"a\", Calls = 1, RenewalPeriod = 300, Operations = [new OperationRateLimit { Name = \"o\", Calls = 1, RenewalPeriod = 1 }] }] });", false)]
+    public void ShouldValidateRenewalPeriodRange(string policy, bool rejected)
+    {
+        var errors = CompilerTestInitialize.InboundDocument(policy).CompileDocument().Errors;
+
+        if (rejected)
+        {
+            errors.Should().ContainSingle(error => error.Id == "APIM2020");
+        }
+        else
+        {
+            errors.Should().BeEmpty();
+        }
+    }
+
+    [TestMethod]
+    public void ShouldReportRateLimitDiagnosticsWithRateLimitPolicyName()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.RateLimit(new RateLimitConfig { RenewalPeriod = 10 });
+            """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM2006" && error.GetMessage(null).Contains("'rate-limit'"));
+    }
+
+    [TestMethod]
+    [DataRow("Apis = GetApis()", "APIM2005")]
+    [DataRow("Apis = [GetApi()]", "APIM2002")]
+    public void ShouldReportNonInlineRateLimitApis(string apis, string expected)
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            $$"""
+              context.RateLimit(new RateLimitConfig { Calls = 1, RenewalPeriod = 10, {{apis}} });
+              """,
+            """
+            static ApiRateLimit[] GetApis() => new[] { GetApi() };
+            static ApiRateLimit GetApi() => new ApiRateLimit { Name = "a", Calls = 1, RenewalPeriod = 10 };
+            """).CompileDocument();
+
+        result.Errors.Should().Contain(error => error.Id == expected);
+    }
 }

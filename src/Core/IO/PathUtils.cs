@@ -12,11 +12,20 @@ public static class PathUtils
                       !d.Equals("bin", StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Checks only the folders below <paramref name="rootFolder"/> (the project or source folder),
+    /// so a project which itself is located under a folder named <c>bin</c> or <c>obj</c> is not excluded.
+    /// </summary>
+    public static bool IsNotInObjOrBinFolder(string path, string rootFolder)
+    {
+        return IsNotInObjOrBinFolder(Path.GetRelativePath(Path.GetFullPath(rootFolder), Path.GetFullPath(path)));
+    }
+
     public static string PrepareOutputPath(string path, string extension)
     {
         var normalizedPath = path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
         var unrootedPath = UnrootPath(normalizedPath);
-        return Path.HasExtension(path) ? path : Path.ChangeExtension(unrootedPath, extension);
+        return Path.HasExtension(unrootedPath) ? unrootedPath : Path.ChangeExtension(unrootedPath, extension);
     }
 
     public static string UnrootPath(string path)

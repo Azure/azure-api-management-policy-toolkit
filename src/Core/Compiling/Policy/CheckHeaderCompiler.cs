@@ -68,32 +68,13 @@ public class CheckHeaderCompiler : IMethodPolicyHandler
             return;
         }
 
-        if (!values.TryGetValue(nameof(CheckHeaderConfig.Values), out var headerValues))
+        if (values.TryGetValue(nameof(CheckHeaderConfig.Values), out var headerValues))
         {
-            context.Report(Diagnostic.Create(
-                CompilationErrors.RequiredParameterNotDefined,
-                node.GetLocation(),
-                "check-header",
-                nameof(CheckHeaderConfig.Values)
-            ));
-            return;
+            var elements = (headerValues.UnnamedValues ?? [])
+                .Select(origin => new XElement("value", origin.Value!))
+                .ToArray<object>();
+            element.Add(elements);
         }
-
-        var elements = (headerValues.UnnamedValues ?? [])
-            .Select(origin => new XElement("value", origin.Value!))
-            .ToArray<object>();
-        if (elements.Length == 0)
-        {
-            context.Report(Diagnostic.Create(
-                CompilationErrors.RequiredParameterIsEmpty,
-                headerValues.Node.GetLocation(),
-                "check-header",
-                nameof(CheckHeaderConfig.Values)
-            ));
-            return;
-        }
-
-        element.Add(elements);
 
         context.AddPolicy(element);
     }

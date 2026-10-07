@@ -39,7 +39,9 @@ public record PublishToDaprConfig
 
     /// <summary>
     /// Specifies the time in seconds to wait for the Dapr sidecar to respond. Valid values are 1 to 240.
+    /// Policy expressions are allowed.
     /// </summary>
+    [ExpressionAllowed]
     public int? Timeout { get; init; }
 
     /// <summary>

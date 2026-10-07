@@ -39,6 +39,7 @@ public class RetryTests
         {
             context.Retry(new RetryConfig
             {
+                Interval = 0,
                 Condition = true,
                 Count = 2,
             }, () =>
@@ -58,6 +59,7 @@ public class RetryTests
         {
             context.Retry(new RetryConfig
             {
+                Interval = 0,
                 Condition = true,
                 ConditionEvaluator = () => _attempts < 2,
                 Count = 3,
@@ -81,6 +83,7 @@ public class RetryTests
         {
             context.Retry(new RetryConfig
             {
+                Interval = 0,
                 Condition = true,
                 ConditionEvaluator = () => _attempts < 2,
                 Count = 3,

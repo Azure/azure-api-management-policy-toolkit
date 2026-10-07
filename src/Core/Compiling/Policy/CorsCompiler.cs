@@ -96,10 +96,22 @@ public class CorsCompiler : IMethodPolicyHandler
                     "cors",
                     nameof(CorsConfig.AllowedMethods)
                 ));
+                return;
             }
 
             allowedMethodsElement.Add(methods);
             element.Add(allowedMethodsElement);
+        }
+        else if (values.TryGetValue(nameof(CorsConfig.PreflightResultMaxAge), out var preflightResultMaxAge))
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.ParameterRequiresAnotherParameter,
+                preflightResultMaxAge.Node.GetLocation(),
+                "cors",
+                nameof(CorsConfig.PreflightResultMaxAge),
+                nameof(CorsConfig.AllowedMethods)
+            ));
+            return;
         }
 
         if (values.TryGetValue(nameof(CorsConfig.ExposeHeaders), out var exposeHeaders))
@@ -115,6 +127,7 @@ public class CorsCompiler : IMethodPolicyHandler
                     "cors",
                     nameof(CorsConfig.ExposeHeaders)
                 ));
+                return;
             }
 
             element.Add(new XElement("expose-headers", exposeHeadersElements));

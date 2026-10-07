@@ -21,6 +21,27 @@ The generated document is only valid for the matching API Management content for
 `Microsoft.ApiManagement/service/apis/policies` or `.../policyFragments` Bicep resource has a `format` property that
 must be set to the same value (`rawxml` or `xml`) you compiled with.
 
+## Decompiling
+
+The decompiler takes the same option for the format of its input, with the same default:
+
+```shell
+# default: rawxml
+dotnet azure-apim-policy-decompiler --s .\target --o .\src
+
+# policies written or exported as xml
+dotnet azure-apim-policy-decompiler --s .\target --o .\src --policy-format xml
+```
+
+| `--policy-format` | How a policy is read |
+| --- | --- |
+| `rawxml` (default) | A value that begins with an expression is C# as it is written: an entity in it, such as the string `"&amp;"`, is kept. Everything else is XML, an `@(...)` further into a value or anywhere in the markup of a liquid `set-body` included |
+| `xml` | The document has to be well-formed XML, and an entity in an expression is decoded like any other |
+
+Give the format the policies were compiled or exported in. A `rawxml` policy read as `xml` usually isn't
+well-formed XML and fails to parse; an `xml` policy read as `rawxml` decompiles to expressions that keep their
+entities and don't parse as C#. The decompiler reports either and names this option.
+
 ## Which format should I use?
 
 - **`rawxml` (default)** keeps expressions verbatim, so the generated files stay readable — including multi-line

@@ -394,4 +394,29 @@ public class SendServiceBusMessageTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldCompileMessageAndErrorHandlingAttributes()
+    {
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.SendServiceBusMessage(new SendServiceBusMessageConfig
+            {
+                QueueName = "orders",
+                MessageId = "0f8fad5b-d9cb-469f-a165-70867728950e",
+                SessionId = "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                TimeToLive = "00:10:00",
+                ResponseVariableName = "result",
+                IgnoreError = true,
+                Payload = "payload"
+            });
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(CompilerTestInitialize.InboundXml(
+            """
+            <send-service-bus-message queue-name="orders" message-id="0f8fad5b-d9cb-469f-a165-70867728950e" session-id="7c9e6679-7425-40de-944b-e07fc1f90ae7" time-to-live="00:10:00" response-variable-name="result" ignore-error="true">
+                <payload>payload</payload>
+            </send-service-bus-message>
+            """));
+    }
 }

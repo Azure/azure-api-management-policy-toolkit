@@ -10,7 +10,9 @@ using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
@@ -19,6 +21,16 @@ public static class CompilerUtils
 {
     public static string ProcessParameter(this ExpressionSyntax expression, IDocumentCompilationContext context)
     {
+        // null has no policy representation; it used to be written out as the text "null"
+        if (IsNull(expression, context))
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.NotSupportedParameter,
+                expression.GetLocation()
+            ));
+            return "";
+        }
+
         var semanticModel = context.Compilation.ContainsSyntaxTree(expression.SyntaxTree)
             ? CachedModel(context.Compilation, expression.SyntaxTree)
             : null;
@@ -39,7 +51,7 @@ public static class CompilerUtils
             case LiteralExpressionSyntax syntax:
                 return syntax.Token.ValueText;
             case InvocationExpressionSyntax syntax:
-                return FindCode(syntax, context);
+                return WithConversionToTarget(FindCode(syntax, context), syntax, semanticModel);
             case MemberAccessExpressionSyntax syntax:
                 return FindCode(syntax, context);
             // case InterpolatedStringExpressionSyntax syntax:
@@ -63,6 +75,53 @@ public static class CompilerUtils
                 ));
                 return "";
         }
+    }
+
+    // C# converts an int helper to the long of the property it is assigned to, such as TokenQuota, but the
+    // emitted expression is still typed int, which API Management rejects there. The conversion is written out.
+    private static string WithConversionToTarget(string code, ExpressionSyntax helperCall, SemanticModel? model)
+    {
+        if (model is null ||
+            !PolicyExpressionCompiler.TryGetImplicitNumericConversion(model, helperCall, out var target))
+        {
+            return code;
+        }
+
+        var type = target.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+        if (code.StartsWith("@(", StringComparison.Ordinal) && code.EndsWith(')'))
+        {
+            return $"@(({type})({code[2..^1]}))";
+        }
+
+        // In a multi-statement expression every value it returns is converted. A raw named value, {{name}},
+        // isn't C# and is kept out of the way while the code is read.
+        if (code.StartsWith("@{", StringComparison.Ordinal) && code.EndsWith('}'))
+        {
+            return "@" + RazorCodeFormatter.WithNamedValuesProtected(code[1..], body =>
+                SyntaxFactory.ParseStatement(body) is BlockSyntax block && !block.ContainsDiagnostics
+                    ? new ReturnConversionRewriter(type).Visit(block).ToFullString()
+                    : body);
+        }
+
+        return code;
+    }
+
+    private sealed class ReturnConversionRewriter(string type) : CSharpSyntaxRewriter
+    {
+        public override SyntaxNode? VisitReturnStatement(ReturnStatementSyntax node) =>
+            node.Expression is { } returned
+                ? node.WithExpression(SyntaxFactory.ParseExpression($"({type})({returned.WithoutTrivia().ToFullString()})")
+                    .WithTriviaFrom(returned))
+                : node;
+
+        // a lambda or a local function returns its own value
+        public override SyntaxNode? VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => node;
+
+        public override SyntaxNode? VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => node;
+
+        public override SyntaxNode? VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node) => node;
+
+        public override SyntaxNode? VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node;
     }
 
     public static string FindCode(this InvocationExpressionSyntax syntax, IDocumentCompilationContext context)
@@ -133,8 +192,42 @@ public static class CompilerUtils
                 continue;
             }
 
+            // Prop = null is the same as not setting the property
+            if (IsNull(assignment.Right, context))
+            {
+                continue;
+            }
+
+            // A callback, such as RetryConfig.ConditionEvaluator, is only run by the emulator and isn't part of
+            // the policy.
+            if (assignment.Right is AnonymousFunctionExpressionSyntax || IsDelegateProperty(context, assignment.Left))
+            {
+                continue;
+            }
+
             var name = assignment.Left.ToString();
-            result[name] = assignment.Right.ProcessExpression(context);
+            var value = assignment.Right.ProcessExpression(context);
+            if (value.Value is null && IsScalarProperty(context, assignment.Left))
+            {
+                // an object or a collection where a single value is expected would otherwise be dropped silently
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.NotSupportedParameter,
+                    assignment.Right.GetLocation()
+                ));
+                continue;
+            }
+
+            if (value.UnnamedValues is null && IsCollectionProperty(context, assignment.Left))
+            {
+                // a collection that isn't written in place, such as a method call, has no items to emit
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.NotSupportedParameter,
+                    assignment.Right.GetLocation()
+                ));
+                continue;
+            }
+
+            result[name] = value;
         }
 
         return new InitializerValue
@@ -142,6 +235,83 @@ public static class CompilerUtils
             Type = (creationSyntax.Type as IdentifierNameSyntax)?.Identifier.ValueText,
             NamedValues = result,
             Node = creationSyntax,
+        };
+    }
+
+    // null, or a constant that is null: default or default(string) for a reference type, (string?)null, a null
+    // const, and default for a nullable value type. default for a value type is zero or false and is a value like
+    // any other.
+    internal static bool IsNull(ExpressionSyntax expression, IDocumentCompilationContext context)
+    {
+        if (expression.IsKind(SyntaxKind.NullLiteralExpression))
+        {
+            return true;
+        }
+
+        // (bool?)null is not a constant either
+        switch (expression)
+        {
+            case CastExpressionSyntax cast:
+                return IsNull(cast.Expression, context);
+            case ParenthesizedExpressionSyntax parenthesized:
+                return IsNull(parenthesized.Expression, context);
+        }
+
+        if (!context.Compilation.ContainsSyntaxTree(expression.SyntaxTree))
+        {
+            return false;
+        }
+
+        var model = CachedModel(context.Compilation, expression.SyntaxTree);
+        if (model.GetConstantValue(expression) is { HasValue: true, Value: null })
+        {
+            return true;
+        }
+
+        // default for a nullable value type, such as bool?, is null without being a constant
+        return expression is LiteralExpressionSyntax or DefaultExpressionSyntax &&
+               expression.Kind() is SyntaxKind.DefaultLiteralExpression or SyntaxKind.DefaultExpression &&
+               model.GetTypeInfo(expression).ConvertedType is INamedTypeSymbol
+               {
+                   OriginalDefinition.SpecialType: SpecialType.System_Nullable_T
+               };
+    }
+
+    private static bool IsDelegateProperty(IDocumentCompilationContext context, ExpressionSyntax property)
+    {
+        return context.Compilation.ContainsSyntaxTree(property.SyntaxTree) &&
+               CachedModel(context.Compilation, property.SyntaxTree).GetTypeInfo(property).Type is
+                   { TypeKind: TypeKind.Delegate };
+    }
+
+    // Collections of the policy configurations are arrays; byte[] is a single binary value.
+    private static bool IsCollectionProperty(IDocumentCompilationContext context, ExpressionSyntax property)
+    {
+        return context.Compilation.ContainsSyntaxTree(property.SyntaxTree) &&
+               CachedModel(context.Compilation, property.SyntaxTree).GetTypeInfo(property).Type is
+                   IArrayTypeSymbol { ElementType.SpecialType: not SpecialType.System_Byte };
+    }
+
+    private static bool IsScalarProperty(IDocumentCompilationContext context, ExpressionSyntax property)
+    {
+        if (!context.Compilation.ContainsSyntaxTree(property.SyntaxTree))
+        {
+            return false;
+        }
+
+        var type = CachedModel(context.Compilation, property.SyntaxTree).GetTypeInfo(property).Type;
+        if (type is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable)
+        {
+            type = nullable.TypeArguments[0];
+        }
+
+        return type switch
+        {
+            IArrayTypeSymbol array => array.ElementType.SpecialType == SpecialType.System_Byte,
+            { SpecialType: SpecialType.System_Object } => false,
+            { TypeKind: TypeKind.Enum } => true,
+            not null => type.SpecialType != SpecialType.None,
+            _ => false
         };
     }
 
@@ -202,13 +372,51 @@ public static class CompilerUtils
     public static bool AddAttribute(this XElement element, IReadOnlyDictionary<string, InitializerValue> parameters,
         string key, string attName)
     {
-        if (parameters.TryGetValue(key, out var value))
+        if (parameters.TryGetValue(key, out var value) && value.Value is not null)
         {
-            element.Add(new XAttribute(attName, value.Value!));
+            element.Add(new XAttribute(attName, value.Value));
             return true;
         }
 
         return false;
+    }
+
+    // The authoring library's [NamedValue], by its type, or by its name alone when the type can't be resolved,
+    // an ambiguous one included.
+    public static bool IsNamedValueAttribute(AttributeData attribute) =>
+        attribute.AttributeClass is { } type &&
+        (type.TypeKind == TypeKind.Error
+            ? type.Name is "NamedValue" or "NamedValueAttribute"
+            : type.ToDisplayString() == "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.NamedValueAttribute");
+
+    /// <summary>
+    /// Reports a literal value outside the range the gateway accepts. A value given by an expression
+    /// can't be checked.
+    /// </summary>
+    public static bool ReportIfOutOfRange(
+        this IDocumentCompilationContext context,
+        IReadOnlyDictionary<string, InitializerValue> parameters,
+        string key,
+        string policy,
+        int minimum,
+        int maximum = int.MaxValue)
+    {
+        if (!parameters.TryGetValue(key, out var parameter) ||
+            !int.TryParse(parameter.Value, out var value) ||
+            (value >= minimum && value <= maximum))
+        {
+            return false;
+        }
+
+        context.Report(Diagnostic.Create(
+            CompilationErrors.ValueOutOfRange,
+            parameter.Node.GetLocation(),
+            policy,
+            key,
+            value,
+            minimum,
+            maximum));
+        return true;
     }
 
     /// <summary>

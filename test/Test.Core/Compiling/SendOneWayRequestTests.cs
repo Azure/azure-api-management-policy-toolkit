@@ -88,6 +88,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Timeout = 100,
                 });
             }
@@ -96,7 +98,10 @@ public class SendOneWayRequestTests
         """
         <policies>
             <inbound>
-                <send-one-way-request timeout="100" />
+                <send-one-way-request timeout="100">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
@@ -110,6 +115,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Timeout = Exp(context.ExpressionContext),
                 });
             }
@@ -120,7 +127,10 @@ public class SendOneWayRequestTests
         """
         <policies>
             <inbound>
-                <send-one-way-request timeout="@(80 + 20)" />
+                <send-one-way-request timeout="@(80 + 20)">
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
+                </send-one-way-request>
             </inbound>
         </policies>
         """,
@@ -134,6 +144,7 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Method = "GET",
                     Url = "https://test.example",
                 });
             }
@@ -144,6 +155,7 @@ public class SendOneWayRequestTests
             <inbound>
                 <send-one-way-request>
                     <set-url>https://test.example</set-url>
+                    <set-method>GET</set-method>
                 </send-one-way-request>
             </inbound>
         </policies>
@@ -158,6 +170,7 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
                     Method = "POST",
                 });
             }
@@ -167,6 +180,7 @@ public class SendOneWayRequestTests
         <policies>
             <inbound>
                 <send-one-way-request>
+                    <set-url>https://example.com/api</set-url>
                     <set-method>POST</set-method>
                 </send-one-way-request>
             </inbound>
@@ -182,6 +196,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Headers = [
                         new HeaderConfig {
                             Name = "content-type",
@@ -202,6 +218,8 @@ public class SendOneWayRequestTests
         <policies>
             <inbound>
                 <send-one-way-request>
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <set-header name="content-type" exists-action="append">
                         <value>plain/text</value>
                     </set-header>
@@ -223,6 +241,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Headers = [
                         new HeaderConfig {
                             Name = "content-type",
@@ -246,6 +266,8 @@ public class SendOneWayRequestTests
         <policies>
             <inbound>
                 <send-one-way-request>
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <set-header name="content-type" exists-action="append">
                         <value>plain/text</value>
                     </set-header>
@@ -267,6 +289,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Body = new BodyConfig {
                         Template = "liquid",
                         XsiNil = "blank",
@@ -281,6 +305,8 @@ public class SendOneWayRequestTests
         <policies>
             <inbound>
                 <send-one-way-request>
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <set-body template="liquid" xsi-nil="blank" parse-date="false">body</set-body>
                 </send-one-way-request>
             </inbound>
@@ -296,6 +322,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Body = new BodyConfig {
                         Content = Exp(context.ExpressionContext),
                     },
@@ -308,6 +336,8 @@ public class SendOneWayRequestTests
         <policies>
             <inbound>
                 <send-one-way-request>
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <set-body>@("bo" + "dy")</set-body>
                 </send-one-way-request>
             </inbound>
@@ -323,6 +353,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Authentication = new CertificateAuthenticationConfig {
                         CertificateId = "example-domain-cert",
                     },
@@ -334,6 +366,8 @@ public class SendOneWayRequestTests
         <policies>
             <inbound>
                 <send-one-way-request>
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <authentication-certificate certificate-id="example-domain-cert" />
                 </send-one-way-request>
             </inbound>
@@ -349,6 +383,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Authentication = new ManagedIdentityAuthenticationConfig {
                         Resource = "test.example/resource",
                         ClientId = "example-client-id",
@@ -361,6 +397,8 @@ public class SendOneWayRequestTests
         <policies>
             <inbound>
                 <send-one-way-request>
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <authentication-managed-identity resource="test.example/resource" client-id="example-client-id" />
                 </send-one-way-request>
             </inbound>
@@ -376,6 +414,8 @@ public class SendOneWayRequestTests
             public void Inbound(IInboundContext context)
             {
                 context.SendOneWayRequest(new SendOneWayRequestConfig {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     Proxy = new ProxyConfig() {
                         Url = "proxy.example",
                         Username = "test-user",
@@ -389,6 +429,8 @@ public class SendOneWayRequestTests
         <policies>
             <inbound>
                 <send-one-way-request>
+                    <set-url>https://example.com/api</set-url>
+                    <set-method>GET</set-method>
                     <proxy url="proxy.example" username="test-user" password="pass" />
                 </send-one-way-request>
             </inbound>

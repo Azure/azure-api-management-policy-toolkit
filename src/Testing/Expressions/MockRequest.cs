@@ -40,6 +40,9 @@ public class MockRequest : MockMessage, IRequest
     public MockPrivateEndpointConnection? PrivateEndpointConnection { get; set; }
     IPrivateEndpointConnection? IRequest.PrivateEndpointConnection => PrivateEndpointConnection;
 
+    public MockFoundry? Foundry { get; set; }
+    IFoundry? IRequest.Foundry => Foundry;
+
     public MockAzureVnetInfo? AzureVnetInfo { get; set; }
     IAzureVnetInfo? IRequest.AzureVnetInfo => AzureVnetInfo;
 

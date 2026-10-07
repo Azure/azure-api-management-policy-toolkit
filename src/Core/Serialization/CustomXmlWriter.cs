@@ -42,9 +42,15 @@ public sealed class CustomXmlWriter : IDisposable
             WriteAttributes(element.Attributes());
         }
 
-        if (element.HasElements)
+        if (RawXmlContent.IsMarkupBody(element))
         {
-            WriteElements(element.Elements());
+            // written exactly as it is: indentation inside a liquid template would change the body
+            _xmlWriter.WriteRaw(string.Concat(
+                element.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting))));
+        }
+        else if (element.Nodes().Any(node => node is not XText or XCData))
+        {
+            WriteNodes(element.Nodes());
         }
         else if (!string.IsNullOrEmpty(element.Value))
         {
@@ -54,11 +60,31 @@ public sealed class CustomXmlWriter : IDisposable
         _xmlWriter.WriteEndElement();
     }
 
-    private void WriteElements(IEnumerable<XElement> elements)
+    // Text, CDATA and comments next to child elements are written in document order.
+    private void WriteNodes(IEnumerable<XNode> nodes)
     {
-        foreach (var element in elements)
+        foreach (var node in nodes)
         {
-            Write(element);
+            switch (node)
+            {
+                case XElement element:
+                    Write(element);
+                    break;
+                case XCData cdata:
+                    cdata.WriteTo(_xmlWriter);
+                    break;
+                case XText text:
+                    // Whitespace between nodes is indentation, the writer produces its own.
+                    if (!string.IsNullOrWhiteSpace(text.Value))
+                    {
+                        WriteValue(text.Value);
+                    }
+
+                    break;
+                default:
+                    node.WriteTo(_xmlWriter);
+                    break;
+            }
         }
     }
 

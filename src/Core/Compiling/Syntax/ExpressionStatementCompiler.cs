@@ -30,6 +30,7 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
                 statement.Expression.GetType().Name,
                 nameof(InvocationExpressionSyntax)
             ));
+            context.PendingPolicyId = null;
             return;
         }
 
@@ -44,13 +45,36 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
                 invocation.Expression.GetType().Name,
                 nameof(MemberAccessExpressionSyntax)
             ));
+            context.PendingPolicyId = null;
             return;
         }
 
         var name = memberAccess.Name.ToString();
+        if (name == "WithId" && TrySetPendingPolicyId(context, invocation))
+        {
+            // context.WithId("id"); on its own gives the id to the next policy, which lets an
+            // if statement (compiled to choose) carry one
+            return;
+        }
+
         if (_handlers.TryGetValue(name, out var handler))
         {
+            if (IsMissingOnSectionContext(context, memberAccess, name, out var sectionContext))
+            {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.PolicyNotAvailableInSection,
+                    memberAccess.Name.GetLocation(),
+                    name,
+                    sectionContext
+                ));
+                context.PendingPolicyId = null;
+                return;
+            }
+
             handler.Handle(context, invocation);
+
+            // A handler that reported an error added no policy. Its id must not move on to the next one.
+            context.PendingPolicyId = null;
         }
         else
         {
@@ -59,6 +83,7 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
                 memberAccess.GetLocation(),
                 name
             ));
+            context.PendingPolicyId = null;
         }
     }
 
@@ -82,12 +107,13 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
             innerInvocation.Expression is MemberAccessExpressionSyntax innerMemberAccess &&
             innerMemberAccess.Name.ToString() == "WithId")
         {
-            if (context.PendingPolicyId is null && innerInvocation.ArgumentList.Arguments.Count == 1)
+            if (innerInvocation.ArgumentList.Arguments.Count == 1)
             {
                 var argExpression = innerInvocation.ArgumentList.Arguments[0].Expression;
                 var idValue = ExtractConstantStringValue(context, argExpression);
                 if (idValue is not null)
                 {
+                    ReportPendingPolicyId(context, innerInvocation);
                     context.PendingPolicyId = idValue;
                 }
             }
@@ -96,6 +122,80 @@ public class ExpressionStatementCompiler : ISyntaxCompiler
         // Return the original invocation unchanged - the caller extracts the
         // method name from invocation.Expression as MemberAccessExpressionSyntax.Name
         return invocation;
+    }
+
+    // Handlers are found by method name, so without this check a policy would compile in any section when the
+    // C# itself isn't compiled first (directory mode): context.ForwardRequest() in Inbound, Base() in a fragment.
+    private static bool IsMissingOnSectionContext(
+        IDocumentCompilationContext context,
+        MemberAccessExpressionSyntax memberAccess,
+        string name,
+        out string sectionContext)
+    {
+        sectionContext = string.Empty;
+        if (!context.Compilation.ContainsSyntaxTree(memberAccess.SyntaxTree))
+        {
+            return false;
+        }
+
+        var model = CompilerUtils.CachedModel(context.Compilation, memberAccess.SyntaxTree);
+        if (model.GetTypeInfo(memberAccess.Expression).Type is not { } receiver ||
+            !PolicyExpressionCompiler.IsAuthoringSectionContext(receiver))
+        {
+            return false;
+        }
+
+        // A section is compiled by its name whatever context it takes: OnError(IOutboundContext context) is
+        // on-error, so its policies are checked against IOnErrorContext, not against what it is written with.
+        var section = SectionContextOf(context, memberAccess) ?? receiver;
+        sectionContext = section.Name;
+        return section.GetMembers(name).IsEmpty &&
+               section.AllInterfaces.All(inherited => inherited.GetMembers(name).IsEmpty);
+    }
+
+    private static INamedTypeSymbol? SectionContextOf(IDocumentCompilationContext context, SyntaxNode node)
+    {
+        var contextName = node.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault()?.Identifier.ValueText switch
+        {
+            "Inbound" => "IInboundContext",
+            "Outbound" => "IOutboundContext",
+            "Backend" => "IBackendContext",
+            "OnError" => "IOnErrorContext",
+            "Fragment" => "IFragmentContext",
+            _ => null
+        };
+        return contextName is null
+            ? null
+            : context.Compilation.GetTypeByMetadataName(
+                $"Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.{contextName}");
+    }
+
+    private static bool TrySetPendingPolicyId(
+        IDocumentCompilationContext context,
+        InvocationExpressionSyntax withIdInvocation)
+    {
+        if (withIdInvocation.ArgumentList.Arguments.Count != 1 ||
+            ExtractConstantStringValue(context, withIdInvocation.ArgumentList.Arguments[0].Expression) is not { } id)
+        {
+            return false;
+        }
+
+        ReportPendingPolicyId(context, withIdInvocation);
+        context.PendingPolicyId = id;
+        return true;
+    }
+
+    // An id that is still waiting for its policy when the next id is given was not followed by one.
+    private static void ReportPendingPolicyId(IDocumentCompilationContext context, SyntaxNode nextId)
+    {
+        if (context.PendingPolicyId is { } pending)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.PolicyIdWithoutPolicy,
+                nextId.GetLocation(),
+                pending
+            ));
+        }
     }
 
     /// <summary>

@@ -21,6 +21,25 @@ public record LlmContentSafetyConfig
     public bool? ShieldPrompt { get; init; }
 
     /// <summary>
+    /// Specifies whether to enforce content safety checks on chat completions (responses). Policy expressions are allowed.
+    /// </summary>
+    [ExpressionAllowed]
+    public bool? EnforceOnCompletions { get; init; }
+
+    /// <summary>
+    /// Specifies the size, in characters, of the sliding window used to buffer streamed completions for content safety checks.
+    /// Must be between 200 and 1000. Policy expressions are allowed.
+    /// </summary>
+    [ExpressionAllowed]
+    public int? WindowSize { get; init; }
+
+    /// <summary>
+    /// Specifies the number of characters by which consecutive sliding windows overlap. Policy expressions are allowed.
+    /// </summary>
+    [ExpressionAllowed]
+    public int? WindowOverlapSize { get; init; }
+
+    /// <summary>
     /// Specifies the content safety categories to be evaluated.
     /// </summary>
     public ContentSafetyCategories? Categories { get; init; }

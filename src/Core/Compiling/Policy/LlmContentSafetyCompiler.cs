@@ -35,6 +35,9 @@ public class LlmContentSafetyCompiler : IMethodPolicyHandler
         }
 
         element.AddAttribute(values, nameof(LlmContentSafetyConfig.ShieldPrompt), "shield-prompt");
+        element.AddAttribute(values, nameof(LlmContentSafetyConfig.EnforceOnCompletions), "enforce-on-completions");
+        element.AddAttribute(values, nameof(LlmContentSafetyConfig.WindowSize), "window-size");
+        element.AddAttribute(values, nameof(LlmContentSafetyConfig.WindowOverlapSize), "window-overlap-size");
 
         if (values.TryGetValue(nameof(LlmContentSafetyConfig.Categories), out var categoriesValue))
         {
@@ -108,7 +111,7 @@ public class LlmContentSafetyCompiler : IMethodPolicyHandler
             return;
         }
 
-        var blockListsElement = new XElement("block-lists");
+        var blockListsElement = new XElement("blocklists");
 
         foreach (var idValue in idsValue.UnnamedValues ?? [])
         {

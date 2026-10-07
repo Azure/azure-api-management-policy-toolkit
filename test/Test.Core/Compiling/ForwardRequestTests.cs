@@ -340,4 +340,31 @@ public class ForwardRequestTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldCompileForwardRequestFromConfigFactory()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Backend(IBackendContext context)
+                {
+                    context.ForwardRequest(Forward());
+                }
+
+                static ForwardRequestConfig Forward() => new ForwardRequestConfig { Timeout = 30 };
+            }
+            """;
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <backend>
+                    <forward-request timeout="30" />
+                </backend>
+            </policies>
+            """);
+    }
 }

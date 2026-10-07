@@ -18,6 +18,11 @@ public class SendServiceBusMessageDecompiler : IPolicyDecompiler
         context.AddOptionalStringProp(props, element, "topic-name", "TopicName");
         context.AddOptionalStringProp(props, element, "namespace", "Namespace");
         context.AddOptionalStringProp(props, element, "client-id", "ClientId");
+        context.AddOptionalStringProp(props, element, "message-id", "MessageId");
+        context.AddOptionalStringProp(props, element, "session-id", "SessionId");
+        context.AddOptionalStringProp(props, element, "time-to-live", "TimeToLive");
+        context.AddOptionalStringProp(props, element, "response-variable-name", "ResponseVariableName");
+        context.AddOptionalBoolProp(props, element, "ignore-error", "IgnoreError");
 
         var messagePropertiesEl = element.Element("message-properties");
         if (messagePropertiesEl != null)

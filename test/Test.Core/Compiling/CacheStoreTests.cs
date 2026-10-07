@@ -57,7 +57,7 @@ public class CacheStoreTests
                 context.CacheStore(Duration(context.ExpressionContext), StoreResponse(context.ExpressionContext));
             }
             
-            uint Duration(IExpressionContext context) => context.User.Email.EndsWith("@contoso.example") ? 10 : 60;
+            int Duration(IExpressionContext context) => context.User.Email.EndsWith("@contoso.example") ? 10 : 60;
             bool StoreResponse(IExpressionContext context) => context.User.Email.EndsWith("@contoso.example");
         }
         """,
@@ -73,5 +73,33 @@ public class CacheStoreTests
     public void ShouldCompileCacheStorePolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow("null")]
+    [DataRow("default")]
+    [DataRow("(bool?)null")]
+    public void ShouldLeaveOutCacheResponseThatIsNull(string cacheResponse)
+    {
+        var code =
+            $$"""
+              [Document]
+              public class PolicyDocument : IDocument
+              {
+                  public void Outbound(IOutboundContext context)
+                  {
+                      context.CacheStore(10, {{cacheResponse}});
+                  }
+              }
+              """;
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <outbound>
+                    <cache-store duration="10" />
+                </outbound>
+            </policies>
+            """);
     }
 }

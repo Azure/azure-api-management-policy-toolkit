@@ -6,6 +6,7 @@ using System.Xml.Linq;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Syntax;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -24,7 +25,10 @@ public class DocumentCompiler
     {
         var semanticModel = compilation.GetSemanticModel(document.SyntaxTree);
         var documentType = document.ExtractDocumentType(semanticModel);
-        var methods = document.DescendantNodes().OfType<MethodDeclarationSyntax>();
+        // Only the document's own section methods: not those of nested classes, nor overloads taking anything
+        // other than the section context, which would otherwise each become another section.
+        var methods = document.Members.OfType<MethodDeclarationSyntax>()
+            .Where(method => TakesSectionContext(method, semanticModel));
         var rootElement = new XElement(documentType == DocumentType.Fragment ? "fragment" : "policies");
         var context = new DocumentCompilationContext(compilation, document, rootElement);
         document.ValidateDocumentName(semanticModel, context);
@@ -35,6 +39,33 @@ public class DocumentCompiler
             CompilePolicy(context, methods);
 
         return context;
+    }
+
+    // A section returns nothing and takes one section context of the authoring library: an overload such as
+    // Inbound(int) isn't one, nor is one taking IHaveExpressionContext, which is what the section contexts share,
+    // nor a helper returning a value. The name as written decides only when the type can't be resolved.
+    private static bool TakesSectionContext(MethodDeclarationSyntax method, SemanticModel model)
+    {
+        if (method.ParameterList.Parameters is not [{ Type: { } type }] ||
+            method.ReturnType is not PredefinedTypeSyntax { Keyword.ValueText: "void" })
+        {
+            return false;
+        }
+
+        if (model.GetTypeInfo(type).Type is { TypeKind: not TypeKind.Error } symbol)
+        {
+            return PolicyExpressionCompiler.IsAuthoringSectionContext(symbol) &&
+                   symbol.Name != nameof(IHaveExpressionContext);
+        }
+
+        var name = type switch
+        {
+            QualifiedNameSyntax qualified => qualified.Right,
+            AliasQualifiedNameSyntax aliased => aliased.Name,
+            _ => type as SimpleNameSyntax
+        };
+        return name is not null && name.Identifier.ValueText != nameof(IHaveExpressionContext) &&
+               PolicyExpressionCompiler.IsSectionContextName(name.Identifier.ValueText);
     }
 
     private void CompilePolicy(DocumentCompilationContext context, IEnumerable<MethodDeclarationSyntax> methods)
@@ -66,6 +97,29 @@ public class DocumentCompiler
         if (fragmentMethod != null && ValidateMethodBody(fragmentMethod, context))
         {
             _blockCompiler.Value.Compile(context, fragmentMethod.Body!);
+            ReportPoliciesAllowedOnce(context, context.RootElement, fragmentMethod);
+        }
+    }
+
+    // The gateway accepts these once per section, also when they are in different branches of a choose.
+    private static void ReportPoliciesAllowedOnce(
+        DocumentCompilationContext context,
+        XElement element,
+        MethodDeclarationSyntax method)
+    {
+        foreach (var policy in OncePerSection)
+        {
+            // an element of that name in the markup of a liquid body is content, not a policy
+            var count = element.Descendants(policy)
+                .Count(found => !found.Ancestors().Any(RawXmlContent.IsMarkupBody));
+            if (count > 1)
+            {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.PolicyAllowedOncePerSection,
+                    method.Identifier.GetLocation(),
+                    policy,
+                    count));
+            }
         }
     }
 
@@ -88,8 +142,12 @@ public class DocumentCompiler
                 policyCount));
         }
 
+        ReportPoliciesAllowedOnce(context, sectionElement, method);
+
         context.AddPolicy(sectionElement);
     }
+
+    private static readonly string[] OncePerSection = ["cors", "quota", "rate-limit"];
 
     private bool ValidateMethodBody(MethodDeclarationSyntax method, DocumentCompilationContext context)
     {

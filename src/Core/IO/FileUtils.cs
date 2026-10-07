@@ -33,10 +33,11 @@ public static class FileUtils
 
     public static string WriteToFile(Data data)
     {
-        // In xml format policy expressions are XML-encoded during serialization, so the
-        // C# must be reflowed on the document tree (raw text) before it is written;
-        // reformatting the encoded string would reparse entities like &lt; as C#.
-        if (data.FormatCode && !data.RawXml)
+        // The C# of policy expressions is reflowed on the document tree (raw text) before it is
+        // written; reformatting the serialized string would reparse entities like &lt; as C#.
+        // That applies to the xml format, and in the rawxml format to every value which is
+        // XML-encoded because it is not a single expression.
+        if (data.FormatCode)
         {
             RazorCodeFormatter.FormatExpressions(data.Element);
         }
@@ -50,12 +51,6 @@ public static class FileUtils
         }
 
         var xml = codeBuilder.ToString();
-        // In rawxml format expressions are written verbatim, so the C# can be reflowed
-        // on the serialized string.
-        if (data.FormatCode && data.RawXml)
-        {
-            xml = RazorCodeFormatter.Format(xml);
-        }
 
         var fileRelativePath = Path.GetDirectoryName(Path.GetRelativePath(data.SourceFolder, data.SourceFilePath))!;
         var targetFolder = Path.Combine(data.OutputFolder, fileRelativePath);

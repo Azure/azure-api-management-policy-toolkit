@@ -9,8 +9,9 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 public record SendRequestConfig
 {
     /// <summary>
-    /// Specifies the name of the variable to store the response.
+    /// Specifies the name of the variable to store the response. Policy expressions are allowed.
     /// </summary>
+    [ExpressionAllowed]
     public required string ResponseVariableName { get; init; }
 
     /// <summary>

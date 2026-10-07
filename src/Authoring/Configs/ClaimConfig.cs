@@ -9,8 +9,9 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 public record ClaimConfig
 {
     /// <summary>
-    /// Specifies the name of the claim.
+    /// Specifies the name of the claim. Policy expressions are allowed.
     /// </summary>
+    [ExpressionAllowed]
     public required string Name { get; init; }
 
     /// <summary>
@@ -20,8 +21,9 @@ public record ClaimConfig
     public string? Match { get; init; }
 
     /// <summary>
-    /// Specifies the separator for multiple claim values.
+    /// Specifies the separator for multiple claim values. Policy expressions are allowed.
     /// </summary>
+    [ExpressionAllowed]
     public string? Separator { get; init; }
 
     /// <summary>

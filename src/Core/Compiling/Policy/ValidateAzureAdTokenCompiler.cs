@@ -35,6 +35,8 @@ public class ValidateAzureAdTokenCompiler : IMethodPolicyHandler
             return;
         }
 
+        element.AddAttribute(values, nameof(ValidateAzureAdTokenConfig.AuthenticationEndpoint),
+            "authentication-endpoint");
         element.AddAttribute(values, nameof(ValidateAzureAdTokenConfig.HeaderName), "header-name");
         element.AddAttribute(values, nameof(ValidateAzureAdTokenConfig.QueryParameterName), "query-parameter-name");
         element.AddAttribute(values, nameof(ValidateAzureAdTokenConfig.TokenValue), "token-value");
@@ -80,6 +82,7 @@ public class ValidateAzureAdTokenCompiler : IMethodPolicyHandler
                     "validate-azure-ad-token.decryption-keys.key",
                     nameof(DecryptionKey)
                 ));
+                continue;
             }
 
             XElement decryptionElement = new("key");
@@ -92,6 +95,7 @@ public class ValidateAzureAdTokenCompiler : IMethodPolicyHandler
                     "validate-azure-ad-token.decryption-keys.key",
                     nameof(DecryptionKey.CertificateId)
                 ));
+                continue;
             }
 
             listElement.Add(decryptionElement);

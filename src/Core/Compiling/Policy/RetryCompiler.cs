@@ -84,6 +84,11 @@ public class RetryCompiler : IMethodPolicyHandler
             return;
         }
 
+        if (context.ReportIfOutOfRange(config, nameof(RetryConfig.Count), "retry", 1, 50))
+        {
+            return;
+        }
+
         if (!element.AddAttribute(config, nameof(RetryConfig.Interval), "interval"))
         {
             context.Report(Diagnostic.Create(

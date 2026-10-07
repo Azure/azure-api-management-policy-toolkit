@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,6 +13,14 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 internal sealed partial class PolicyExpressionCompiler
 {
+    private void ReportNonConstantNamedValue(InvocationExpressionSyntax invocation)
+    {
+        context.Report(Diagnostic.Create(
+            CompilationErrors.NamedValueNameNotConstant,
+            invocation.GetLocation(),
+            invocation.ArgumentList.Arguments.ToString()));
+    }
+
     private sealed class HelperInliningRewriter(
         PolicyExpressionCompiler compiler,
         SemanticModel model,
@@ -193,6 +202,18 @@ internal sealed partial class PolicyExpressionCompiler
                 : rewritten;
         }
 
+        // A returned value that C# converts to the helper's numeric return type has that conversion written out.
+        public override SyntaxNode? VisitReturnStatement(ReturnStatementSyntax node)
+        {
+            var visited = (ReturnStatementSyntax)base.VisitReturnStatement(node)!;
+            return node.Expression is { } written && visited.Expression is { } result &&
+                   TryGetImplicitNumericConversion(model, written, out var returnType)
+                ? visited.WithExpression(
+                    (compiler.ConvertRawNamedValue(returnType, result) ?? CastTo(returnType, result).Expression)
+                    .WithTriviaFrom(result))
+                : visited;
+        }
+
         // An explicit cast of a named value, directly or from a helper or argument, converts all of its text like
         // an implicit conversion: to string it's the string "{{x}}", to another type (int)({{x}}). A cast of the
         // parenthesized call, as the decompiler writes a token used as code, keeps the raw token.
@@ -360,7 +381,18 @@ internal sealed partial class PolicyExpressionCompiler
                 invoked.MethodKind is not (MethodKind.Ordinary or MethodKind.ReducedExtension) ||
                 !IsUserSource(invoked))
             {
-                return base.VisitInvocationExpression(node);
+                var visited = base.VisitInvocationExpression(node);
+
+                // API Management has no NamedValue method: a call can only be written as {{name}}, which needs a
+                // name known at compile time (a constant, or a helper parameter bound to one).
+                if (invoked is { Name: nameof(IExpressionContext.NamedValue) } &&
+                    IsExpressionContext(invoked.ContainingType) &&
+                    !(visited is InvocationExpressionSyntax call && HasNamedValueName(call)))
+                {
+                    compiler.ReportNonConstantNamedValue(node);
+                }
+
+                return visited;
             }
 
             return compiler.InlineSourceInvocation(
@@ -368,6 +400,15 @@ internal sealed partial class PolicyExpressionCompiler
                        ?.WithTriviaFrom(node) ??
                    node;
         }
+
+        // context?.NamedValue("x") is rewritten with its conditional access.
+        private static bool HasNamedValueName(InvocationExpressionSyntax call) =>
+            NamedValueRewriter.IsNamedValueCall(call, out _) ||
+            call is
+            {
+                Expression: MemberBindingExpressionSyntax,
+                ArgumentList.Arguments: [{ NameColon: null, Expression: LiteralExpressionSyntax literal }]
+            } && literal.IsKind(SyntaxKind.StringLiteralExpression);
 
         public override SyntaxNode? VisitAnonymousObjectMemberDeclarator(AnonymousObjectMemberDeclaratorSyntax node)
         {

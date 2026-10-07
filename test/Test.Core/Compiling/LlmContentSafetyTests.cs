@@ -125,10 +125,10 @@ public class LlmContentSafetyTests
         <policies>
             <inbound>
                 <llm-content-safety backend-id="backendId">
-                    <block-lists>
+                    <blocklists>
                         <id>blockList1</id>
                         <id>blockList2</id>
-                    </block-lists>
+                    </blocklists>
                 </llm-content-safety>
             </inbound>
         </policies>
@@ -267,10 +267,10 @@ public class LlmContentSafetyTests
         <policies>
             <inbound>
                 <llm-content-safety backend-id="backendId">
-                    <block-lists>
+                    <blocklists>
                         <id>@(context.Variables["blockListId"].ToString())</id>
                         <id>blockList2</id>
-                    </block-lists>
+                    </blocklists>
                 </llm-content-safety>
             </inbound>
         </policies>
@@ -349,10 +349,10 @@ public class LlmContentSafetyTests
                         <category name="violence" threshold="3" />
                         <category name="hate_speech" threshold="2" />
                     </categories>
-                    <block-lists>
+                    <blocklists>
                         <id>blockList1</id>
                         <id>blockList2</id>
-                    </block-lists>
+                    </blocklists>
                 </llm-content-safety>
             </inbound>
         </policies>
@@ -362,5 +362,31 @@ public class LlmContentSafetyTests
     public void ShouldCompileLlmContentSafetyPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void ShouldCompileBlocklistsAndStreamingWindowAttributes()
+    {
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.LlmContentSafety(new LlmContentSafetyConfig
+            {
+                BackendId = "safety",
+                EnforceOnCompletions = true,
+                WindowSize = 500,
+                WindowOverlapSize = 100,
+                BlockLists = new ContentSafetyBlockLists { Ids = ["list-1", "list-2"] }
+            });
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(CompilerTestInitialize.InboundXml(
+            """
+            <llm-content-safety backend-id="safety" enforce-on-completions="true" window-size="500" window-overlap-size="100">
+                <blocklists>
+                    <id>list-1</id>
+                    <id>list-2</id>
+                </blocklists>
+            </llm-content-safety>
+            """));
     }
 }

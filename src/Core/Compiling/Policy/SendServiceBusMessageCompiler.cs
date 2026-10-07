@@ -43,6 +43,12 @@ public class SendServiceBusMessageCompiler : IMethodPolicyHandler
 
         element.AddAttribute(values, nameof(SendServiceBusMessageConfig.Namespace), "namespace");
         element.AddAttribute(values, nameof(SendServiceBusMessageConfig.ClientId), "client-id");
+        element.AddAttribute(values, nameof(SendServiceBusMessageConfig.MessageId), "message-id");
+        element.AddAttribute(values, nameof(SendServiceBusMessageConfig.SessionId), "session-id");
+        element.AddAttribute(values, nameof(SendServiceBusMessageConfig.TimeToLive), "time-to-live");
+        element.AddAttribute(values, nameof(SendServiceBusMessageConfig.ResponseVariableName),
+            "response-variable-name");
+        element.AddAttribute(values, nameof(SendServiceBusMessageConfig.IgnoreError), "ignore-error");
 
         if (values.TryGetValue(nameof(SendServiceBusMessageConfig.MessageProperties), out var messageProperties))
         {

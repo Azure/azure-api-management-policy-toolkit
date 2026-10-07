@@ -205,4 +205,20 @@ public class ReturnResponseTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    [DataRow("Template = \"razor\"")]
+    [DataRow("XsiNil = \"empty\"")]
+    public void ShouldValidateBodyNestedInReturnResponse(string property)
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            $$"""
+              context.ReturnResponse(new ReturnResponseConfig
+              {
+                  Body = new BodyConfig { Content = "body", {{property}} }
+              });
+              """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM9994");
+    }
 }

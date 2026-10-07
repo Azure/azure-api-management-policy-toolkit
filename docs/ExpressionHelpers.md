@@ -62,7 +62,7 @@ if (IsCompanyIp(context.ExpressionContext) && !IsHealthCheck(context.ExpressionC
 
 A policy configuration argument may be a call to a factory method, also from a referenced project. The factory must
 return a single `new TConfig { ... }` expression and take no parameters other than policy section contexts, such as
-`IInboundContext`.
+`IInboundContext`, or `IHaveExpressionContext`.
 
 ```csharp
 context.RateLimitByKey(Limits.PerProduct(context));
@@ -94,6 +94,44 @@ public static class TextHelpers
 Helpers are inlined from source, so the library must be a project reference. Calling a helper, property or
 non-constant field of a compiled library is reported, although its constants can still be used.
 
+## What the analyzer checks
+
+The analyzer reports code that API Management rejects when the policy is saved: types and members outside the set it
+allows in policy expressions (`APIM001`, `APIM002`), and type names it can't resolve on their own (`APIM003`).
+
+It checks:
+
+- every helper declared in a policy document or fragment class, including helpers in a class nested inside it.
+  A helper it inherits is checked when the base class is a document itself, not otherwise. A helper is a method
+  that takes the expression context, or one the document's sections, policy configuration factories or other
+  helpers call; it may take a section context instead, whose `ExpressionContext` is the gateway's `context`. The
+  `[Expression]` attribute isn't needed for these.
+- methods marked `[Expression]` and every method of a class marked `[Expression]`.
+- expression lambdas passed to a policy.
+
+A helper in any other class is only checked when its class is marked `[Expression]`. Code marked `[Expression]` may
+only call document helpers and other marked helpers, while an unmarked document helper may call any helper declared in
+source.
+
+The starting points are the sections, the configuration factories, the methods marked `[Expression]` and the helpers
+that take the expression context or a section context, of every document and helper library in the project. A
+section is what the compiler compiles: `Inbound`, `Outbound`, `Backend` or `OnError` of a document, or the first
+`Fragment` method of a fragment, taking one section context. A method of a document that none of them reaches, such as a `ToString()` override or a `void` method that isn't a
+section, never becomes a policy expression and isn't checked, nor are the helpers only it calls. Code of another
+document or library reaches a helper when it names the document, `Shared.Helper()`, directly or through a using alias.
+Calls are matched by name, so an overload of a helper is checked with it. Properties declared in source can't be used
+as helpers; the compiler reports them.
+
+### Ambiguous type names
+
+API Management resolves type names against all the namespaces it imports, whatever the `using` directives of the
+source file are. `Formatting` exists in both `Newtonsoft.Json` and `System.Xml`, so it has to be written with its
+namespace:
+
+```csharp
+JsonConvert.SerializeObject(value, Newtonsoft.Json.Formatting.Indented)
+```
+
 ## Named values
 
 `context.NamedValue("name")` compiles to a raw `{{name}}` token, so the named value is used as code.
@@ -116,7 +154,9 @@ non-constant field of a compiled library is reported, although its constants can
   pair of parentheses to keep them.
 - At either end of an interpolation hole a named value is always parenthesized, `{({{name}})}`, so it can't run into
   the hole's braces.
-- An expression that is only a named value compiles to the plain attribute value, `{{name}}`.
+- An expression that is only a named value, returned from a `string` helper or a `[NamedValue]` helper, compiles to
+  the plain attribute value, `{{name}}`. Returned from a helper of another type it stays an expression, `@({{name}})`,
+  which the gateway evaluates as code.
 
 ## C# language version
 

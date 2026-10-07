@@ -25,7 +25,7 @@ public class MockUrlTests
     public void MockUrl_ToString_WithNonDefaultPort()
     {
         // Arrange
-        var url = new MockUrl { Port = "8443" };
+        var url = new MockUrl { Port = 8443 };
 
         // Act
         var result = url.ToString();
@@ -57,7 +57,7 @@ public class MockUrlTests
     public void MockUrl_ToString_HttpDefaultPort()
     {
         // Arrange
-        var url = new MockUrl { Scheme = "http", Port = "80" };
+        var url = new MockUrl { Scheme = "http", Port = 80 };
 
         // Act
         var result = url.ToString();

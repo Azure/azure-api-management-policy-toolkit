@@ -7,8 +7,13 @@ public interface IUrl
 {
     string Host { get; }
     string Path { get; }
-    string Port { get; }
+    int Port { get; }
     IReadOnlyDictionary<string, string[]> Query { get; }
     string QueryString { get; }
     string Scheme { get; }
+
+    /// <summary>
+    /// The whole URL as text.
+    /// </summary>
+    string ToString();
 }

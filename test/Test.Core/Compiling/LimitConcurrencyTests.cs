@@ -48,6 +48,8 @@ public class LimitConcurrencyTests
                     () =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -63,6 +65,8 @@ public class LimitConcurrencyTests
                     () =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -83,12 +87,18 @@ public class LimitConcurrencyTests
             </backend>
             <outbound>
                 <limit-concurrency key="outbound" max-count="10">
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </limit-concurrency>
             </outbound>
             <on-error>
                 <limit-concurrency key="on-error" max-count="10">
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </limit-concurrency>
             </on-error>
         </policies>

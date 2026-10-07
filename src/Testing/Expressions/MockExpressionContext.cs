@@ -35,6 +35,14 @@ public class MockExpressionContext : IExpressionContext
     public MockUser User { get; set; } = new MockUser();
     IUser IExpressionContext.User => User;
 
+    // null like in the gateway, where there is no backend entity until one is selected and no workspace
+    // unless the API is in one
+    public MockBackend? Backend { get; set; }
+    IBackend? IExpressionContext.Backend => Backend;
+
+    public MockWorkspace? Workspace { get; set; }
+    IWorkspace? IExpressionContext.Workspace => Workspace;
+
     public MockDeployment Deployment { get; set; } = new MockDeployment();
     IDeployment IExpressionContext.Deployment => Deployment;
 
@@ -44,8 +52,9 @@ public class MockExpressionContext : IExpressionContext
     public MockOperation Operation { get; set; } = new MockOperation();
     IOperation IExpressionContext.Operation => Operation;
 
-    public MockProduct Product { get; set; } = new MockProduct();
-    IProduct IExpressionContext.Product => Product;
+    // null like in the gateway for a request made without a subscription
+    public MockProduct? Product { get; set; }
+    IProduct? IExpressionContext.Product => Product;
 
     public Action<string> Trace { get; set; } = (message) => { };
 

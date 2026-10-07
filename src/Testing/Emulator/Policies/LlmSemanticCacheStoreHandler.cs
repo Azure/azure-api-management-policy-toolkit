@@ -10,6 +10,10 @@ internal class LlmSemanticCacheStoreHandler : PolicyHandler<uint>
 {
     public override string PolicyName => nameof(IOutboundContext.LlmSemanticCacheStore);
 
+    // The optional cacheResponse argument isn't simulated; only the duration reaches the callbacks.
+    protected override uint ExtractArgument(object?[]? args) =>
+        args is [uint duration, _] ? duration : base.ExtractArgument(args);
+
     protected override void Handle(GatewayContext context, uint duration)
     {
         // No-op by default in emulator.

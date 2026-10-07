@@ -5,6 +5,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
 
 public record ExpressionMethodInfo(
@@ -77,9 +79,23 @@ public class PolicyDecompilerContext
 
     #region Expression Handling
 
-    public bool IsExpression(string value) =>
-        (value.StartsWith("@(") && value.EndsWith(")")) ||
-        (value.StartsWith("@{") && value.EndsWith("}"));
+    public bool IsExpression(string value) => IsSingleExpression(value);
+
+    /// <summary>
+    /// True when the whole value is one balanced @(...) or @{...} expression. A value such as
+    /// "@(a)-@(b)" is text with embedded expressions and has to be kept as a string.
+    /// </summary>
+    public static bool IsSingleExpression(string value)
+    {
+        if (value.Length < 3 || value[0] != '@' || (value[1] != '(' && value[1] != '{'))
+        {
+            return false;
+        }
+
+        char open = value[1];
+        char close = open == '(' ? ')' : '}';
+        return PolicyDecompiler.TryScanBalanced(value, 0, open, close, out int length) && length == value.Length;
+    }
 
     public string HandleValue(string value, string suggestedName, string returnType = "string")
     {
@@ -108,6 +124,10 @@ public class PolicyDecompilerContext
         {
             return NamedValueCall(value, "int");
         }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
+        }
         if (TryParseIsoDuration(value, out var seconds))
         {
             return seconds.ToString();
@@ -125,6 +145,10 @@ public class PolicyDecompilerContext
         {
             return NamedValueCall(value, "bool");
         }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
+        }
         return value.ToLowerInvariant();
     }
 
@@ -136,7 +160,11 @@ public class PolicyDecompilerContext
         }
         if (IsNamedValueToken(value))
         {
-            return NamedValueCall(value, "int");
+            return NamedValueCall(value, "uint");
+        }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
         }
         return value;
     }
@@ -151,36 +179,38 @@ public class PolicyDecompilerContext
         {
             return NamedValueCall(value, "double");
         }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
+        }
         return value;
     }
 
     public string HandleConditionExpression(string value, string suggestedName)
     {
         value = value.Trim();
-        if (value.StartsWith("@(") && value.EndsWith(")"))
+        if (IsExpression(value))
         {
             var body = value.Substring(2, value.Length - 3);
-            return CreateExpressionMethod(body, suggestedName, "bool", false);
+            return CreateExpressionMethod(body, suggestedName, "bool", value[1] == '{');
         }
-        if (value.StartsWith("@{") && value.EndsWith("}"))
+        if (IsNamedValueToken(value))
         {
-            var body = value.Substring(2, value.Length - 3);
-            return CreateExpressionMethod(body, suggestedName, "bool", true);
+            return NamedValueCall(value, "bool");
+        }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
         }
         return value.ToLowerInvariant();
     }
 
     public string CreateExpressionMethodReference(string value, string suggestedName, string returnType)
     {
-        if (value.StartsWith("@(") && value.EndsWith(")"))
+        if (IsExpression(value))
         {
             var body = value.Substring(2, value.Length - 3);
-            return CreateExpressionMethod(body, suggestedName, returnType, false);
-        }
-        if (value.StartsWith("@{") && value.EndsWith("}"))
-        {
-            var body = value.Substring(2, value.Length - 3);
-            return CreateExpressionMethod(body, suggestedName, returnType, true);
+            return CreateExpressionMethod(body, suggestedName, returnType, value[1] == '{');
         }
         return Literal(value);
     }
@@ -195,9 +225,24 @@ public class PolicyDecompilerContext
 
     public string GenerateUniqueMethodName(string suggestedName)
     {
-        var name = $"{suggestedName}{_expressionCounter}";
+        var name = $"{SanitizeIdentifier(suggestedName)}{_expressionCounter}";
         _expressionCounter++;
         return name;
+    }
+
+    /// <summary>
+    /// Makes a name usable as a C# identifier: characters that are not letters, digits or underscores
+    /// are dropped, and a name that is empty or starts with a digit gets an underscore prefix.
+    /// </summary>
+    public static string SanitizeIdentifier(string name)
+    {
+        var sb = new StringBuilder(name.Length);
+        foreach (char c in name)
+        {
+            if (char.IsLetterOrDigit(c) || c == '_') sb.Append(c);
+        }
+        if (sb.Length == 0 || char.IsDigit(sb[0])) sb.Insert(0, '_');
+        return sb.ToString();
     }
 
     public string CreateNamedValueStringExpression(string value, string suggestedName)
@@ -206,6 +251,11 @@ public class PolicyDecompilerContext
         int pos = 0;
         foreach (Match match in NamedValueTokenPattern.Matches(value))
         {
+            if (!IsValidTokenName(match.Groups[1].Value))
+            {
+                continue;
+            }
+
             if (match.Index > pos)
             {
                 parts.Add(Literal(value.Substring(pos, match.Index - pos)));
@@ -251,10 +301,11 @@ public class PolicyDecompilerContext
     }
 
     public static bool IsNamedValueToken(string value) =>
-        NamedValueTokenPattern.IsMatch(value) && value.StartsWith("{{") && value.EndsWith("}}");
+        NamedValueTokenPattern.Match(value) is { Success: true } match && match.Length == value.Length &&
+        IsValidTokenName(match.Groups[1].Value);
 
     public static bool ContainsNamedValueToken(string value) =>
-        NamedValueTokenPattern.IsMatch(value);
+        NamedValueTokenPattern.Matches(value).Any(match => IsValidTokenName(match.Groups[1].Value));
 
     public static string ReplaceNamedValueTokens(string body)
     {
@@ -443,11 +494,12 @@ public class PolicyDecompilerContext
 
     // A {{name}} token in a string, starting at the match position; names have API Management's name characters.
     private static readonly Regex StringTokenPattern = new(
-        @"\G\{\{\s*([A-Za-z0-9_.\-]+)\s*\}\}",
+        @"\G\{\{\s*(" + RazorCodeFormatter.NamedValueName + @")\s*\}\}",
         RegexOptions.Compiled);
 
+    // A {{name}} token in a value; a name is one with IsValidTokenName, as in a string
     public static readonly Regex NamedValueTokenPattern = new(
-        @"\{\{([A-Za-z][A-Za-z0-9_.\-]*)\}\}",
+        @"\{\{(" + RazorCodeFormatter.NamedValueName + @")\}\}",
         RegexOptions.Compiled);
 
     #endregion
@@ -591,7 +643,7 @@ public class PolicyDecompilerContext
         var value = element.Attribute(xmlAttr)?.Value;
         if (value != null)
         {
-            props.Add($"{propName} = {HandleIntValue(value, propName)}");
+            props.Add($"{propName} = {HandleUintValue(value, propName)}");
         }
     }
 
@@ -672,7 +724,8 @@ public class PolicyDecompilerContext
 
     public string BuildBodyConfigProperty(XElement bodyElement)
     {
-        var valueChild = bodyElement.Element("value");
+        // a value element that is all of the body; one among other content is part of a template
+        var valueChild = RawXmlContent.IsValueElementBody(bodyElement) ? bodyElement.Element("value") : null;
         string content;
         if (valueChild != null)
             content = GetElementTextOrValue(valueChild);
@@ -708,11 +761,88 @@ public class PolicyDecompilerContext
 
     public static string GetElementText(XElement element)
     {
+        if (RawXmlContent.IsMarkupBody(element))
+        {
+            // The markup of a liquid body is template text and stays XML: an @(...) in it isn't an expression,
+            // and written raw its reserved characters would stop the body from being read back as markup. A
+            // CDATA section stays one too: the gateway returns it differently from the text it holds.
+            return string.Concat(element.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting)));
+        }
         if (element.Nodes().All(n => n is XText))
         {
             return string.Concat(element.Nodes().OfType<XText>().Select(t => t.Value));
         }
+        if (element.HasElements)
+        {
+            // Other markup content (e.g. a SOAP body) is kept as written instead of flattened to its text.
+            return GetInnerRawXml(element);
+        }
         return element.Value;
+    }
+
+    /// <summary>
+    /// Serializes an element as raw policy text: like XML, but policy expressions are written verbatim
+    /// (unescaped quotes, angle brackets and ampersands), as in API Management's rawxml format.
+    /// </summary>
+    public static string ToRawXml(XElement element)
+    {
+        var clone = new XElement(element);
+        var expressions = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var node in clone.DescendantsAndSelf())
+        {
+            foreach (var attribute in node.Attributes().Where(a => !a.IsNamespaceDeclaration).ToList())
+            {
+                attribute.Value = ProtectExpressions(attribute.Value, expressions);
+            }
+
+            foreach (var text in node.Nodes().OfType<XText>().Where(t => t is not XCData).ToList())
+            {
+                text.Value = ProtectExpressions(text.Value, expressions);
+            }
+        }
+
+        var xml = clone.ToString(SaveOptions.DisableFormatting);
+        foreach (var (placeholder, expression) in expressions)
+        {
+            xml = xml.Replace(placeholder, expression, StringComparison.Ordinal);
+        }
+
+        return xml;
+    }
+
+    public static string GetInnerRawXml(XElement element)
+    {
+        const string wrapperName = "apim-raw-content";
+        var xml = ToRawXml(new XElement(wrapperName, element.Nodes()));
+        var start = $"<{wrapperName}>";
+        var end = $"</{wrapperName}>";
+        return xml.StartsWith(start, StringComparison.Ordinal) && xml.EndsWith(end, StringComparison.Ordinal)
+            ? xml.Substring(start.Length, xml.Length - start.Length - end.Length)
+            : string.Empty;
+    }
+
+    private static string ProtectExpressions(string value, Dictionary<string, string> expressions)
+    {
+        var spans = PolicyDecompiler.CollectExpressionSpans(value);
+        if (spans.Count == 0)
+        {
+            return value;
+        }
+
+        var sb = new StringBuilder(value.Length);
+        int cursor = 0;
+        foreach (var (start, length) in spans)
+        {
+            sb.Append(value, cursor, start - cursor);
+            var placeholder = $"__APIM_RAW_EXPR_{expressions.Count}__";
+            expressions[placeholder] = value.Substring(start, length);
+            sb.Append(placeholder);
+            cursor = start + length;
+        }
+
+        sb.Append(value, cursor, value.Length - cursor);
+        return sb.ToString();
     }
 
     public static string GetElementTextOrValue(XElement element)
@@ -761,7 +891,8 @@ public class PolicyDecompilerContext
     {
         if (string.IsNullOrEmpty(kebabOrSnakeCase)) return "Value";
 
-        var parts = kebabOrSnakeCase.Split('-', '_', '.');
+        // Any character that can't be part of an identifier separates words.
+        var parts = Regex.Split(kebabOrSnakeCase, @"[^\p{L}\p{Nd}]+");
         var sb = new StringBuilder();
         foreach (var part in parts)
         {

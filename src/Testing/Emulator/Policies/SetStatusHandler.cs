@@ -18,6 +18,6 @@ internal class SetStatusHandler : PolicyHandler<StatusConfig>
     protected override void Handle(GatewayContext context, StatusConfig config)
     {
         context.Response.StatusCode = config.Code;
-        context.Response.StatusReason = config.Reason;
+        context.Response.StatusReason = config.Reason ?? string.Empty;
     }
 }

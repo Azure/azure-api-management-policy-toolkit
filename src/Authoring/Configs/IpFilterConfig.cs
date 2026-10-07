@@ -5,12 +5,12 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 /// <summary>
 /// Configuration for the IpFilter policy.<br/>
-/// Specifies the action to take (allow or deny), IP addresses, and/or IP address ranges.
+/// Specifies the action to take ("allow" or "forbid"), IP addresses, and/or IP address ranges.
 /// </summary>
 public record IpFilterConfig
 {
     /// <summary>
-    /// Specifies the action to take (allow or deny). Policy expressions are allowed.
+    /// Specifies the action to take ("allow" or "forbid"). Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
     public required string Action { get; init; }

@@ -240,4 +240,20 @@ public class CorsTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldReportCorsPreflightMaxAgeWithoutAllowedMethods()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.Cors(new CorsConfig
+            {
+                AllowedOrigins = ["*"],
+                AllowedHeaders = ["*"],
+                PreflightResultMaxAge = 300
+            });
+            """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2030");
+    }
 }

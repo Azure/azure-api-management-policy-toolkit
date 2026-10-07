@@ -15,6 +15,7 @@ public class CacheRemoveValueDecompiler : IPolicyDecompiler
         var props = new List<string>();
         context.AddRequiredStringProp(props, element, "key", "Key");
         context.AddOptionalStringProp(props, element, "caching-type", "CachingType");
+        context.AddOptionalBoolProp(props, element, "fail-on-cache-removal-error", "FailOnCacheRemovalError");
         PolicyDecompilerContext.EmitConfigCall(writer, prefix, "CacheRemoveValue", "CacheRemoveValueConfig", props);
     }
 }

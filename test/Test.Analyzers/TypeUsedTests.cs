@@ -357,6 +357,466 @@ public class TypeUsedTests
     }
 
     [TestMethod]
+    public async Task ShouldAnalyseUnattributedHelpersOfDocument()
+    {
+        await VerifyAsync(
+            """
+            public class Document : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Tenant", Tenant(context.ExpressionContext));
+                    context.SetHeader("X-Host", Host());
+                    context.SetHeader("X-Name", Limits().ToString());
+                    context.RateLimit(Limits());
+                    System.Environment.GetEnvironmentVariable("NotAnExpression");
+                }
+
+                // called from a section without the expression context: expanded all the same
+                static string Host() => {|#3:System.Environment.MachineName|};
+
+                // nothing of the document calls these, so they never become a policy expression
+                public override string ToString() => System.Environment.MachineName;
+
+                public static Document Create() => new Document();
+
+                static string Unused(string value) => value + System.Environment.NewLine;
+
+                // a void method that takes no section context isn't a section: nothing is compiled from it
+                public void Log() => Unused("x");
+
+                static string Tenant(IExpressionContext context) =>
+                    Tidy(context.Request.Headers.GetValueOrDefault("X-Tenant", "")) + {|#0:System.Environment.MachineName|};
+
+                static string Tidy(string value) => Text.Trim(value) + Nested.Line() + {|#1:System.Environment.NewLine|};
+
+                // a factory the section calls: the helper it uses is expanded
+                static RateLimitConfig Limits() => new RateLimitConfig { Calls = Calls(), RenewalPeriod = 1 };
+
+                static int Calls() => {|#7:System.Environment.ProcessorCount|};
+
+                static RateLimitConfig Limits(IInboundContext context) =>
+                    new RateLimitConfig { Calls = 1, RenewalPeriod = System.Environment.ProcessorCount };
+
+                static class Nested
+                {
+                    public static string Line() => {|#2:System.Environment.NewLine|};
+                }
+            }
+
+            public static class Text
+            {
+                public static string Trim(string value) => value.Trim();
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(2)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(3)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(7)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldFollowCallsToDocumentHelpersHoweverTheyAreWritten()
+    {
+        await VerifyAsync(
+            """
+            using N = Mielek.Test.Document.Nested;
+
+            public abstract class BaseDocument<T> : IDocument
+            {
+                // expanded where a derived document calls it
+                protected static string Host() => {|#0:System.Environment.MachineName|};
+
+                protected string Name() => {|#4:System.Environment.MachineName|};
+            }
+
+            public class Document : BaseDocument<int>
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                    context.SetHeader("X-Name", base.Name());
+                    context.SetHeader("X-Paren", (this).Paren());
+                    context.SetHeader("X-Cast", ((Document)this).Cast());
+                    context.SetHeader("X-Line", N.Line());
+                    context.SetHeader("X-This", this.Instance());
+                    context.SetHeader("X-Full", global::Mielek.Test.Document.Nested.Full());
+                    context.SetHeader("X-Key", Has(context.ExpressionContext));
+                }
+
+                string Instance() => {|#2:System.Environment.MachineName|};
+
+                string Paren() => {|#5:System.Environment.MachineName|};
+
+                string Cast() => {|#6:System.Environment.MachineName|};
+
+                static string Has(IExpressionContext context) => context.Request.Headers.ContainsKey("a") ? "a" : "b";
+
+                public static class Nested
+                {
+                    public static string Line() => {|#1:System.Environment.NewLine|};
+
+                    public static string Full() => {|#3:System.Environment.NewLine|};
+                }
+
+                // context.Request.Headers.ContainsKey(...) is a call on a value, not on this class
+                public static class Headers
+                {
+                    public static bool ContainsKey(string key) => System.Environment.Is64BitProcess;
+                }
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(2)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(3)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(4)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(5)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(6)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldStartFromASectionImplementedExplicitly()
+    {
+        await VerifyAsync(
+            """
+            public class Document : IDocument
+            {
+                void IDocument.Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                    context.SetVariable("key", Key(context));
+                }
+
+                static string Host() => {|#0:System.Environment.MachineName|};
+
+                // a helper that takes a section context is expanded like any other: reading its ExpressionContext
+                // is the gateway's context, anything else in it is checked
+                static string Key(IHaveExpressionContext holder) =>
+                    holder.ExpressionContext.Request.IpAddress + {|#1:System.Environment.MachineName|};
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldStartFromTheSectionsTheCompilerCompilesOnly()
+    {
+        await VerifyAsync(
+            """
+            public class Document : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                }
+
+                // not named for a section, or taking more than the section context: the compiler compiles neither,
+                // so what only they call isn't checked
+                public void Audit(IInboundContext context)
+                {
+                    context.SetHeader("X-Audit", Secret());
+                }
+
+                public void Inbound(IInboundContext context, int retries)
+                {
+                    context.SetHeader("X-Retries", Secret());
+                }
+
+                // nor is one taking what the section contexts share
+                public void Inbound(IHaveExpressionContext context)
+                {
+                    Secret();
+                }
+
+                // a method returning an enum or an interface of the authoring library isn't a configuration factory
+                static DocumentScope Scope()
+                {
+                    Secret();
+                    return DocumentScope.Api;
+                }
+
+                static IHaveExpressionContext Holder()
+                {
+                    Secret();
+                    return null!;
+                }
+
+                // a fragment's section isn't one of a document's
+                public void Fragment(IFragmentContext context)
+                {
+                    context.SetHeader("X-Fragment", Secret());
+                }
+
+                static string Host() => {|#0:System.Environment.MachineName|};
+
+                static string Secret() => System.Environment.MachineName;
+            }
+
+            public class Piece : IFragment
+            {
+                public void Fragment(IFragmentContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                }
+
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Inbound", Secret());
+                }
+
+                // the compiler compiles the first Fragment method only
+                public void Fragment(IInboundContext context)
+                {
+                    context.SetHeader("X-Second", Secret());
+                }
+
+                static string Host() => {|#1:System.Environment.MachineName|};
+
+                static string Secret() => System.Environment.MachineName;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldStartFromTheFirstFragmentMethodOfEachPart()
+    {
+        // the members of a partial class come in file order; the compiler compiles the part marked [Document], so
+        // the first Fragment method of each part is a starting point, whichever file comes first
+        var test = new BaseAnalyzerTest<TypeUsedAnalyzer>(
+            """
+            public partial class Piece
+            {
+                public void Fragment(IInboundContext context)
+                {
+                    context.SetHeader("X-Other", Other());
+                }
+
+                static string Other() => {|#0:System.Environment.MachineName|};
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment"));
+        test.TestState.Sources.Add(
+            """
+            using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+
+            namespace Mielek.Test;
+
+            [Document]
+            public partial class Piece : IFragment
+            {
+                public void Fragment(IFragmentContext context)
+                {
+                    context.SetHeader("X-Host", Host());
+                }
+
+                static string Host() => {|#1:System.Environment.MachineName|};
+            }
+            """);
+        await test.RunAsync();
+    }
+
+    [TestMethod]
+    public async Task ShouldAnalyseWhatAnotherDocumentUsesOfADocument()
+    {
+        await VerifyAsync(
+            """
+            using S = Mielek.Test.Shared;
+
+            public class Shared : IDocument
+            {
+                public void Inbound(IInboundContext context) { }
+
+                // a factory is a root wherever it is used from; the helper it calls is analysed
+                public static RateLimitConfig Limits() => new RateLimitConfig { Calls = Calls(), RenewalPeriod = 1 };
+
+                static int Calls() => {|#0:System.Environment.ProcessorCount|};
+
+                static string Section(IInboundContext context) =>
+                    context.ExpressionContext.Request.Url.Host + {|#1:System.Environment.MachineName|};
+
+                // a helper another document calls by a qualified name is analysed; one nothing calls is not
+                public static string Host() => {|#2:System.Environment.MachineName|};
+
+                public static string Unused() => System.Environment.MachineName;
+
+                // reached through a helper of the other document, through an [Expression] class, and through an alias
+                public static string Deep() => {|#4:System.Environment.MachineName|};
+
+                public static string Lib() => {|#5:System.Environment.MachineName|};
+
+                public static string Aliased() => {|#6:System.Environment.MachineName|};
+
+                // a factory nothing calls is a root all the same
+                public static RateLimitConfig Spare() => new RateLimitConfig { Calls = SpareCalls(), RenewalPeriod = 1 };
+
+                static int SpareCalls() => {|#7:System.Environment.ProcessorCount|};
+
+                public static class Nested
+                {
+                    public static string Line() => {|#3:System.Environment.NewLine|};
+                }
+            }
+
+            public class Document : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.RateLimit(Shared.Limits());
+                    context.SetHeader("X-Host", Shared.Host());
+                    context.SetHeader("X-Line", Line());
+                    context.SetHeader("X-Own", Unused());
+                    context.SetHeader("X-Deep", Tag());
+                    context.SetHeader("X-Lib", Helpers.Tag());
+                    context.SetHeader("X-Alias", S.Aliased());
+                }
+
+                // a bare name in another document is its own method, not Shared's
+                static string Unused() => "own";
+
+                static string Tag() => Shared.Deep() + "!";
+
+                // naming Shared to qualify the call isn't a use of Shared
+                static string Line() => Shared.Nested.Line();
+            }
+
+            [Expression]
+            public static class Helpers
+            {
+                public static string Tag() => Shared.Lib() + "!";
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(1)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(2)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(3)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(4)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(5)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(6)
+                .WithArguments("System.Environment"),
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(7)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldNotTakeAUsersSectionContextForTheGatewaysContext()
+    {
+        // the compiler maps the ExpressionContext of the authoring library's section contexts only
+        await VerifyAsync(
+            """
+            public interface IMine : IHaveExpressionContext
+            {
+                string Extra { get; }
+            }
+
+            public class Document : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetVariable("key", Key(null!));
+                }
+
+                static string Key(IMine holder) => {|#0:holder.ExpressionContext|}.Request.IpAddress;
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.IHaveExpressionContext")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldFollowACallQualifiedWithTheClassADocumentIsNestedIn()
+    {
+        await VerifyAsync(
+            """
+            public static class Outer
+            {
+                public class Document : IDocument
+                {
+                    public void Inbound(IInboundContext context)
+                    {
+                        context.SetHeader("X-Line", Outer.Document.Nested.Line());
+                    }
+
+                    public static class Nested
+                    {
+                        public static string Line() => {|#0:System.Environment.NewLine|};
+                    }
+                }
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment")
+        );
+    }
+
+    [TestMethod]
+    public async Task ShouldFollowACallQualifiedWithADerivedDocumentsNamespace()
+    {
+        var test = new BaseAnalyzerTest<TypeUsedAnalyzer>(
+            """
+            public class Base : IDocument
+            {
+                public void Inbound(IInboundContext context) { }
+
+                public static string Host() => {|#0:System.Environment.MachineName|};
+            }
+
+            public class Document : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetHeader("X-Host", Other.Derived.Host());
+                }
+            }
+            """,
+            DiagnosticResult.CompilerError(Rules.TypeUsed.DisallowedType.Id).WithLocation(0)
+                .WithArguments("System.Environment"));
+        // the derived document is declared in another namespace, which a call to the base's helper is written with
+        test.TestState.Sources.Add(
+            """
+            namespace Other;
+
+            public class Derived : Mielek.Test.Base { }
+            """);
+        await test.RunAsync();
+    }
+
+    [TestMethod]
     public async Task ShouldAllowDictionaryExtensions()
     {
         await VerifyAsync(

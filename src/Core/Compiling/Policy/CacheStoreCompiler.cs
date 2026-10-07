@@ -30,13 +30,9 @@ public class CacheStoreCompiler : IMethodPolicyHandler
 
         element.Add(new XAttribute("duration", arguments[0].Expression.ProcessParameter(context)));
 
-        if (arguments.Count == 2)
+        if (arguments.Count == 2 && !CompilerUtils.IsNull(arguments[1].Expression, context))
         {
-            var cacheResponseValue = arguments[1].Expression.ProcessParameter(context);
-            if (cacheResponseValue != "null")
-            {
-                element.Add(new XAttribute("cache-response", cacheResponseValue));
-            }
+            element.Add(new XAttribute("cache-response", arguments[1].Expression.ProcessParameter(context)));
         }
 
         context.AddPolicy(element);

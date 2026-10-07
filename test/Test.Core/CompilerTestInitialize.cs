@@ -19,7 +19,11 @@ public static class CompilerTestInitialize
     private static readonly IEnumerable<MetadataReference> References =
     [
         MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+        // the authoring library refers to the types of its members through System.Runtime
+        MetadataReference.CreateFromFile(
+            Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location)!, "System.Runtime.dll")),
         MetadataReference.CreateFromFile(typeof(XElement).Assembly.Location),
+        MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
         MetadataReference.CreateFromFile(typeof(IDocument).Assembly.Location)
     ];
 
@@ -41,6 +45,31 @@ public static class CompilerTestInitialize
     {
         s_serviceProvider.Dispose();
     }
+
+    /// <summary>A policy document whose inbound section holds the statements.</summary>
+    public static string InboundDocument(string statements, string members = "") =>
+        $$"""
+          [Document]
+          public class PolicyDocument : IDocument
+          {
+              public void Inbound(IInboundContext context)
+              {
+                  {{statements}}
+              }
+
+              {{members}}
+          }
+          """;
+
+    /// <summary>The policy XML of a document whose inbound section holds the policy.</summary>
+    public static string InboundXml(string policy) =>
+        $"""
+         <policies>
+             <inbound>
+                 {policy.ReplaceLineEndings("\n        ")}
+             </inbound>
+         </policies>
+         """;
 
     public static IDocumentCompilationResult CompileDocument(this string document) => document.CompileDocument([]);
 

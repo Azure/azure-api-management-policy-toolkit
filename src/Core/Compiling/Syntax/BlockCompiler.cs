@@ -39,7 +39,20 @@ public class BlockCompiler : ISyntaxCompiler
                     statement.GetLocation(),
                     statement.Kind().ToString()
                 ));
+                // an id doesn't move past a statement that isn't a policy
+                context.PendingPolicyId = null;
             }
+        }
+
+        // context.WithId("id"); as the last statement of a block has no policy to give its id to
+        if (context.PendingPolicyId is { } id)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.PolicyIdWithoutPolicy,
+                block.CloseBraceToken.GetLocation(),
+                id
+            ));
+            context.PendingPolicyId = null;
         }
     }
 }

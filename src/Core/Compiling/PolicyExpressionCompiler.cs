@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
@@ -107,6 +108,16 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
             return nestedNamedValue;
         }
 
+        // API Management types an expression by its code and rejects one typed object, so the cast to object
+        // that a helper declared to return object leaves around its result is dropped.
+        while (lowered is ExpressionSyntax expression && expression.Unparenthesized() is CastExpressionSyntax
+               {
+                   Type: PredefinedTypeSyntax { Keyword.RawKind: (int)SyntaxKind.ObjectKeyword }
+               } cast)
+        {
+            lowered = cast.Expression;
+        }
+
         return FinalizeCode(lowered);
 
         SyntaxNode? CompileRootBody(bool renameAll)
@@ -114,12 +125,29 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
             var rewriter = new HelperInliningRewriter(
                 this, declarationModel, bindings, stack, method, _renamer.CreateRenames(body, declarationModel, renameAll));
             var visited = rewriter.Visit(body);
+            if (visited is ExpressionSyntax result && body is ExpressionSyntax written &&
+                TryGetImplicitNumericConversion(declarationModel, written, out var returnType))
+            {
+                visited = ConvertRawNamedValue(returnType, result) ?? CastTo(returnType, result).Expression;
+            }
+
             return rewriter.HasUnsupportedWrite ? null : visited;
         }
     }
 
     public string CompileCondition(ExpressionSyntax condition)
     {
+        // A boolean constant is a valid condition as is: <when condition="true">
+        if (condition.IsKind(SyntaxKind.TrueLiteralExpression))
+        {
+            return "true";
+        }
+
+        if (condition.IsKind(SyntaxKind.FalseLiteralExpression))
+        {
+            return "false";
+        }
+
         var model = CompilerUtils.CachedModel(context.Compilation, condition.SyntaxTree);
         if (condition is InvocationExpressionSyntax namedValueInvocation &&
             TryResolveMethod(namedValueInvocation, model, out var namedValueMethod) &&
@@ -510,7 +538,45 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
         (SymbolEqualityComparer.Default.Equals(first, second) ||
          first.ToDisplayString(EmittedTypeFormat) == second.ToDisplayString(EmittedTypeFormat));
 
-    private static ExpressionSyntax CastTo(ITypeSymbol type, ExpressionSyntax expression) =>
+    // C# converts 300 to uint when a helper declared to return uint returns it, but the emitted expression
+    // is only the 300, which API Management types as int. The conversion has to be written out.
+    internal static bool TryGetImplicitNumericConversion(
+        SemanticModel model,
+        ExpressionSyntax expression,
+        [NotNullWhen(true)] out ITypeSymbol? target)
+    {
+        target = null;
+        if (model.SyntaxTree != expression.SyntaxTree)
+        {
+            return false;
+        }
+
+        var info = model.GetTypeInfo(expression);
+        var converted = info.ConvertedType;
+        if (converted is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable)
+        {
+            // a helper declared to return uint? converts 300 the same way
+            converted = nullable.TypeArguments[0];
+        }
+
+        if (info.Type is not { } type || converted is null ||
+            !IsNumeric(type) || !IsNumeric(converted) ||
+            SymbolEqualityComparer.Default.Equals(type, converted))
+        {
+            return false;
+        }
+
+        target = converted;
+        return true;
+    }
+
+    private static bool IsNumeric(ITypeSymbol type) => type.SpecialType is
+        SpecialType.System_SByte or SpecialType.System_Byte or SpecialType.System_Int16 or
+        SpecialType.System_UInt16 or SpecialType.System_Int32 or SpecialType.System_UInt32 or
+        SpecialType.System_Int64 or SpecialType.System_UInt64 or SpecialType.System_Single or
+        SpecialType.System_Double or SpecialType.System_Decimal;
+
+    private static ParenthesizedExpressionSyntax CastTo(ITypeSymbol type, ExpressionSyntax expression) =>
         SyntaxFactory.ParenthesizedExpression(SyntaxFactory.CastExpression(
             SyntaxFactory.ParseTypeName(type.ToDisplayString(EmittedTypeFormat)),
             ParenthesizeIfNeeded(expression)));
@@ -604,14 +670,17 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
             Name: { } name,
             ContainingNamespace: { } containingNamespace
         } &&
-        name is (nameof(IHaveExpressionContext)
+        IsSectionContextName(name) &&
+        containingNamespace.ToDisplayString() ==
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring";
+
+    internal static bool IsSectionContextName(string name) =>
+        name is nameof(IHaveExpressionContext)
             or nameof(IInboundContext)
             or nameof(IOutboundContext)
             or nameof(IBackendContext)
             or nameof(IOnErrorContext)
-            or nameof(IFragmentContext)) &&
-        containingNamespace.ToDisplayString() ==
-        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring";
+            or nameof(IFragmentContext);
 
     private static bool IsSafeSourceHelper(
         InvocationExpressionSyntax invocation,
@@ -674,38 +743,36 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
 
     private bool TryGetNamedValue(IMethodSymbol method, out string value)
     {
-        var attribute = method.GetAttributes().FirstOrDefault(candidate =>
-            candidate.AttributeClass?.Name == "NamedValueAttribute");
-        if (attribute?.ConstructorArguments is
-            [{ Value: string configuredValue }])
-        {
-            value = configuredValue.Contains("{{", StringComparison.Ordinal)
-                ? configuredValue
-                : $"{{{{{configuredValue}}}}}";
-            return true;
-        }
-
-        if (TryGetMethodDeclaration(method, out var declaration))
-        {
-            var attributeSyntax = declaration.AttributeLists
-                .SelectMany(list => list.Attributes)
-                .FirstOrDefault(candidate => candidate.Name.ToString() is "NamedValue" or "NamedValueAttribute");
-            var argument = attributeSyntax?.ArgumentList?.Arguments.FirstOrDefault()?.Expression;
-            if (argument is not null)
-            {
-                var constant = ModelFor(argument.SyntaxTree)?.GetConstantValue(argument);
-                if (constant is { HasValue: true, Value: string syntaxValue })
-                {
-                    value = syntaxValue.Contains("{{", StringComparison.Ordinal)
-                        ? syntaxValue
-                        : $"{{{{{syntaxValue}}}}}";
-                    return true;
-                }
-            }
-        }
-
         value = string.Empty;
-        return false;
+        var attribute = method.GetAttributes().FirstOrDefault(CompilerUtils.IsNamedValueAttribute);
+        if (attribute is null)
+        {
+            return false;
+        }
+
+        string? configured = null;
+        if (attribute.ConstructorArguments is [{ Value: string bound }])
+        {
+            configured = bound;
+        }
+        // an attribute whose type couldn't be resolved has no bound arguments: its argument is read as written
+        else if (attribute.ApplicationSyntaxReference?.GetSyntax() is AttributeSyntax
+                 {
+                     ArgumentList.Arguments: [{ Expression: var argument }, ..]
+                 })
+        {
+            configured = ModelFor(argument.SyntaxTree)?.GetConstantValue(argument) is { HasValue: true, Value: string written }
+                ? written
+                : null;
+        }
+
+        if (configured is null)
+        {
+            return false;
+        }
+
+        value = configured.Contains("{{", StringComparison.Ordinal) ? configured : $"{{{{{configured}}}}}";
+        return true;
     }
 
     private void ReportCannotFindMethod(InvocationExpressionSyntax invocation)

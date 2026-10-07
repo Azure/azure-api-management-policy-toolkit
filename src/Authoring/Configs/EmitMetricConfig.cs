@@ -23,7 +23,7 @@ public record EmitMetricConfig
 
     /// <summary>
     /// Optional. Specifies the metric namespace. 
-    /// Defaults to "apim" if not specified.
+    /// Defaults to "API Management" if not specified.
     /// </summary>
     public string? Namespace { get; init; }
 

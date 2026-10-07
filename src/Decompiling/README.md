@@ -53,6 +53,7 @@ Common options:
 - `--ext`: output file extension (`.cs` by default)
 - `--namespace`: base namespace for generated classes
 - `--scope`: document scope (`Operation` by default)
+- `--pf` / `--policy-format`: format of the input, `rawxml` (default) or `xml`, as for the compiler
 - `--doc-id-root`: root path used to compute relative `DocumentId` values
 - `--document-suffix` / `--fragment-suffix`: name suffixes for generated class names
 - `--verbose`: print progress information while generating files

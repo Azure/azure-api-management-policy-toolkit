@@ -31,7 +31,7 @@ public abstract class BaseSemanticCacheStoreCompiler : IMethodPolicyHandler
     public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
         var arguments = node.ArgumentList.Arguments;
-        if (arguments.Count != 1)
+        if (arguments.Count is > 2 or < 1)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.ArgumentCountMissMatchForPolicy,
@@ -42,6 +42,12 @@ public abstract class BaseSemanticCacheStoreCompiler : IMethodPolicyHandler
 
         var element = new XElement(_policyName);
         element.Add(new XAttribute("duration", arguments[0].Expression.ProcessParameter(context)));
+
+        if (arguments.Count == 2 && !CompilerUtils.IsNull(arguments[1].Expression, context))
+        {
+            element.Add(new XAttribute("cache-response", arguments[1].Expression.ProcessParameter(context)));
+        }
+
         context.AddPolicy(element);
     }
 }

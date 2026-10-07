@@ -35,6 +35,8 @@ public class CacheRemoveValueCompiler : IMethodPolicyHandler
         }
 
         element.AddAttribute(values, nameof(CacheRemoveValueConfig.CachingType), "caching-type");
+        element.AddAttribute(values, nameof(CacheRemoveValueConfig.FailOnCacheRemovalError),
+            "fail-on-cache-removal-error");
 
         context.AddPolicy(element);
     }

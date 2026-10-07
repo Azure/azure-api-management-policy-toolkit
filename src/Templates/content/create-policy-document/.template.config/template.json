@@ -21,7 +21,7 @@
   "defaultName": "PolicyDocument1",
   "primaryOutputs": [
     {
-      "path": ".cs"
+      "path": "PolicyDocument1.cs"
     }
   ],
   "symbols": {

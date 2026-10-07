@@ -15,7 +15,7 @@ public class MockUrl : IUrl
     {
         Scheme = uri.Scheme;
         Host = uri.Host;
-        Port = uri.Port.ToString();
+        Port = uri.Port;
         Path = uri.AbsolutePath;
         if (!string.IsNullOrEmpty(uri.Query))
         {
@@ -25,7 +25,7 @@ public class MockUrl : IUrl
 
     public string Scheme { get; set; } = "https";
     public string Host { get; set; } = "contoso.example";
-    public string Port { get; set; } = "443";
+    public int Port { get; set; } = 443;
     public string Path { get; set; } = "/v2/mock/op";
 
     public Dictionary<string, string[]> Query { get; set; } = new Dictionary<string, string[]> { };
@@ -55,7 +55,7 @@ public class MockUrl : IUrl
 
     public override string ToString()
     {
-        var port = (Scheme == "https" && Port == "443") || (Scheme == "http" && Port == "80")
+        var port = (Scheme == "https" && Port == 443) || (Scheme == "http" && Port == 80)
             ? ""
             : $":{Port}";
         return $"{Scheme}://{Host}{port}{Path}{QueryString}";

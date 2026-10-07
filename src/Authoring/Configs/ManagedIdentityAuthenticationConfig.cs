@@ -15,8 +15,8 @@ public record ManagedIdentityAuthenticationConfig : IAuthenticationConfig
     /// <summary>
     /// Optional. The client ID of the user-assigned managed identity.<br/>
     /// If this property is not specified, the system-assigned managed identity is used.
+    /// Policy expressions aren't allowed.
     /// </summary>
-    [ExpressionAllowed]
     public string? ClientId { get; init; }
 
     /// <summary>

@@ -358,4 +358,70 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor ParameterRequiresAnotherParameter = new(
+        "APIM2030",
+        "Parameter requires another parameter",
+        "Parameter '{1}' of '{0}' policy can only be used when '{2}' is defined",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor PolicyNotAvailableInSection = new(
+        "APIM2031",
+        "Policy is not available in this section",
+        "Policy method '{0}' is not available on '{1}', the policy is not allowed in this section",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor PolicyIdWithoutPolicy = new(
+        "APIM2033",
+        "Policy id without a policy",
+        "WithId('{0}') is not followed by a policy in this block, so the id would be given to an unrelated policy",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor PolicyAllowedOncePerSection = new(
+        "APIM2032",
+        "Policy is allowed once per section",
+        "Policy '{0}' is used {1} times in this section, API Management allows one per section",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor ValueTypeNotAccepted = new(
+        "APIM2034",
+        "Value type is not accepted",
+        "Policy '{0}' does not accept an expression of type '{1}', API Management rejects it; convert the value, for example with ToString()",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "https://learn.microsoft.com/en-us/azure/api-management/set-variable-policy#allowed-types",
+        customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor NamedValueNameNotConstant = new(
+        "APIM2040",
+        "Named value name is not a constant",
+        "Named value name '{0}' must be a compile-time constant string, API Management resolves named values when the policy is saved",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Description.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
 }

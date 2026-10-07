@@ -12,12 +12,11 @@ public record EmitTokenMetricConfig
     /// Required. The dimensions to include with the metric.<br/>
     /// These dimensions can be used to filter and group the metrics in monitoring systems.
     /// </summary>
-    [ExpressionAllowed]
     public required MetricDimensionConfig[] Dimensions { get; init; }
 
     /// <summary>
     /// Optional. The namespace to use for the metrics.<br/>
-    /// If not specified, the default namespace is used.
+    /// If not specified, the default namespace is used. Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
     public string? Namespace { get; init; }

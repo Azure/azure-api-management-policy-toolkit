@@ -7,6 +7,8 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 var sourceOption = new Option<string?>("--s", "--source")
 {
@@ -53,6 +55,21 @@ var scopeOption = new Option<string>("--scope", "-s")
     Description = "Policy scope"
 };
 
+var policyFormatOption = new Option<string>("--pf", "--policy-format")
+{
+    DefaultValueFactory = _ => "rawxml",
+    Description = "Policy content format of the input: rawxml (default) or xml"
+};
+policyFormatOption.Validators.Add(result =>
+{
+    var value = result.GetValueOrDefault<string>();
+    // by name only: Enum.TryParse also takes a number or a list of names
+    if (value is not null && !Enum.GetNames<PolicyFormat>().Contains(value, StringComparer.OrdinalIgnoreCase))
+    {
+        result.AddError($"Invalid policy format value '{value}'. Use 'rawxml' (default) or 'xml'.");
+    }
+});
+
 var docIdRootOption = new Option<DirectoryInfo?>("--doc-id-root")
 {
     Description = "Root path for computing relative DocumentId (for traceability)"
@@ -72,7 +89,7 @@ var fragmentSuffixOption = new Option<string>("--fragment-suffix")
 
 var noValidateOption = new Option<bool>("--no-validate")
 {
-    Description = "Skip validation"
+    Description = "Skip checking that the generated C# is syntactically valid"
 };
 
 var verboseOption = new Option<bool>("--verbose", "-v")
@@ -96,6 +113,7 @@ foreach (var option in new Option[]
              outputExtOption,
              namespaceOption,
              scopeOption,
+             policyFormatOption,
              docIdRootOption,
              documentSuffixOption,
              fragmentSuffixOption,
@@ -120,6 +138,7 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
     var docIdRoot = parseResult.GetValue(docIdRootOption);
     var documentSuffix = parseResult.GetValue(documentSuffixOption)!;
     var fragmentSuffix = parseResult.GetValue(fragmentSuffixOption)!;
+    var noValidate = parseResult.GetValue(noValidateOption);
     var verbose = parseResult.GetValue(verboseOption);
 
     // Discover XML files
@@ -182,13 +201,30 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
     }
 
     var decompiler = new PolicyDecompiler();
-    var decompileOptions = new DecompileOptions { Scope = scope };
+    var decompileOptions = new DecompileOptions
+    {
+        Scope = scope,
+        PolicyFormat = Enum.Parse<PolicyFormat>(parseResult.GetValue(policyFormatOption)!, ignoreCase: true)
+    };
     int succeeded = 0;
     int failed = 0;
     int skipped = 0;
 
+    // A file found through more than one option is decompiled once.
+    xmlFiles = xmlFiles.DistinctBy(file => file.fullPath).ToList();
+
+    // Policies that share a directory can't all be named after it; those get the file name added. A file
+    // that isn't a policy document is skipped below and doesn't count.
+    var filesPerDirectory = xmlFiles
+        .Select(file => file.fullPath)
+        .Where(file => IsPolicyFile(file, decompileOptions.PolicyFormat))
+        .GroupBy(file => Path.GetDirectoryName(file)!)
+        .ToDictionary(group => group.Key, group => group.Count());
+    var usedTypeNames = new HashSet<string>(StringComparer.Ordinal);
+
     foreach (var (fullPath, basePath) in xmlFiles)
     {
+        var sharesDirectory = filesPerDirectory.GetValueOrDefault(Path.GetDirectoryName(fullPath)!) > 1;
         var relativePath = Path.GetRelativePath(basePath, fullPath);
         var relativeDir = Path.GetDirectoryName(relativePath) ?? "";
 
@@ -210,13 +246,21 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
         try
         {
             var xml = await File.ReadAllTextAsync(fullPath);
-            var preprocessed = PolicyDecompiler.PreprocessXml(xml);
             XDocument doc;
-            try { doc = XDocument.Parse(preprocessed); }
+            try
+            {
+                doc = XDocument.Parse(PolicyDecompiler.PreprocessXml(xml, decompileOptions.PolicyFormat));
+            }
             catch (Exception ex)
             {
                 failed++;
                 await Console.Error.WriteLineAsync($"Error parsing {relativePath}: {ex.Message}");
+                if (decompileOptions.PolicyFormat == PolicyFormat.Xml)
+                {
+                    await Console.Error.WriteLineAsync(
+                        "  The policy was read as xml. If its expressions are written as code, pass --policy-format rawxml or leave the option out.");
+                }
+
                 continue;
             }
 
@@ -237,8 +281,9 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
             string result;
             if (rootElement == "fragment")
             {
-                var fragmentId = GetFragmentId(fullPath, basePath);
-                var className = BuildClassName(fullPath, basePath, fragmentSuffix);
+                var fragmentId = GetFragmentId(fullPath, basePath, sharesDirectory);
+                var className = MakeUnique(
+                    BuildClassName(fullPath, basePath, fragmentSuffix, sharesDirectory), namespaceName, usedTypeNames);
                 if (verbose)
                 {
                     await Console.Out.WriteLineAsync($"Processing: {relativePath}");
@@ -249,7 +294,8 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
             }
             else
             {
-                var className = BuildClassName(fullPath, basePath, documentSuffix);
+                var className = MakeUnique(
+                    BuildClassName(fullPath, basePath, documentSuffix, sharesDirectory), namespaceName, usedTypeNames);
                 if (verbose)
                 {
                     await Console.Out.WriteLineAsync($"Processing: {relativePath}");
@@ -261,6 +307,31 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
 
             Directory.CreateDirectory(outputDir);
             await File.WriteAllTextAsync(outputFile, result);
+
+            if (!noValidate)
+            {
+                var syntaxErrors = CSharpSyntaxTree.ParseText(result).GetDiagnostics()
+                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                    .ToList();
+                if (syntaxErrors.Count > 0)
+                {
+                    failed++;
+                    await Console.Error.WriteLineAsync(
+                        $"Error validating {relativePath}: the generated C# in {outputFile} has syntax errors (use --no-validate to skip this check):");
+                    if (decompileOptions.PolicyFormat == PolicyFormat.RawXml)
+                    {
+                        await Console.Error.WriteLineAsync(
+                            "  The policy was read as rawxml. If its expressions are XML-escaped, pass --policy-format xml.");
+                    }
+
+                    foreach (var error in syntaxErrors)
+                    {
+                        await Console.Error.WriteLineAsync($"  {error}");
+                    }
+                    continue;
+                }
+            }
+
             succeeded++;
 
             if (verbose)
@@ -306,7 +377,21 @@ static string SanitizeIdentifier(string name)
     return result;
 }
 
-static string BuildClassName(string fullPath, string basePath, string suffix)
+static bool IsPolicyFile(string path, PolicyFormat format)
+{
+    try
+    {
+        var root = XDocument.Parse(PolicyDecompiler.PreprocessXml(File.ReadAllText(path), format)).Root?.Name.LocalName;
+        return root is "policies" or "fragment";
+    }
+    catch (Exception)
+    {
+        // reported as a failure when the file is processed
+        return false;
+    }
+}
+
+static string BuildClassName(string fullPath, string basePath, string suffix, bool sharesDirectory)
 {
     var relativePath = Path.GetRelativePath(basePath, fullPath);
     var relativeDir = Path.GetDirectoryName(relativePath) ?? "";
@@ -327,11 +412,26 @@ static string BuildClassName(string fullPath, string basePath, string suffix)
     }
 
     var sanitized = SanitizeIdentifier(nameBasis);
+    if (sharesDirectory && segments.Length > 0)
+    {
+        sanitized += SanitizeIdentifier(Path.GetFileNameWithoutExtension(fullPath)).TrimStart('_');
+    }
     if (!sanitized.EndsWith(suffix, StringComparison.Ordinal))
     {
         sanitized += suffix;
     }
     return sanitized;
+}
+
+// Different files can still map to one name (e.g. a-b.xml and a_b.xml); later ones get a number.
+static string MakeUnique(string className, string namespaceName, HashSet<string> usedTypeNames)
+{
+    var candidate = className;
+    for (var number = 2; !usedTypeNames.Add($"{namespaceName}.{candidate}"); number++)
+    {
+        candidate = $"{className}{number}";
+    }
+    return candidate;
 }
 
 static string BuildNamespace(string baseNamespace, string relativeDir)
@@ -346,8 +446,14 @@ static string BuildNamespace(string baseNamespace, string relativeDir)
     return baseNamespace + "." + string.Join(".", segments);
 }
 
-static string GetFragmentId(string fullPath, string basePath)
+static string GetFragmentId(string fullPath, string basePath, bool sharesDirectory)
 {
+    // Several fragments in one directory can't all take the directory's name
+    if (sharesDirectory)
+    {
+        return Path.GetFileNameWithoutExtension(fullPath);
+    }
+
     var relativePath = Path.GetRelativePath(basePath, fullPath);
     var relativeDir = Path.GetDirectoryName(relativePath) ?? "";
     var segments = relativeDir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)

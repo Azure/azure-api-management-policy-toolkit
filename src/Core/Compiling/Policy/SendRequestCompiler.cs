@@ -34,6 +34,11 @@ public class SendRequestCompiler : IMethodPolicyHandler
             return;
         }
 
+        if (ReportMissingUrlOrMethod(context, node, values, "send-request"))
+        {
+            return;
+        }
+
         element.AddAttribute(values, nameof(SendRequestConfig.Mode), "mode");
         element.AddAttribute(values, nameof(SendRequestConfig.Timeout), "timeout");
         element.AddAttribute(values, nameof(SendRequestConfig.IgnoreError), "ignore-error");
@@ -71,6 +76,41 @@ public class SendRequestCompiler : IMethodPolicyHandler
         context.AddPolicy(element);
     }
 
+    // The gateway rejects a request without a URL or method unless the mode is copy. A mode given by an
+    // expression can't be checked.
+    internal static bool ReportMissingUrlOrMethod(
+        IDocumentCompilationContext context,
+        InvocationExpressionSyntax node,
+        IReadOnlyDictionary<string, InitializerValue> values,
+        string policy)
+    {
+        // SendRequestConfig and SendOneWayRequestConfig name these properties the same; the gateway reads attribute
+        // values as written, so copy is the only spelling
+        if (values.TryGetValue(nameof(SendRequestConfig.Mode), out var mode) &&
+            (mode.Value == "copy" || mode.Value is { } written && (written.StartsWith('@') || written.Contains("{{"))))
+        {
+            return false;
+        }
+
+        var missing = false;
+        foreach (var name in new[] { nameof(SendRequestConfig.Url), nameof(SendRequestConfig.Method) })
+        {
+            // an empty <set-url /> or <set-method /> is as much missing as none
+            if (!values.TryGetValue(name, out var value) || string.IsNullOrWhiteSpace(value.Value))
+            {
+                context.Report(Diagnostic.Create(
+                    CompilationErrors.RequiredParameterNotDefined,
+                    node.GetLocation(),
+                    policy,
+                    name
+                ));
+                missing = true;
+            }
+        }
+
+        return missing;
+    }
+
     private void HandleAuthentication(IDocumentCompilationContext context, XElement element,
         InitializerValue authentication)
     {
@@ -85,9 +125,6 @@ public class SendRequestCompiler : IMethodPolicyHandler
             case nameof(CertificateAuthenticationConfig):
                 AuthenticationCertificateCompiler.HandleCertificateAuthentication(context, element, values,
                     authentication.Node);
-                break;
-            case nameof(BasicAuthenticationConfig):
-                AuthenticationBasicCompiler.HandleBasicAuthentication(context, element, values, authentication.Node);
                 break;
             case nameof(ManagedIdentityAuthenticationConfig):
                 AuthenticationManagedIdentityCompiler.HandleManagedIdentityAuthentication(context, element, values,

@@ -29,9 +29,9 @@ public record CacheLookupValueConfig
     public object? DefaultValue { get; init; }
 
     /// <summary>
-    /// Type of cache to use. Valid values are "internal" (per-gateway private cache) 
-    /// or "external" (shared cache as configured in the policy).
-    /// If not specified, "external" is used.
+    /// Type of cache to use. Valid values are "internal" (built-in cache), "external" (external cache)
+    /// or "prefer-external" (external cache if configured, otherwise the built-in cache).
+    /// If not specified, "prefer-external" is used.
     /// </summary>
     public string? CachingType { get; init; }
 }

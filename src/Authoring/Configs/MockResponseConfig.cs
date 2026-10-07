@@ -15,7 +15,7 @@ public record MockResponseConfig
     public int? StatusCode { get; init; }
 
     /// <summary>
-    /// Value of Content-Type HTTP header to be returned. Default is application/json.<br/>
+    /// Value of Content-Type HTTP header to be returned. Used to select the corresponding example or schema.<br/>
     /// Policy expressions aren't allowed.
     /// </summary>
     public string? ContentType { get; init; }

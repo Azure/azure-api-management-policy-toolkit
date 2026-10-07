@@ -11,7 +11,7 @@ public interface IProduct
     string Id { get; }
     string Name { get; }
     ProductState State { get; }
-    int? SubscriptionLimit { get; }
+    int? SubscriptionsLimit { get; }
     bool SubscriptionRequired { get; }
 }
 

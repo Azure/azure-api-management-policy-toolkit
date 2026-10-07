@@ -112,4 +112,34 @@ public class CacheRemoveValueTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldCompileFailOnCacheRemovalError()
+    {
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.CacheRemoveValue(new CacheRemoveValueConfig
+            {
+                Key = "cacheKey",
+                FailOnCacheRemovalError = true
+            });
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(CompilerTestInitialize.InboundXml(
+            """
+            <cache-remove-value key="cacheKey" fail-on-cache-removal-error="true" />
+            """));
+    }
+
+    [TestMethod]
+    public void ShouldTreatNullConfigPropertyAsNotSet()
+    {
+        var code = CompilerTestInitialize.InboundDocument(
+            """
+            context.CacheRemoveValue(new CacheRemoveValueConfig { Key = "k", CachingType = null });
+            """);
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            CompilerTestInitialize.InboundXml("""<cache-remove-value key="k" />"""));
+    }
 }

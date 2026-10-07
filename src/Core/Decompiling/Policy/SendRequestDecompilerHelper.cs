@@ -7,6 +7,12 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling.Policy;
 
 internal static class SendRequestDecompilerHelper
 {
+    // A certificate body written as a literal can't be assigned to the byte[] Body property, so the
+    // request is kept as written, like a standalone authentication-certificate.
+    public static bool HasLiteralCertificateBody(XElement element, PolicyDecompilerContext context) =>
+        element.Element("authentication-certificate")?.Attribute("body")?.Value is { } body &&
+        !context.IsExpression(body) && !PolicyDecompilerContext.ContainsNamedValueToken(body);
+
     public static void EmitAuthentication(PolicyDecompilerContext context, XElement element, List<string> props)
     {
         var authBasic = element.Element("authentication-basic");
@@ -26,6 +32,10 @@ internal static class SendRequestDecompilerHelper
             var certId = authCert.Attribute("certificate-id")?.Value;
             if (thumb != null) certProps.Add($"Thumbprint = {context.HandleValue(thumb, "Thumbprint")}");
             if (certId != null) certProps.Add($"CertificateId = {context.HandleValue(certId, "CertificateId")}");
+            var certBody = authCert.Attribute("body")?.Value;
+            if (certBody != null) certProps.Add($"Body = {context.HandleValue(certBody, "Body", "byte[]")}");
+            var certPassword = authCert.Attribute("password")?.Value;
+            if (certPassword != null) certProps.Add($"Password = {context.HandleValue(certPassword, "Password")}");
             props.Add($"Authentication = new CertificateAuthenticationConfig {{ {string.Join(", ", certProps)} }}");
             return;
         }
@@ -37,6 +47,8 @@ internal static class SendRequestDecompilerHelper
             var miProps = new List<string> { $"Resource = {context.HandleValue(resource, "Resource")}" };
             var clientId = authMi.Attribute("client-id")?.Value;
             if (clientId != null) miProps.Add($"ClientId = {context.HandleValue(clientId, "ClientId")}");
+            context.AddOptionalStringProp(miProps, authMi, "output-token-variable-name", "OutputTokenVariableName");
+            context.AddOptionalBoolProp(miProps, authMi, "ignore-error", "IgnoreError");
             props.Add($"Authentication = new ManagedIdentityAuthenticationConfig {{ {string.Join(", ", miProps)} }}");
         }
     }

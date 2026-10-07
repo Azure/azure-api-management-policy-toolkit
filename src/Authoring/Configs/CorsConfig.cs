@@ -19,12 +19,12 @@ public record CorsConfig
     public bool? AllowCredentials { get; init; }
 
     /// <summary>
-    /// Specifies whether preflight OPTIONS requests will be terminated automatically without forwarding to the backend.<br/>
-    /// Default value is "true". Set to "false" to pass OPTIONS requests to the backend.<br/>
+    /// Controls the processing of cross-origin requests that don't match the policy settings.<br/>
+    /// When true, such a request is terminated with an empty 200 OK response; when false, it continues without the CORS headers.<br/>
     /// Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public string? TerminateUnmatchedRequest { get; init; }
+    public bool? TerminateUnmatchedRequest { get; init; }
 
     /// <summary>
     /// List of origins allowed to make cross-origin calls to your API.<br/>

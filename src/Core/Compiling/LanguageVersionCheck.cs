@@ -15,6 +15,10 @@ internal static class LanguageVersionCheck
 {
     private static readonly ConditionalWeakTable<Compilation, DownlevelCompilation> DownlevelCompilations = new();
 
+    // A line break inside an interpolation is a C# 11 feature of the source only: the emitted expression is
+    // normalized, which puts every interpolation on one line.
+    private const string NewlineInInterpolation = "CS8967";
+
     // API Management compiles policy expressions as C# 7, so the helper code emitted into this expression is bound
     // again as C# 7.3 and any newer language feature it uses is reported at its source location.
     public static void ReportNewerLanguageFeatures(IDocumentCompilationContext context, IEnumerable<SyntaxNode> sources)
@@ -40,6 +44,7 @@ internal static class LanguageVersionCheck
             foreach (var diagnostic in model.GetDiagnostics(source.Span))
             {
                 if (diagnostic.Severity == DiagnosticSeverity.Error &&
+                    diagnostic.Id != NewlineInInterpolation &&
                     !existing.Contains((diagnostic.Location.SourceSpan, diagnostic.Id)) &&
                     reported.Add((diagnostic.Location.SourceSpan, diagnostic.Id)))
                 {

@@ -13,6 +13,6 @@ public class MockProduct : IProduct
     public string Id { get; set; }
     public string Name { get; set; }
     public ProductState State { get; set; }
-    public int? SubscriptionLimit { get; set; }
+    public int? SubscriptionsLimit { get; set; }
     public bool SubscriptionRequired { get; set; }
 }

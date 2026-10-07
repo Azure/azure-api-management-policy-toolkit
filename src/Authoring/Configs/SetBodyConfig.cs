@@ -10,7 +10,10 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 public record SetBodyConfig
 {
     /// <summary>
-    /// Optional. Specifies a template to use for the body content.
+    /// Optional. Specifies a template to use for the body content. The only supported value is "liquid".<br/>
+    /// With a liquid template the gateway returns the characters &lt;, &gt; and &amp; that are written as text
+    /// XML-escaped (&amp;lt;, &amp;gt;, &amp;amp;), also inside a CDATA section. They are unaffected inside liquid tags
+    /// and when the content is well-formed XML, which the compiler writes as markup.
     /// </summary>
     public string? Template { get; init; }
 

@@ -352,4 +352,41 @@ public class WithIdCompilationTests
             """;
         result.Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    [DataRow("""context.SetHeader("X-A", "1"); context.WithId("orphan");""")]
+    [DataRow("""context.WithId("orphan"); context.WithId("kept"); context.Base();""")]
+    [DataRow("""context.WithId("orphan"); context.WithId("kept").SetHeader("X-A", "1");""")]
+    public void ShouldReportWithIdThatNoPolicyFollows(string statements)
+    {
+        var result = CompilerTestInitialize.InboundDocument(statements).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error =>
+            error.Id == "APIM2033" && error.GetMessage(null).Contains("orphan"));
+    }
+
+    [TestMethod]
+    [DataRow("context.NotAPolicy();")]
+    [DataRow("var x = 5;")]
+    [DataRow("context.ToString;")]
+    public void ShouldNotMoveAnIdPastAStatementThatIsNotAPolicy(string statement)
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            $"""context.WithId("lost"); {statement} context.Base();""").CompileDocument();
+
+        result.Document.Descendants().Where(element => element.Attribute("id") is not null).Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public void ShouldNotMoveIdOfAPolicyThatFailedToTheNextPolicy()
+    {
+        var result = CompilerTestInitialize.InboundDocument(
+            """
+            context.WithId("limit").RateLimit(new RateLimitConfig { RenewalPeriod = 10 });
+            context.SetHeader("X-A", "1");
+            """).CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2006");
+        result.Document.Descendants("set-header").Single().Attribute("id").Should().BeNull();
+    }
 }
