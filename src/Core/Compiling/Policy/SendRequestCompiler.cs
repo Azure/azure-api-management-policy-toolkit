@@ -84,7 +84,8 @@ public class SendRequestCompiler : IMethodPolicyHandler
         IReadOnlyDictionary<string, InitializerValue> values,
         string policy)
     {
-        // SendRequestConfig and SendOneWayRequestConfig name these properties the same
+        // SendRequestConfig and SendOneWayRequestConfig name these properties the same; the gateway reads attribute
+        // values as written, so copy is the only spelling
         if (values.TryGetValue(nameof(SendRequestConfig.Mode), out var mode) &&
             (mode.Value == "copy" || mode.Value is { } written && (written.StartsWith('@') || written.Contains("{{"))))
         {

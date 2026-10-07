@@ -121,6 +121,19 @@ public class SectionAlignmentTests
                 {
                 }
 
+                // what the section contexts share isn't a section's own context
+                public void Inbound(IHaveExpressionContext shared)
+                {
+                }
+
+                // a section returns nothing: these are helpers
+                public string Outbound(IOutboundContext context) => "x";
+
+                public string OnError(Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.IOnErrorContext context)
+                {
+                    return "x";
+                }
+
                 public class Nested
                 {
                     public void Outbound(IOutboundContext context)

@@ -743,38 +743,36 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
 
     private bool TryGetNamedValue(IMethodSymbol method, out string value)
     {
-        var attribute = method.GetAttributes().FirstOrDefault(candidate =>
-            candidate.AttributeClass?.Name == "NamedValueAttribute");
-        if (attribute?.ConstructorArguments is
-            [{ Value: string configuredValue }])
-        {
-            value = configuredValue.Contains("{{", StringComparison.Ordinal)
-                ? configuredValue
-                : $"{{{{{configuredValue}}}}}";
-            return true;
-        }
-
-        if (TryGetMethodDeclaration(method, out var declaration))
-        {
-            var attributeSyntax = declaration.AttributeLists
-                .SelectMany(list => list.Attributes)
-                .FirstOrDefault(candidate => candidate.Name.ToString() is "NamedValue" or "NamedValueAttribute");
-            var argument = attributeSyntax?.ArgumentList?.Arguments.FirstOrDefault()?.Expression;
-            if (argument is not null)
-            {
-                var constant = ModelFor(argument.SyntaxTree)?.GetConstantValue(argument);
-                if (constant is { HasValue: true, Value: string syntaxValue })
-                {
-                    value = syntaxValue.Contains("{{", StringComparison.Ordinal)
-                        ? syntaxValue
-                        : $"{{{{{syntaxValue}}}}}";
-                    return true;
-                }
-            }
-        }
-
         value = string.Empty;
-        return false;
+        var attribute = method.GetAttributes().FirstOrDefault(CompilerUtils.IsNamedValueAttribute);
+        if (attribute is null)
+        {
+            return false;
+        }
+
+        string? configured = null;
+        if (attribute.ConstructorArguments is [{ Value: string bound }])
+        {
+            configured = bound;
+        }
+        // an attribute whose type couldn't be resolved has no bound arguments: its argument is read as written
+        else if (attribute.ApplicationSyntaxReference?.GetSyntax() is AttributeSyntax
+                 {
+                     ArgumentList.Arguments: [{ Expression: var argument }, ..]
+                 })
+        {
+            configured = ModelFor(argument.SyntaxTree)?.GetConstantValue(argument) is { HasValue: true, Value: string written }
+                ? written
+                : null;
+        }
+
+        if (configured is null)
+        {
+            return false;
+        }
+
+        value = configured.Contains("{{", StringComparison.Ordinal) ? configured : $"{{{{{configured}}}}}";
+        return true;
     }
 
     private void ReportCannotFindMethod(InvocationExpressionSyntax invocation)

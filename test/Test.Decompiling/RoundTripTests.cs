@@ -583,6 +583,35 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void SetBodyWithoutTemplate_KeepsWhitespaceAsWritten()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <set-body>
+                        <root>
+                            <a> </a>
+                            <b />
+                        </root>
+                    </set-body>
+                </inbound>
+            </policies>
+            """;
+        var body = XDocument.Parse(xml, LoadOptions.PreserveWhitespace).Descendants("set-body").Single();
+        var expected = string.Concat(body.Nodes().Select(n => n.ToString(SaveOptions.DisableFormatting)))
+            .ReplaceLineEndings("\n");
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        var result = CompileCSharp(csharp);
+
+        result.Errors.Should().BeEmpty("the decompiled C# should compile.\nGenerated C#:\n{0}", csharp);
+        // a body without a template is text: its markup is kept as written, whitespace included
+        var compiled = result.Document.Descendants("set-body").Single();
+        compiled.Elements().Should().BeEmpty();
+        compiled.Value.ReplaceLineEndings("\n").Should().Be(expected, "Generated C#:\n{0}", csharp);
+    }
+
+    [TestMethod]
     public void SetBodyWithMarkup_KeepsInnerXml()
     {
         var xml = """

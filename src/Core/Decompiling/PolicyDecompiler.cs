@@ -278,6 +278,7 @@ public class PolicyDecompiler
         return doc;
     }
 
+    // Whitespace in a set-body written as markup, liquid or not, is body content: a SOAP body is kept as written.
     private static bool IsInMarkupBody(XText text) =>
         text.Ancestors("set-body").FirstOrDefault() is { } body && !RawXmlContent.IsValueElementBody(body) &&
         (body.HasElements || RawXmlContent.IsMarkupBody(body));
@@ -443,7 +444,7 @@ public class PolicyDecompiler
     }
 
     private static readonly Regex Entity =
-        new(@"&(lt|gt|amp|quot|apos|#[0-9]+|#x[0-9A-Fa-f]+);", RegexOptions.Compiled);
+        new(@"&(" + RawXmlContent.Entities + @");", RegexOptions.Compiled);
 
     // The markup of a liquid body is template text: an @(...) in it is XML-escaped like the rest, in rawxml too.
     private static bool IsInLiquidMarkup(XElement? element) =>

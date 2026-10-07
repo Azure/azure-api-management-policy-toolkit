@@ -251,6 +251,11 @@ public class PolicyDecompilerContext
         int pos = 0;
         foreach (Match match in NamedValueTokenPattern.Matches(value))
         {
+            if (!IsValidTokenName(match.Groups[1].Value))
+            {
+                continue;
+            }
+
             if (match.Index > pos)
             {
                 parts.Add(Literal(value.Substring(pos, match.Index - pos)));
@@ -296,10 +301,11 @@ public class PolicyDecompilerContext
     }
 
     public static bool IsNamedValueToken(string value) =>
-        NamedValueTokenPattern.Match(value) is { Success: true } match && match.Length == value.Length;
+        NamedValueTokenPattern.Match(value) is { Success: true } match && match.Length == value.Length &&
+        IsValidTokenName(match.Groups[1].Value);
 
     public static bool ContainsNamedValueToken(string value) =>
-        NamedValueTokenPattern.IsMatch(value);
+        NamedValueTokenPattern.Matches(value).Any(match => IsValidTokenName(match.Groups[1].Value));
 
     public static string ReplaceNamedValueTokens(string body)
     {
@@ -488,11 +494,12 @@ public class PolicyDecompilerContext
 
     // A {{name}} token in a string, starting at the match position; names have API Management's name characters.
     private static readonly Regex StringTokenPattern = new(
-        @"\G\{\{\s*([A-Za-z0-9_.\-]+)\s*\}\}",
+        @"\G\{\{\s*(" + RazorCodeFormatter.NamedValueName + @")\s*\}\}",
         RegexOptions.Compiled);
 
+    // A {{name}} token in a value; a name is one with IsValidTokenName, as in a string
     public static readonly Regex NamedValueTokenPattern = new(
-        @"\{\{([A-Za-z][A-Za-z0-9_.\-]*)\}\}",
+        @"\{\{(" + RazorCodeFormatter.NamedValueName + @")\}\}",
         RegexOptions.Compiled);
 
     #endregion

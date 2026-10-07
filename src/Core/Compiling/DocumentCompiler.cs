@@ -41,18 +41,21 @@ public class DocumentCompiler
         return context;
     }
 
-    // A section takes one section context of the authoring library: an overload such as Inbound(int) isn't one.
-    // The name as written decides only when the type can't be resolved.
+    // A section returns nothing and takes one section context of the authoring library: an overload such as
+    // Inbound(int) isn't one, nor is one taking IHaveExpressionContext, which is what the section contexts share,
+    // nor a helper returning a value. The name as written decides only when the type can't be resolved.
     private static bool TakesSectionContext(MethodDeclarationSyntax method, SemanticModel model)
     {
-        if (method.ParameterList.Parameters is not [{ Type: { } type }])
+        if (method.ParameterList.Parameters is not [{ Type: { } type }] ||
+            method.ReturnType is not PredefinedTypeSyntax { Keyword.ValueText: "void" })
         {
             return false;
         }
 
         if (model.GetTypeInfo(type).Type is { TypeKind: not TypeKind.Error } symbol)
         {
-            return PolicyExpressionCompiler.IsAuthoringSectionContext(symbol);
+            return PolicyExpressionCompiler.IsAuthoringSectionContext(symbol) &&
+                   symbol.Name != nameof(IHaveExpressionContext);
         }
 
         var name = type switch
@@ -61,7 +64,8 @@ public class DocumentCompiler
             AliasQualifiedNameSyntax aliased => aliased.Name,
             _ => type as SimpleNameSyntax
         };
-        return name is not null && PolicyExpressionCompiler.IsSectionContextName(name.Identifier.ValueText);
+        return name is not null && name.Identifier.ValueText != nameof(IHaveExpressionContext) &&
+               PolicyExpressionCompiler.IsSectionContextName(name.Identifier.ValueText);
     }
 
     private void CompilePolicy(DocumentCompilationContext context, IEnumerable<MethodDeclarationSyntax> methods)

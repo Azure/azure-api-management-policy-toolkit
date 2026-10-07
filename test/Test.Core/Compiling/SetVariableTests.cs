@@ -162,6 +162,8 @@ public class SetVariableTests
     // Uri values are reported too; the references of this test compilation don't resolve it
     [DataRow("object", "new { a = 1 }")]
     [DataRow("System.DayOfWeek", "System.DayOfWeek.Monday")]
+    [DataRow("System.DayOfWeek?", "context.Request.Method == \"GET\" ? System.DayOfWeek.Monday : (System.DayOfWeek?)null")]
+    [DataRow("System.DayOfWeek?", "null")]
     [DataRow("object", "System.Tuple.Create(1, \"a\")")]
     [DataRow("object", "new System.Collections.Generic.Dictionary<string, string>()")]
     [DataRow("int[]", "new[] { 1 }")]

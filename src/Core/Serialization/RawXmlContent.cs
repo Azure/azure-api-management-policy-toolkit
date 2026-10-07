@@ -71,8 +71,11 @@ public static class RawXmlContent
     // tag starts with a letter of any script, _ or :. A policy has no DTD, so the only entities are XML's five and
     // character references; an HTML entity such as &nbsp; is text.
     private static readonly Regex StrayCharacter = new(
-        @"<!\[CDATA\[.*?\]\]>|<!--.*?-->|<(?![\p{L}_:/!?])|&(?!(?:lt|gt|amp|quot|apos|#[0-9]+|#x[0-9A-Fa-f]+);)",
+        @"<!\[CDATA\[.*?\]\]>|<!--.*?-->|<(?![\p{L}_:/!?])|&(?!(?:" + Entities + @");)",
         RegexOptions.Compiled | RegexOptions.Singleline);
+
+    // What an entity may be in a policy, which has no DTD: XML's five and a character reference.
+    internal const string Entities = "lt|gt|amp|quot|apos|#[0-9]+|#x[0-9A-Fa-f]+";
 
     private static string Escape(Match match) => match.Value switch
     {

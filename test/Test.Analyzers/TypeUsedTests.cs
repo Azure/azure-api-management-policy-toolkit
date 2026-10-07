@@ -542,6 +542,12 @@ public class TypeUsedTests
                     context.SetHeader("X-Retries", Secret());
                 }
 
+                // nor is one taking what the section contexts share
+                public void Inbound(IHaveExpressionContext context)
+                {
+                    Secret();
+                }
+
                 // a fragment's section isn't one of a document's
                 public void Fragment(IFragmentContext context)
                 {

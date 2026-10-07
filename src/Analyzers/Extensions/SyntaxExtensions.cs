@@ -269,8 +269,10 @@ public static class SyntaxExtensions
         static SyntaxNode? Part(IMethodSymbol method) =>
             method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().Parent;
 
+        // IHaveExpressionContext is what the section contexts share, not a section's own
         static bool TakesOneSectionContext(IMethodSymbol method) =>
-            method.Parameters.Length == 1 && method.Parameters[0].Type.IsSectionContext();
+            method.Parameters.Length == 1 && method.Parameters[0].Type.IsSectionContext() &&
+            method.Parameters[0].Type.ToFullyQualifiedString() != SectionContext;
     }
 
     // using S = Some.Namespace.Shared; gives the name S the meaning of Shared in the file

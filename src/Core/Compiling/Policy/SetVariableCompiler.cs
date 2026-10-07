@@ -117,10 +117,16 @@ public class SetVariableCompiler : IMethodPolicyHandler
             return model.GetTypeInfo(value).Type is { } type && IsRejectedValueType(type) ? type : null;
         }
 
-        if (method.GetAttributes().Any(attribute => attribute.AttributeClass?.Name == nameof(NamedValueAttribute)) ||
+        if (method.GetAttributes().Any(CompilerUtils.IsNamedValueAttribute) ||
             !(visited ??= new HashSet<ISymbol>(SymbolEqualityComparer.Default)).Add(method))
         {
             return null;
+        }
+
+        // a helper declared with a rejected type returns one whatever it returns: DayOfWeek? Day() => null
+        if (IsRejectedValueType(method.ReturnType))
+        {
+            return method.ReturnType;
         }
 
         var returned = declaration.ExpressionBody is { } arrow
@@ -138,6 +144,8 @@ public class SetVariableCompiler : IMethodPolicyHandler
     {
         null or IDynamicTypeSymbol or IErrorTypeSymbol => false,
         { TypeKind: TypeKind.Enum } => true,
+        INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable =>
+            IsRejectedValueType(nullable.TypeArguments[0]),
         IArrayTypeSymbol array => array.Rank != 1 || array.ElementType.SpecialType is not
             (SpecialType.System_String or SpecialType.System_Byte),
         INamedTypeSymbol named => named.IsAnonymousType || named.IsTupleType ||

@@ -15,8 +15,11 @@ public static class RazorCodeFormatter
 {
     private readonly static Regex CSharpCodeStart = new Regex("(@\\()|(@{)", RegexOptions.Compiled);
 
+    // The characters of a named value's name, as API Management allows them.
+    internal const string NamedValueName = @"[A-Za-z0-9_.\-]+";
+
     // A named value token such as {{port}} can be used as code; it would parse as nested blocks.
-    private readonly static Regex NamedValueToken = new Regex(@"\{\{[A-Za-z0-9_.\-]+\}\}", RegexOptions.Compiled);
+    private readonly static Regex NamedValueToken = new Regex(@"\{\{" + NamedValueName + @"\}\}", RegexOptions.Compiled);
 
     /// <summary>
     /// Reflows the C# inside policy expressions (<c>@(...)</c> and <c>@{...}</c>) directly
