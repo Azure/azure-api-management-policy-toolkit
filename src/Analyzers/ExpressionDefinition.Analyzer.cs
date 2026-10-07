@@ -30,7 +30,9 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
     // does not convert its value, so this follows the types it accepts as the value of a variable, with two
     // additions the set-variable compiler reports there: System.Uri and enums, which a helper may return for use
     // inside a larger expression. object is here because the decompiler declares the helper of a set-variable
-    // value as object. Nullable and array forms and enums are handled in IsAllowedReturnType.
+    // value as object. Nullable and array forms and enums are handled in IsAllowedReturnType: a nullable type is
+    // allowed when its type is, although the gateway's list omits bool?, sbyte? and TimeSpan?, which haven't been
+    // probed.
     private readonly static IReadOnlyCollection<string> AllowedExpressionReturnTypes = new HashSet<string>()
     {
         "System.Boolean",
@@ -69,10 +71,10 @@ public class ExpressionDefinitionAnalyzer : DiagnosticAnalyzer
         {
             case { TypeKind: TypeKind.Enum }:
                 return true;
-            // the gateway accepts string[] and byte[] as the value of an expression, but not int[]
+            // the gateway accepts byte[] and sbyte[] as the value of an expression, no other array
             case IArrayTypeSymbol { Rank: 1 } array:
                 return array.ElementType.SpecialType is
-                    SpecialType.System_String or SpecialType.System_Byte;
+                    SpecialType.System_Byte or SpecialType.System_SByte;
             case INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable:
                 return IsAllowedReturnType(nullable.TypeArguments[0]);
             default:

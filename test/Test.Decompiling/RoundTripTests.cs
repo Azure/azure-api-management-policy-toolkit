@@ -201,6 +201,31 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    [DataRow("_x", DisplayName = "Starting with an underscore")]
+    [DataRow("1x", DisplayName = "Starting with a digit")]
+    [DataRow("a.b-c_d", DisplayName = "With every name character")]
+    public void NamedValueTokenNamedWithAnyNameCharacters_IsANamedValue(string name)
+    {
+        var xml = $"<policies><inbound><set-variable name=\"key\" value=\"{{{{{name}}}}}\" /></inbound></policies>";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain($"\"{name}\"").And.NotContain($"{{{{{name}}}}}");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void NamedValueTokenWithoutALetter_IsText()
+    {
+        var xml = """<policies><inbound><set-variable name="key" value="{{123}}" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("\"{{123}}\"");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
     public void NamedValueTokenConcatenatedWithVariable_RoundTrips()
     {
         var xml = """<policies><inbound><set-variable name="url" value="@{var id = context.Request.Url.Path;return &quot;{{Base}}/&quot; + id;}" /></inbound></policies>""";

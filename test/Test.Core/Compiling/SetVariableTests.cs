@@ -167,6 +167,16 @@ public class SetVariableTests
     [DataRow("object", "System.Tuple.Create(1, \"a\")")]
     [DataRow("object", "new System.Collections.Generic.Dictionary<string, string>()")]
     [DataRow("int[]", "new[] { 1 }")]
+    [DataRow("string[]", "new[] { \"a\" }")]
+    [DataRow("System.Collections.Generic.List<string>", "new System.Collections.Generic.List<string>()")]
+    [DataRow("System.Collections.Generic.IEnumerable<string>", "new[] { \"a\" }")]
+    [DataRow("System.Collections.ObjectModel.ReadOnlyCollection<string>", "new System.Collections.ObjectModel.ReadOnlyCollection<string>(new[] { \"a\" })")]
+    [DataRow("System.Collections.Hashtable", "new System.Collections.Hashtable()")]
+    [DataRow("System.Collections.Generic.HashSet<string>", "new System.Collections.Generic.HashSet<string>()")]
+    [DataRow("System.Collections.ObjectModel.ReadOnlyDictionary<string, string>", "new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new System.Collections.Generic.Dictionary<string, string>())")]
+    [DataRow("System.Collections.Generic.Dictionary<string, string>.KeyCollection", "new System.Collections.Generic.Dictionary<string, string>().Keys")]
+    [DataRow("System.Linq.IOrderedEnumerable<string>", "System.Linq.Enumerable.OrderBy(new[] { \"a\" }, x => x)")]
+    [DataRow("byte?[]", "new byte?[] { 1 }")]
     [DataRow("object", "Inner(context)")]
     [DataRow("object", "(object)new { a = 1 }")]
     [DataRow("object", "((object)(Inner(context)))")]
@@ -192,8 +202,8 @@ public class SetVariableTests
     }
 
     [TestMethod]
-    [DataRow("string[]", "new[] { \"a\" }")]
     [DataRow("byte[]", "new byte[] { 1 }")]
+    [DataRow("sbyte[]", "new sbyte[] { 1 }")]
     [DataRow("object", "context.RequestId")]
     [DataRow("System.TimeSpan", "context.Elapsed")]
     public void ShouldAcceptVariableValueOfATypeTheGatewayAccepts(string returnType, string expression)

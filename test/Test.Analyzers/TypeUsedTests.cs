@@ -548,6 +548,19 @@ public class TypeUsedTests
                     Secret();
                 }
 
+                // a method returning an enum or an interface of the authoring library isn't a configuration factory
+                static DocumentScope Scope()
+                {
+                    Secret();
+                    return DocumentScope.Api;
+                }
+
+                static IHaveExpressionContext Holder()
+                {
+                    Secret();
+                    return null!;
+                }
+
                 // a fragment's section isn't one of a document's
                 public void Fragment(IFragmentContext context)
                 {

@@ -381,17 +381,18 @@ public static class CompilerUtils
         return false;
     }
 
-    /// <summary>
-    /// Reports a literal value outside the range the gateway accepts. A value given by an expression
-    /// can't be checked.
-    /// </summary>
-    // The authoring library's [NamedValue], by its type, or by its name alone when the type can't be resolved.
+    // The authoring library's [NamedValue], by its type, or by its name alone when the type can't be resolved,
+    // an ambiguous one included.
     public static bool IsNamedValueAttribute(AttributeData attribute) =>
         attribute.AttributeClass is { } type &&
         (type.TypeKind == TypeKind.Error
             ? type.Name is "NamedValue" or "NamedValueAttribute"
             : type.ToDisplayString() == "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.NamedValueAttribute");
 
+    /// <summary>
+    /// Reports a literal value outside the range the gateway accepts. A value given by an expression
+    /// can't be checked.
+    /// </summary>
     public static bool ReportIfOutOfRange(
         this IDocumentCompilationContext context,
         IReadOnlyDictionary<string, InitializerValue> parameters,

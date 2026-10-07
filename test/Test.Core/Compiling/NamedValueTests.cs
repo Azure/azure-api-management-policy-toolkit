@@ -31,6 +31,34 @@ public class NamedValueTests
     )]
     [DataRow(
         """
+        // a second NamedValueAttribute in scope leaves the attribute unresolved: it is read by its name as written
+        public class NamedValueAttribute : Attribute
+        {
+            public NamedValueAttribute(string value) { }
+        }
+
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetVariable("key", Key(context.ExpressionContext));
+            }
+
+            [NamedValue("Api-Key")]
+            string Key(IExpressionContext context) => throw new NotImplementedException();
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-variable name="key" value="{{Api-Key}}" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile NamedValue that can't be resolved by its name"
+    )]
+    [DataRow(
+        """
         [Document]
         public class PolicyDocument : IDocument
         {

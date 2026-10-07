@@ -23,6 +23,7 @@ public static class CompilerTestInitialize
         MetadataReference.CreateFromFile(
             Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location)!, "System.Runtime.dll")),
         MetadataReference.CreateFromFile(typeof(XElement).Assembly.Location),
+        MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
         MetadataReference.CreateFromFile(typeof(IDocument).Assembly.Location)
     ];
 

@@ -84,9 +84,10 @@ public class SetVariableCompiler : IMethodPolicyHandler
         return literal is null ? null : $"@({literal})";
     }
 
-    // The gateway types the expression itself, not the helper that holds it, and rejects these as the value
-    // of a variable: Uri, enums, anonymous types, tuples, dictionaries and arrays other than string[] and
-    // byte[]. It rejects object too, but an expression typed object in C# is often a call to another helper
+    // The gateway types the expression itself, not the helper that holds it, and accepts a list of value types:
+    // scalars, most of their nullable forms, byte[] and sbyte[], and the Newtonsoft types. Of what it rejects,
+    // this reports Uri, enums, anonymous types, tuples, other arrays and every type of System.Collections and
+    // System.Linq. It rejects object too, but an expression typed object in C# is often a call to another helper
     // whose own expression has an accepted type, so that isn't reported: the helper it calls is looked at instead.
     private static ITypeSymbol? FindRejectedValueType(
         IDocumentCompilationContext context,
@@ -144,16 +145,16 @@ public class SetVariableCompiler : IMethodPolicyHandler
     {
         null or IDynamicTypeSymbol or IErrorTypeSymbol => false,
         { TypeKind: TypeKind.Enum } => true,
+        // a nullable value is as its value; the list omits bool?, sbyte? and TimeSpan?, which haven't been probed
         INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable =>
             IsRejectedValueType(nullable.TypeArguments[0]),
+        // the gateway's list of value types has byte[] and sbyte[] as its only arrays and no collection
         IArrayTypeSymbol array => array.Rank != 1 || array.ElementType.SpecialType is not
-            (SpecialType.System_String or SpecialType.System_Byte),
+            (SpecialType.System_Byte or SpecialType.System_SByte),
         INamedTypeSymbol named => named.IsAnonymousType || named.IsTupleType ||
                                   named.ToDisplayString() == "System.Uri" ||
-                                  named.OriginalDefinition.ToDisplayString() is
-                                      "System.Collections.Generic.Dictionary<TKey, TValue>" or
-                                      "System.Collections.Generic.IDictionary<TKey, TValue>" or
-                                      "System.Collections.Generic.IReadOnlyDictionary<TKey, TValue>" ||
+                                  named.ContainingNamespace?.ToDisplayString() is { } space &&
+                                  (space is "System.Collections" or "System.Linq" || space.StartsWith("System.Collections.")) ||
                                   named.OriginalDefinition.ToDisplayString().StartsWith("System.Tuple<"),
         _ => false
     };
