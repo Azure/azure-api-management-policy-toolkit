@@ -58,8 +58,7 @@ public static class FileUtils
         }
 
         var fileRelativePath = Path.GetDirectoryName(Path.GetRelativePath(data.SourceFolder, data.SourceFilePath))!;
-        var targetFolder = Path.Combine(data.OutputFolder, fileRelativePath);
-        var targetFile = Path.Combine(targetFolder, data.OutputFilePath);
+        var targetFile = PathUtils.GetPathWithinFolder(data.OutputFolder, fileRelativePath, data.OutputFilePath);
         var directoryPath = Path.GetDirectoryName(targetFile);
         if (directoryPath is not null && !Directory.Exists(directoryPath))
         {
