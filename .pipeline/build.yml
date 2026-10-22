@@ -96,7 +96,7 @@ extends:
                   command: 'restore'
                   projects: '$(mainProjectPath)'
                   feedsToUse: select
-                  vstsFeed: 'ApiManagement'
+                  vstsFeed: 'One/ApiManagementPolicyToolkit'
                   includeNuGetOrg: false
 
               - task: DotNetCoreCLI@2
