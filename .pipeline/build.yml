@@ -72,6 +72,36 @@ extends:
                     Write-Host "##vso[task.setvariable variable=PackageVersion]$packageVersion"
                     Write-Host "##vso[build.updatebuildnumber]$packageVersion"
 
+              - task: PowerShell@2
+                displayName: 'Pin NuGet documentation to release tag'
+                condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+                inputs:
+                  targetType: inline
+                  script: |
+                    $tag = $env:BUILD_SOURCEBRANCH.Substring('refs/tags/'.Length)
+                    $repositoryUrl = 'https://github.com/Azure/azure-api-management-policy-toolkit'
+                    $documentationUrl = "$repositoryUrl/tree/$tag"
+                    $projects = Get-ChildItem -Path "$env:BUILD_SOURCESDIRECTORY\src\*\*.csproj"
+
+                    foreach ($project in $projects)
+                    {
+                        $content = [System.IO.File]::ReadAllText($project.FullName)
+                        if (-not $content.Contains('<PackageReadmeFile>README.md</PackageReadmeFile>'))
+                        {
+                            continue
+                        }
+
+                        $content = $content.Replace('<PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>', "<PackageProjectUrl>$documentationUrl</PackageProjectUrl>")
+                        $content = $content.Replace("Read more about it at $repositoryUrl", "Read more about it at $documentationUrl")
+                        [System.IO.File]::WriteAllText($project.FullName, $content)
+
+                        $readmePath = Join-Path $project.DirectoryName 'README.md'
+                        $readme = [System.IO.File]::ReadAllText($readmePath)
+                        $readme = $readme.Replace("$repositoryUrl/blob/main/", "$repositoryUrl/blob/$tag/")
+                        $readme = $readme.Replace("$repositoryUrl/tree/main/", "$repositoryUrl/tree/$tag/")
+                        [System.IO.File]::WriteAllText($readmePath, $readme)
+                    }
+
               - task: UseDotNet@2
                 displayName: 'Setup .NET 10 SDK'
                 inputs:
