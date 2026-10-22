@@ -23,8 +23,6 @@ public class PathUtilsTests
         yield return ["UserPolicy", "cshtml", "UserPolicy.cshtml"];
         yield return ["UserPolicy", ".cshtml", "UserPolicy.cshtml"];
         yield return ["UserPolicy.cshtml", "xml", "UserPolicy.cshtml"];
-        yield return [$"{Path.DirectorySeparatorChar}UserPolicy", "xml", "UserPolicy.xml"];
-        yield return [$"{Path.AltDirectorySeparatorChar}UserPolicy", "xml", "UserPolicy.xml"];
         yield return
         [
             $"Folder{Path.DirectorySeparatorChar}UserPolicy", "xml",
@@ -37,26 +35,6 @@ public class PathUtilsTests
         ];
         yield return
         [
-            $"{Path.DirectorySeparatorChar}Folder{Path.DirectorySeparatorChar}UserPolicy", "xml",
-            $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
-        ];
-        yield return
-        [
-            $"{Path.AltDirectorySeparatorChar}Folder{Path.AltDirectorySeparatorChar}UserPolicy", "xml",
-            $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
-        ];
-        yield return
-        [
-            $"{Path.DirectorySeparatorChar}Folder{Path.AltDirectorySeparatorChar}UserPolicy", "xml",
-            $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
-        ];
-        yield return
-        [
-            $"{Path.AltDirectorySeparatorChar}Folder{Path.DirectorySeparatorChar}UserPolicy", "xml",
-            $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
-        ];
-        yield return
-        [
             $"Folder{Path.DirectorySeparatorChar}{Path.DirectorySeparatorChar}UserPolicy", "xml",
             $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
         ];
@@ -65,6 +43,32 @@ public class PathUtilsTests
             $"Folder{Path.AltDirectorySeparatorChar}{Path.AltDirectorySeparatorChar}UserPolicy", "xml",
             $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
         ];
+    }
+
+    [TestMethod]
+    [DataRow("../UserPolicy")]
+    [DataRow("Folder/../../UserPolicy")]
+    [DataRow(@"..\UserPolicy.xml")]
+    [DataRow(@"Folder\..\UserPolicy")]
+    public void PrepareOutputPath_WithParentDirectorySegment_ShouldThrow(string path)
+    {
+        var action = () => PathUtils.PrepareOutputPath(path, "xml");
+
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot contain parent directory segments*");
+    }
+
+    [TestMethod]
+    [DataRow("/UserPolicy")]
+    [DataRow(@"\UserPolicy")]
+    [DataRow("C:/UserPolicy")]
+    [DataRow(@"C:\UserPolicy.xml")]
+    public void PrepareOutputPath_WithRootedPath_ShouldThrow(string path)
+    {
+        var action = () => PathUtils.PrepareOutputPath(path, "xml");
+
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*must be relative*");
     }
 
     [TestMethod]

@@ -79,13 +79,31 @@ extends:
                   version: '11.0.100-rc.1.26425.128'
                   includePreviewVersions: true
 
+              - task: UseDotNet@2
+                displayName: 'Setup .NET 8 runtime'
+                inputs:
+                  packageType: 'runtime'
+                  version: '8.x'
+
+              - task: UseDotNet@2
+                displayName: 'Setup .NET 9 runtime'
+                inputs:
+                  packageType: 'runtime'
+                  version: '9.x'
+
+              - task: UseDotNet@2
+                displayName: 'Setup .NET 10 runtime'
+                inputs:
+                  packageType: 'runtime'
+                  version: '10.x'
+
               - task: DotNetCoreCLI@2
                 displayName: 'Restore main solution'
                 inputs:
                   command: 'restore'
                   projects: '$(mainProjectPath)'
                   feedsToUse: select
-                  vstsFeed: 'ApiManagement'
+                  vstsFeed: 'One/ApiManagementPolicyToolkit'
                   includeNuGetOrg: false
 
               - task: DotNetCoreCLI@2

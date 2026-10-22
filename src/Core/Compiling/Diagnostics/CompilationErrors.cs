@@ -358,4 +358,15 @@ public static class CompilationErrors
         description: "Description.",
         helpLinkUri: "TODO",
         customTags: ["APIM", "ApiManagement"]);
+
+    public readonly static DiagnosticDescriptor InvalidDocumentOutputPath = new(
+        "APIM2021",
+        "Invalid policy document output path",
+        "Document name '{0}' is invalid: {1}",
+        "PolicyDocumentCompilation",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Policy document names must resolve within the configured output folder.",
+        helpLinkUri: "TODO",
+        customTags: ["APIM", "ApiManagement"]);
 }
