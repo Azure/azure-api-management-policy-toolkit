@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Basic.Reference.Assemblies;
+
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 using Microsoft.CodeAnalysis;
@@ -14,8 +16,8 @@ public class BaseAnalyzerTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, MSTestV
 {
     public BaseAnalyzerTest(string source, params DiagnosticResult[] diags)
     {
-        ReferenceAssemblies = new ReferenceAssemblies("net10.0",
-            new PackageIdentity("Microsoft.NETCore.App.Ref", "10.0.0"), Path.Combine("ref", "net10.0"));
+        ReferenceAssemblies = new ReferenceAssemblies("net10.0");
+        TestState.AdditionalReferences.AddRange(Net100.References.All);
         TestState.AdditionalReferences.Add(
             MetadataReference.CreateFromFile(typeof(ExpressionAttribute).Assembly.Location));
         TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Expression<>).Assembly.Location));
