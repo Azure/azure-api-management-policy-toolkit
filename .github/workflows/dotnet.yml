@@ -33,7 +33,7 @@ jobs:
         run: dotnet test --no-build --logger trx --results-directory "TestResults"
       - name: Upload dotnet test results
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dotnet-test-results-${{ matrix.os }}
           path: TestResults
@@ -42,7 +42,7 @@ jobs:
         run: dotnet format style --verify-no-changes --report "FormatReport"
       - name: Upload format report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dotnet-format-report-${{ matrix.os }}
           path: FormatReport
@@ -95,7 +95,7 @@ jobs:
         run: dotnet test --no-build --logger trx --results-directory "TestResults"
       - name: Upload dotnet test results
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dotnet-test-results-example-${{ matrix.os }}
           path: ./example/TestResults
