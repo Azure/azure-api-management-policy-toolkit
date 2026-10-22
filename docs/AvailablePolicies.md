@@ -27,6 +27,31 @@ Notes:
 
 ## Implemented policies
 
+### Typed wait branches
+
+Use branch-scoped lambdas to author a `wait` policy in any section or fragment:
+
+```csharp
+context.Wait("any",
+    branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "response" }),
+    branch => branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cached" }));
+```
+
+Use `"all"` to wait for every branch, or `null` to omit the `for` attribute (APIM defaults to `"all"`).
+Each synchronous lambda must contain exactly one direct `SendRequest`, `CacheLookupValue`, or `if`/`else if`/`else`
+chain (compiled as `choose`). Conditional bodies may contain multiple sequential policies.
+Policy calls, conditions, and configuration expressions must use the branch context, not a captured outer context.
+Pass individual lambdas, not arrays or delegate references; context-producing helpers must have a source-proven
+branch-local origin. Constant `WithId` metadata is supported. Invalid shapes and captured contexts produce
+compiler diagnostic APIM2022 and authoring analyzer diagnostics APIM105/APIM106.
+
+The decompiler emits this typed form and binds child expressions to their branch context. The legacy
+`Wait(Action, string?)` overload remains compilable but is obsolete.
+**Emulator limitation:** typed `Wait` branches are supported for authoring and XML round-trips only;
+the toolkit's gateway emulator does not execute them. This does not add parallel emulator execution.
+
+### Policy list
+
 - ✅ authentication-basic
 - ✅ authentication-certificate
 - ✅ authentication-managed-identity
