@@ -30,7 +30,7 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 | ✅ | RedirectContentUrls | Outbound | None (no-arg) | No-op + callbacks | `emulator/redirect-content-urls` |
 | ✅ | Retry | Inbound, Outbound, Backend, OnError | RetryConfig + delegate | Wrapper/flow control | `emulator/retry` |
 | ✅ | SendOneWayRequest | Inbound, Outbound, Backend, OnError | SendOneWayRequestConfig | External service mock | `emulator/send-one-way-request` |
-| ⬜ | Trace | All sections | TraceConfig | Store interaction | `emulator/trace` |
+| ✅ | Trace | Inbound, Outbound, Backend | TraceConfig | No-op + callbacks | `emulator/trace` |
 | ⬜ | ValidateAzureAdToken | Inbound | ValidateAzureAdTokenConfig | Validation + short-circuit | `emulator/validate-azure-ad-token` |
 | ⬜ | ValidateClientCertificate | Inbound | ValidateClientCertificateConfig | Validation + short-circuit | `emulator/validate-client-certificate` |
 | ⬜ | ValidateContent | Inbound, Outbound, OnError | ValidateContentConfig | Validation + short-circuit | `emulator/validate-content` |
