@@ -133,6 +133,153 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void Wait_WithChooseAndBranchExpressions_RoundTrips()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait for="any">
+                        <send-request response-variable-name="primary" />
+                        <choose>
+                            <when condition="@(context.Variables.ContainsKey(&quot;use-cache&quot;))">
+                                <cache-lookup-value key="lookup" variable-name="value" />
+                                <send-request response-variable-name="fallback" />
+                            </when>
+                            <otherwise>
+                                <send-request response-variable-name="backup" />
+                            </otherwise>
+                        </choose>
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        csharp.Should().Contain("Wait(\"any\",")
+            .And.MatchRegex(@"Condition\d+\(waitBranch\d+\.ExpressionContext\)");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void Wait_BindsModeToOuterContextAndChildExpressionsToBranch()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait for="@(context.Variables.ContainsKey(&quot;race&quot;) ? &quot;any&quot; : &quot;all&quot;)">
+                        <send-request response-variable-name="response">
+                            <set-url>@(context.Request.Url.ToString())</set-url>
+                        </send-request>
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        csharp.Should().MatchRegex(@"Wait\(WaitFor\d+\(context\.ExpressionContext\),")
+            .And.MatchRegex(@"RequestUrl\d+\(waitBranch\d+\.ExpressionContext\)");
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    public void Wait_RestoresSectionContextForFollowingPolicies()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait>
+                        <cache-lookup-value key="key" variable-name="cached" />
+                    </wait>
+                    <send-request response-variable-name="later">
+                        <set-url>@(context.Request.Url.ToString())</set-url>
+                    </send-request>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        csharp.Should().MatchRegex(@"RequestUrl\d+\(context\.ExpressionContext\)");
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    [DataRow("{{lookup-key}}", @"NamedValue_LookupKey\d+", DisplayName = "Whole named value in wait branch")]
+    [DataRow("prefix-{{lookup-key}}", @"Key\d+", DisplayName = "Named value template in wait branch")]
+    public void Wait_BindsNamedValuesToBranchAndRestoresSectionContext(string key, string helperPattern)
+    {
+        var xml = $$$"""
+            <policies>
+                <inbound>
+                    <wait>
+                        <cache-lookup-value key="{{{key}}}" variable-name="cached" />
+                    </wait>
+                    <set-variable name="later" value="{{later-value}}" />
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        csharp.Should().MatchRegex($@"{helperPattern}\(waitBranch\d+\.ExpressionContext\)")
+            .And.MatchRegex(@"NamedValue_LaterValue\d+\(context\.ExpressionContext\)");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void Wait_PreservesParentAndBranchPolicyIds()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <wait id="wait-id" for="all">
+                        <send-request id="first" response-variable-name="response" />
+                        <cache-lookup-value id="second" key="key" variable-name="cached" />
+                    </wait>
+                </inbound>
+            </policies>
+            """;
+
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    [DataRow("inbound")]
+    [DataRow("backend")]
+    [DataRow("outbound")]
+    [DataRow("on-error")]
+    public void Wait_WithDefaultModeInEachSection_RoundTrips(string section)
+    {
+        var xml = $"""
+            <policies>
+                <{section}>
+                    <wait>
+                        <send-request response-variable-name="response" />
+                    </wait>
+                </{section}>
+            </policies>
+            """;
+
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void Wait_InFragment_RoundTrips()
+    {
+        var xml = """
+            <fragment>
+                <wait for="all">
+                    <cache-lookup-value key="key" variable-name="cached" />
+                </wait>
+            </fragment>
+            """;
+
+        var csharp = s_decompiler.DecompileFragment(xml, "wait-fragment", "RoundTripFragment", "RoundTripTest");
+        var result = CompileCSharp(csharp);
+        result.Errors.Should().BeEmpty("the generated fragment should compile:\n{0}", csharp);
+        result.Document.Should().NotBeNull("the generated fragment should produce XML:\n{0}", csharp);
+        SerializeXElement(result.Document).Should().Be(NormalizeXml(xml));
+    }
+
+    [TestMethod]
     public void SetBackendService_RoundTrips()
     {
         var xml = """<policies><backend><set-backend-service base-url="https://api.example.com" /></backend></policies>""";
@@ -201,6 +348,81 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void NamedValueTokenConcatenatedWithVariable_RoundTrips()
+    {
+        var xml = """<policies><inbound><set-variable name="url" value="@{var id = context.Request.Url.Path;return &quot;{{Base}}/&quot; + id;}" /></inbound></policies>""";
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
+    [DataRow("context.Variables.TryGetValue(&quot;x&quot;, out var v) &amp;&amp; (string)v == &quot;a&quot;",
+        DisplayName = "Out variable")]
+    [DataRow("context.Variables[&quot;x&quot;] is string s &amp;&amp; s.Length &gt; 0", DisplayName = "Pattern variable")]
+    [DataRow("context.Request.Headers.Keys.Any(a =&gt; int.TryParse(a, out var n) &amp;&amp; n &gt; 1) || context.Request.Headers.Keys.Any(b =&gt; int.TryParse(b, out var n) &amp;&amp; n &gt; 2)",
+        DisplayName = "Same out variable in sibling lambdas")]
+    public void ConditionWithDeclaration_RoundTrips(string condition)
+    {
+        var xml = $"""<policies><inbound><choose><when condition="@({condition})"><set-variable name="matched" value="true" /></when></choose></inbound></policies>""";
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("{{flag}}", DisplayName = "Named value as the whole condition")]
+    [DataRow("context.Variables.ContainsKey(&quot;{{v}}&quot;)", DisplayName = "Named value in a string argument")]
+    public void NamedValueTokenInCondition_RoundTrips(string condition)
+    {
+        var xml = $"""<policies><inbound><choose><when condition="@({condition})"><set-variable name="matched" value="true" /></when></choose></inbound></policies>""";
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("@(&quot;enabled=&quot; + {{flag}})", DisplayName = "After a string")]
+    [DataRow("@({{flag}} + &quot;x&quot;)", DisplayName = "Before a string")]
+    [DataRow("@(({{n}}) * 2)", DisplayName = "Parenthesized operand")]
+    [DataRow("@(-({{n}}))", DisplayName = "Parenthesized under a unary operator")]
+    [DataRow("@(({{n}}).ToString())", DisplayName = "Parenthesized receiver")]
+    [DataRow("@($&quot;a{({{n}})}b&quot;)", DisplayName = "Interpolation hole")]
+    public void NamedValueTokenUsedAsCode_RoundTrips(string value)
+    {
+        var xml = $"""<policies><inbound><set-variable name="value" value="{value}" /></inbound></policies>""";
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void NamedValueTokenAfterInterpolationBrace_CompilesToHoleWithNamedValue()
+    {
+        // API Management substitutes {{n}} one brace in, so $"{{{n}}}" is a hole around the named value's code.
+        var xml = """<policies><inbound><set-variable name="value" value="@($&quot;{{{n}}}&quot;)" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        var result = CompileCSharp(csharp);
+
+        result.Errors.Should().BeEmpty("the decompiled C# should compile.\nGenerated C#:\n{0}", csharp);
+        result.Document.Descendants("set-variable").Single().Attribute("value")!.Value.Should().Be("@($\"{({{n}})}\")");
+    }
+
+    [TestMethod]
+    [DataRow("@(&quot;{{BaseUrl}}&quot;.Trim('/'))", DisplayName = "Literal followed by a member access")]
+    [DataRow("@(@&quot;{{Root}}\\logs&quot;)", DisplayName = "Verbatim string")]
+    [DataRow("@($&quot;https://{{Host}}/{context.Request.Url.Path}&quot;)", DisplayName = "Interpolated string")]
+    [DataRow("@($@&quot;a{{x}}b&quot;)", DisplayName = "Verbatim interpolated string")]
+    [DataRow("@($&quot;{{\\&quot;k\\&quot;: \\&quot;{{s}}\\&quot;}}&quot;)", DisplayName = "Escaped braces in a JSON template")]
+    public void NamedValueTokenInStringLiteral_RoundTrips(string value)
+    {
+        var xml = $"""<policies><inbound><set-variable name="value" value="{value}" /></inbound></policies>""";
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("@{string s = {{k}}; return s.ToUpper();}")]
+    [DataRow("@(new string[] { {{k}} }.Length)")]
+    public void NamedValueTokenConvertedToString_RoundTrips(string value)
+    {
+        var xml = $"""<policies><inbound><set-variable name="value" value="{value}" /></inbound></policies>""";
+        AssertRoundTripSemantic(xml);
+    }
+
+    [TestMethod]
     public void FullPolicySections_RoundTrips()
     {
         var xml = """
@@ -240,8 +462,8 @@ public class RoundTripTests
     [DataRow("validate-status-code.xml")]
     [DataRow("validate-odata-request.xml")]
     [DataRow("send-service-bus-message.xml")]
-    [DataRow("invoke-darp-binding.xml")]
-    [DataRow("publish-to-darp.xml")]
+    [DataRow("invoke-dapr-binding.xml")]
+    [DataRow("publish-to-dapr.xml")]
     [DataRow("azure-openai-emit-token-metric.xml")]
     [DataRow("llm-emit-token-metric.xml")]
     [DataRow("azure-openai-semantic-cache-lookup.xml")]
@@ -350,6 +572,16 @@ public class RoundTripTests
         csharp.Should().NotBeNullOrEmpty("decompilation should produce C# code");
         csharp.Should().Contain("class RoundTripPolicy", "decompiled code should contain the policy class");
         csharp.Should().Contain("context.NamedValue(", "named value tokens should be converted to NamedValue calls");
+    }
+
+    [TestMethod]
+    [DataRow("""<outbound><validate-status-code unspecified-status-code-action="prevent" errors-variable-name="errors"><status-code code="200" action="ignore" /><status-code code="404" action="detect" /></validate-status-code></outbound>""",
+        DisplayName = "validate-status-code with status codes")]
+    [DataRow("""<inbound><validate-jwt header-name="Authorization"><openid-config url="https://login.example/.well-known/openid-configuration" validate-connectivity="false" /></validate-jwt></inbound>""",
+        DisplayName = "validate-jwt openid-config validate-connectivity")]
+    public void PolicyChildElements_RoundTrip(string sections)
+    {
+        AssertRoundTrip($"<policies>{sections}</policies>");
     }
 
     private static void AssertRoundTrip(string originalXml)

@@ -70,7 +70,7 @@ public class ValidateStatusCodeTests
                 context.ValidateStatusCode(new ValidateStatusCodeConfig
                 {
                     UnspecifiedStatusCodeAction = "prevent",
-                    ErrorVariableName = "status-code-validation-errors"
+                    ErrorsVariableName = "status-code-validation-errors"
                 });
             }
         }
@@ -78,7 +78,7 @@ public class ValidateStatusCodeTests
         """
         <policies>
             <outbound>
-                <validate-status-code unspecified-status-code-action="prevent" error-variable-name="status-code-validation-errors" />
+                <validate-status-code unspecified-status-code-action="prevent" errors-variable-name="status-code-validation-errors" />
             </outbound>
         </policies>
         """,

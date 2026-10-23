@@ -77,7 +77,7 @@ public class ForwardRequestTests
                     });
             }
 
-            public uint CalcTimeout(IExpressionContext context) => 9 + 1;
+            public int CalcTimeout(IExpressionContext context) => 9 + 1;
         }
         """,
         """
@@ -122,7 +122,7 @@ public class ForwardRequestTests
                         TimeoutMs = CalcTimeout(context.ExpressionContext),
                     });
             }
-            public uint CalcTimeout(IExpressionContext context) => 8999 + 1;
+            public int CalcTimeout(IExpressionContext context) => 8999 + 1;
         }
         """,
         """
@@ -167,7 +167,7 @@ public class ForwardRequestTests
                         ContinueTimeout = CalcTimeout(context.ExpressionContext),
                     });
             }
-            public uint CalcTimeout(IExpressionContext context) => 99 + 1;
+            public int CalcTimeout(IExpressionContext context) => 99 + 1;
         }
         """,
         """
@@ -178,6 +178,30 @@ public class ForwardRequestTests
         </policies>
         """,
         DisplayName = "Should compile forward request policy with expression in ContinueTimeout"
+    )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Backend(IBackendContext context) {
+                context.ForwardRequest(new ForwardRequestConfig()
+                    {
+                        Timeout = ReadTimeout(context.ExpressionContext),
+                    });
+            }
+
+            public int ReadTimeout(IExpressionContext context) => context.Variables.GetValueOrDefault<int>("timeout", 30);
+        }
+        """,
+        """
+        <policies>
+            <backend>
+                <forward-request timeout="@(context.Variables.GetValueOrDefault<int>("timeout", 30))" />
+            </backend>
+        </policies>
+        """,
+        DisplayName = "Should compile forward request policy with int expression in Timeout without a cast"
     )]
     [DataRow(
         """

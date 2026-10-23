@@ -27,6 +27,7 @@ public class DocumentCompiler
         var methods = document.DescendantNodes().OfType<MethodDeclarationSyntax>();
         var rootElement = new XElement(documentType == DocumentType.Fragment ? "fragment" : "policies");
         var context = new DocumentCompilationContext(compilation, document, rootElement);
+        document.ValidateDocumentName(semanticModel, context);
 
         if (documentType == DocumentType.Fragment)
             CompileFragment(context, methods);
@@ -76,6 +77,17 @@ public class DocumentCompiler
         var sectionElement = new XElement(section);
         var sectionContext = new DocumentCompilationContext(context, sectionElement);
         _blockCompiler.Value.Compile(sectionContext, method.Body!);
+
+        // The gateway rejects a backend section with more than one top-level policy, <base /> included.
+        var policyCount = sectionElement.Elements().Count();
+        if (section == "backend" && policyCount > 1)
+        {
+            context.Report(Diagnostic.Create(
+                CompilationErrors.BackendAllowsOnePolicy,
+                method.Identifier.GetLocation(),
+                policyCount));
+        }
+
         context.AddPolicy(sectionElement);
     }
 

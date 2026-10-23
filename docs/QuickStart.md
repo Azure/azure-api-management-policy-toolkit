@@ -23,31 +23,14 @@ We will cover the following topics:
     dotnet new classlib --output Contoso.Apis.Policies
     dotnet sln add ./Contoso.Apis.Policies
     ```
-4. :exclamation: Azure API Management Policy toolkit is not yet published to NuGet.
-    Because of that, we need to create a local nuget repository for the packages and put the libraries there.
-   1. Create a local nuget repository for the packages by executing
-       ```shell
-       mkdir packages
-       ```
-   2. Download the Azure API Management policy toolkit libraries from GitHub release and put them in the `packages` folder.
-   3. Create a file named `nuget.config` in the solution folder with the content:
-       ```xml
-       <configuration>
-         <packageSources>
-           <!-- local feed for the project -->
-           <add key="local" value="./packages" />
-           <!-- fallback to nuget.org -->
-           <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-         </packageSources>
-       </configuration>
-       ```
-5. Add Azure API Management policy authoring toolkit library by running
+4. Add the [Azure API Management policy authoring toolkit library](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring)
+   from NuGet by running
     ```shell
     cd ./Contoso.Apis.Policies
     dotnet add package Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring
     ```
 
-6. Open the solution in your IDE of choice. We
+5. Open the solution in your IDE of choice. We
   tested [Visual Studio ](https://visualstudio.microsoft.com), [Rider](https://www.jetbrains.com/rider/), [Visual Studio Code](https://code.visualstudio.com/)
   with [C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit),
   but any IDE with C# support should work.
@@ -115,12 +98,13 @@ Azure API Management supports policy documents in Razor format. The Azure API Ma
 dotnet tool called a compiler which can generate
 Razor policy documents from C# classes.
 
-To use the compiler, we first need to add it to our solution folder. To do that execute the following command in the
-solution folder.
+To use the compiler, first install the
+[compiler tool from NuGet](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling).
+Execute the following command in the solution folder.
 
 ```shell
 cd .. # Go to solution folder if not already there
-dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
+dotnet tool install Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling
 ````
 
 After the installation, the compiler should be available in the project folder as the `azure-apim-policy-compiler` command.
@@ -133,6 +117,16 @@ dotnet azure-apim-policy-compiler --s .\Contoso.Apis.Policies --o . --format tru
 The compiler is a dotnet tool whose command name is `azure-apim-policy-compiler`. The `--s` parameter is a source folder with policy documents.
 The `--o` parameter is an output folder for generated policy documents. The `--format` parameter is a flag which tells
 the compiler to format the generated document.
+Run `dotnet azure-apim-policy-compiler --help` to see all options, defaults, and accepted aliases.
+
+The `--policy-format` parameter (alias `--pf`) selects how policy expressions are encoded: `rawxml` (the default,
+expressions written verbatim) or `xml` (reserved characters XML-encoded for the standards-compliant content
+format). See the [Output format guide](./OutputFormat.md) for the trade-offs between the two formats and how they
+map to the API Management content format.
+
+```shell
+dotnet azure-apim-policy-compiler --s .\Contoso.Apis.Policies --o . --format true --policy-format xml
+```
 
 The compiler will generate `ApiOperationPolicy.xml` file in the solution folder. The generated file should have the
 following
@@ -209,16 +203,20 @@ Let's unpack the code above it:
   `otherwise` element.
 * `IsCompanyIP` is a method which checks if request comes from company IP addresses, and it is mapped to a policy
   expression
-* Every method, other than section method are treated as expressions. They need to accept one parameter of type
-  `IExpressionContext`
-  with name `context`. Type is available in `Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions` namespace.
+* Every method, other than section method are treated as expressions. They take a parameter of type
+  `IExpressionContext`, which is passed as `context.ExpressionContext`. Type is available in
+  `Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions` namespace.
 * `IExpressionContext` type contains the same properties as `context` object in policy expressions.
 * `AuthenticationBasic` method is mapped to `authentication-basic` policy.
 * `AuthenticationManagedIdentity` method is mapped to `authentication-managed-identity` policy.
 * `SetHeader` method is mapped to `set-header` policy with override.
 
 Expressions are methods in the class. They may be static or instance methods, and they can be private or public.
-They need to accept one parameter of type `IExpressionContext` with name `context`.
+They take a parameter of type `IExpressionContext`, which can have any name, and they can take other arguments too,
+such as a header name.
+
+Expressions can call other helper methods, including helpers shared from another project, and use named values. See
+[Expression helpers](ExpressionHelpers.md) for what the compiler supports.
 
 To use an expression you just need to call that method in the place were you want to use it. In our example, we call
 `IsCompanyIP` method in the `if` statement, and we call `GetUserId` method in the `SetHeader` method in value parameter.
@@ -235,7 +233,7 @@ context.SomePolicy(new Config()
 Cool! We have a more complex policy document. Now let's compile it to a policy document.
 
 ```shell
-dotnet azure-apim-policy-compiler --s .\source\ --o . --format true
+dotnet azure-apim-policy-compiler --s .\Contoso.Apis.Policies --o . --format true
 ```
 
 Content of the generated file should be:
@@ -263,9 +261,10 @@ Isn't it great, right? I hope it is. But we can now test the expressions in the 
 ## Testing expressions in policy document
 
 The Azure API Management policy toolkit provides a way to test expressions in policy documents. To do that we need to
-create a test project from a solution folder. Then we will need to add a reference to the policy project and the testing
-library. Last, we need to create a test class and write a test for the expression. All of that you can do by executing
-the following commands.
+create a test project from a solution folder. Then we will need to add a reference to the policy project and the
+[testing library from NuGet](https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Testing).
+Last, we need to create a test class and write a test for the expression. All of that you can do by executing the
+following commands.
 
 ```shell
 dotnet new mstest --output Contoso.Apis.Policies.Tests
@@ -311,7 +310,7 @@ Let's unpack the code above:
 * `MockExpressionContext` is a class which is used to mock request context. It is available in
   `Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions` namespace. It implements `IExpressionContext`
   interface and exposes helper properties to set up request context.
-* `context.MockRequest.IpAddress = "10.0.0.12"` is setting a IpAddress for request.
+* `context.Request.IpAddress = "10.0.0.12"` is setting a IpAddress for request.
 
 To check that the expression works as expected, run the test by executing the following command.
 Command can be executed in the test project folder or solution folder.

@@ -14,7 +14,20 @@ public static class MockRedirectContentUrlsProvider
     public static Setup RedirectContentUrls(
         this MockPoliciesProvider<IOutboundContext> mock,
         Func<GatewayContext, bool> predicate
-    )
+    ) => RedirectContentUrls<IOutboundContext>(mock, predicate);
+
+    public static Setup RedirectContentUrls(this MockPoliciesProvider<IInboundContext> mock) =>
+        RedirectContentUrls(mock, _ => true);
+
+    public static Setup RedirectContentUrls(
+        this MockPoliciesProvider<IInboundContext> mock,
+        Func<GatewayContext, bool> predicate
+    ) => RedirectContentUrls<IInboundContext>(mock, predicate);
+
+    private static Setup RedirectContentUrls<T>(
+        MockPoliciesProvider<T> mock,
+        Func<GatewayContext, bool> predicate
+    ) where T : class
     {
         var handler = mock.SectionContextProxy.GetHandler<RedirectContentUrlsHandler>();
         return new Setup(predicate, handler);

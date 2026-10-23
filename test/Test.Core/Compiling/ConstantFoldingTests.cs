@@ -4,7 +4,7 @@
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
-public class ConstFoldingRewriterTests
+public class ConstantFoldingTests
 {
     [TestMethod]
     [DataRow(
@@ -36,5 +36,34 @@ public class ConstFoldingRewriterTests
     public void ShouldFoldConstInExpressionBody(string code, string constClass, string expectedXml)
     {
         code.CompileDocument(constClass).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow(
+        """
+        using System;
+
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.SetVariable("match", IsMatch(context.ExpressionContext));
+            }
+            bool IsMatch(IExpressionContext context)
+                => string.Equals(context.Request.IpAddress, "10.0.0.1", StringComparison.OrdinalIgnoreCase);
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <set-variable name="match" value="@(string.Equals(context.Request.IpAddress, "10.0.0.1", StringComparison.OrdinalIgnoreCase))" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should preserve enum member access in expression body"
+    )]
+    public void ShouldPreserveEnumMemberInExpressionBody(string code, string expectedXml)
+    {
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
 }

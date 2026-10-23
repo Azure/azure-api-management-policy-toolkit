@@ -48,6 +48,12 @@ public class DirectoryCompiler(DocumentCompiler compiler)
                     Console.Error.WriteLine(error.ToString());
                 }
 
+                if (!documentResult.Errors.IsEmpty)
+                {
+                    Console.Error.WriteLine($"Document '{document.Identifier.ValueText}' not written due to errors");
+                    continue;
+                }
+
                 var policyFileName = document.ExtractDocumentFileName(semantics);
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
@@ -58,6 +64,7 @@ public class DirectoryCompiler(DocumentCompiler compiler)
                     OutputFilePath = PathUtils.PrepareOutputPath(policyFileName, options.FileExtension),
                     FormatCode = options.FormatCode,
                     XmlWriterSettings = options.XmlWriterSettings,
+                    RawXml = options.RawXml,
                 });
                 Console.Out.WriteLine($"File '{targetFile}' created");
             }

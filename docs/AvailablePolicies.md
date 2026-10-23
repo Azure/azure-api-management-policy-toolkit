@@ -19,8 +19,38 @@ Notes:
   policy (with `when` / `otherwise`).
 - `InlinePolicy(string)` allows inserting arbitrary XML when a policy isn't implemented as a first-class API.
 - The decompiler uses `InlinePolicy` as a fallback for any XML element it does not have a specific handler for.
+- Some documents are rejected at compile time because API Management rejects the XML when a policy is saved. These
+  are errors, not warnings, so a document that compiles can be deployed:
+  - `cache-value` requires both `ExpiresAfter` and `RefreshAfter`; the gateway reports the missing attribute.
+  - The `Backend` section takes a single policy, counting `Base()`. Wrap several in `choose` or `retry`, or move
+    them to another section.
 
 ## Implemented policies
+
+### Typed wait branches
+
+Use branch-scoped lambdas to author a `wait` policy in any section or fragment:
+
+```csharp
+context.Wait("any",
+    branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "response" }),
+    branch => branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cached" }));
+```
+
+Use `"all"` to wait for every branch, or `null` to omit the `for` attribute (APIM defaults to `"all"`).
+Each synchronous lambda must contain exactly one direct `SendRequest`, `CacheLookupValue`, or `if`/`else if`/`else`
+chain (compiled as `choose`). Conditional bodies may contain multiple sequential policies.
+Policy calls, conditions, and configuration expressions must use the branch context, not a captured outer context.
+Pass individual lambdas, not arrays or delegate references; context-producing helpers must have a source-proven
+branch-local origin. Constant `WithId` metadata is supported. Invalid shapes and captured contexts produce
+compiler diagnostic APIM2022 and authoring analyzer diagnostics APIM105/APIM106.
+
+The decompiler emits this typed form and binds child expressions to their branch context. The legacy
+`Wait(Action, string?)` overload remains compilable but is obsolete.
+**Emulator limitation:** typed `Wait` branches are supported for authoring and XML round-trips only;
+the toolkit's gateway emulator does not execute them. This does not add parallel emulator execution.
+
+### Policy list
 
 - ✅ authentication-basic
 - ✅ authentication-certificate
@@ -214,7 +244,7 @@ c.SendServiceBusMessage(new SendServiceBusMessageConfig
 });
 
 // Invoke Dapr binding
-c.InvokeDarpBinding(new InvokeDarpBindingConfig
+c.InvokeDaprBinding(new InvokeDaprBindingConfig
 {
     Name = "my-binding",
     Operation = "create",
@@ -222,10 +252,12 @@ c.InvokeDarpBinding(new InvokeDarpBindingConfig
 });
 
 // Publish to Dapr topic
-c.PublishToDarp(new PublishToDarpConfig
+c.PublishToDapr(new PublishToDaprConfig
 {
     Topic = "my-topic",
-    PubSubName = "pubsub"
+    Content = "my-content",
+    PubSubName = "pubsub",
+    Timeout = 10 // seconds, 1-240
 });
 ```
 

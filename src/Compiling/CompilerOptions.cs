@@ -4,8 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Xml;
 
-using Microsoft.Extensions.Configuration;
-
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 public class CompilerOptions
@@ -14,26 +12,39 @@ public class CompilerOptions
     private string OutputPath { get; }
     private bool Format { get; }
     private string FileExtension { get; }
+    private bool RawXml { get; }
 
     private XmlWriterSettings XmlWriterSettings => new()
     {
         OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Fragment, Indent = Format
     };
 
-    public CompilerOptions(IConfigurationRoot configuration)
+    public CompilerOptions(string sourcePath, string outputPath, string fileExtension, bool format, string policyFormat)
     {
-        SourcePath = configuration["s"] ??
-                     configuration["source"] ??
-                     throw new NullReferenceException("Source path not provided");
-        SourcePath = Path.GetFullPath(SourcePath);
-        OutputPath = configuration["o"] ??
-                     configuration["out"] ??
-                     throw new NullReferenceException("Output path not provided");
-        OutputPath = Path.GetFullPath(OutputPath);
-
-        FileExtension = configuration["ext"] ?? "xml";
-        Format = bool.TryParse(configuration["format"] ?? "true", out var fmt) && fmt;
+        SourcePath = Path.GetFullPath(sourcePath);
+        OutputPath = Path.GetFullPath(outputPath);
+        FileExtension = fileExtension;
+        Format = format;
+        RawXml = ParseRawXml(policyFormat);
     }
+
+    private static bool ParseRawXml(string policyFormat)
+    {
+        if (policyFormat.Equals("rawxml", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (policyFormat.Equals("xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        throw new ArgumentException(
+            $"Invalid policy format value '{policyFormat}'. Use 'rawxml' (default) or 'xml'.");
+    }
+
+
 
     public bool IsProjectSource
     {
@@ -68,6 +79,7 @@ public class CompilerOptions
         FormatCode = Format,
         FileExtension = FileExtension,
         XmlWriterSettings = XmlWriterSettings,
+        RawXml = RawXml,
     };
 
     public ProjectCompilerOptions ToProjectCompilerOptions() => new()
@@ -80,5 +92,6 @@ public class CompilerOptions
         FormatCode = Format,
         FileExtension = FileExtension,
         XmlWriterSettings = XmlWriterSettings,
+        RawXml = RawXml,
     };
 }

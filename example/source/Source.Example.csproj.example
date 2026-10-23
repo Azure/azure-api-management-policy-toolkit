@@ -6,12 +6,15 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>.net8</TargetFramework>
+    <ExampleTargetFramework Condition="'$(ExampleTargetFramework)' == ''">net10.0</ExampleTargetFramework>
+    <TargetFramework>$(ExampleTargetFramework)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <WarningsAsErrors>$(WarningsAsErrors);CS9057</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring" Version="1.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 </Project>

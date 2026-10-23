@@ -65,6 +65,13 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
                     await Console.Error.WriteLineAsync(error.ToString());
                 }
 
+                if (!documentResult.Errors.IsEmpty)
+                {
+                    await Console.Error.WriteLineAsync(
+                        $"Document '{document.Identifier.ValueText}' not written due to errors");
+                    continue;
+                }
+
                 var policyFileName = document.ExtractDocumentFileName(semantics);
                 var targetFile = FileUtils.WriteToFile(new FileUtils.Data()
                 {
@@ -75,6 +82,7 @@ public class ProjectCompiler(DocumentCompiler documentCompiler)
                     OutputFilePath = PathUtils.PrepareOutputPath(policyFileName, options.FileExtension),
                     FormatCode = options.FormatCode,
                     XmlWriterSettings = options.XmlWriterSettings,
+                    RawXml = options.RawXml,
                 });
                 await Console.Out.WriteLineAsync($"File '{targetFile}' created");
             }

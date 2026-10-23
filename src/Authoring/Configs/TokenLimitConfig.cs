@@ -19,7 +19,7 @@ public record TokenLimitConfig
     /// Indicates whether to estimate the token count of the prompt. Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public required bool EstimatePromptToken { get; init; }
+    public required bool EstimatePromptTokens { get; init; }
 
     /// <summary>
     /// Specifies the maximum number of tokens that can be consumed per minute. Policy expressions are allowed.

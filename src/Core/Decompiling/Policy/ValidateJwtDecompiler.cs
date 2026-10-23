@@ -29,8 +29,10 @@ public class ValidateJwtDecompiler : IPolicyDecompiler
         {
             var items = openIdConfigs.Select(e =>
             {
-                var url = e.Attribute("url")?.Value ?? "";
-                return $"new OpenIdConfig {{ Url = {context.HandleValue(url, "OpenIdUrl")} }}";
+                var openIdProps = new List<string>();
+                context.AddRequiredStringProp(openIdProps, e, "url", "Url");
+                context.AddOptionalBoolExprProp(openIdProps, e, "validate-connectivity", "ValidateConnectivity");
+                return $"new OpenIdConfig {{ {string.Join(", ", openIdProps)} }}";
             });
             props.Add($"OpenIdConfigs = new OpenIdConfig[] {{ {string.Join(", ", items)} }}");
         }

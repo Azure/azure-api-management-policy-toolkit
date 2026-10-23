@@ -125,7 +125,9 @@ public class CacheValueTests
                 context.CacheValue(new CacheValueConfig()
                     {
                         Key = "my-key",
-                        VariableName = "result"
+                        VariableName = "result",
+                        ExpiresAfter = 28800,
+                        RefreshAfter = 14400,
                     },
                     () =>
                     {
@@ -137,7 +139,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="my-key" variable-name="result">
+                <cache-value key="my-key" variable-name="result" expires-after="28800" refresh-after="14400">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -157,7 +159,9 @@ public class CacheValueTests
                 context.CacheValue(new CacheValueConfig()
                     {
                         Key = KeyExp(context.ExpressionContext),
-                        VariableName = "result"
+                        VariableName = "result",
+                        ExpiresAfter = 28800,
+                        RefreshAfter = 14400,
                     },
                     () =>
                     {
@@ -171,7 +175,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="@(context.Product.Name)" variable-name="result">
+                <cache-value key="@(context.Product.Name)" variable-name="result" expires-after="28800" refresh-after="14400">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -192,6 +196,7 @@ public class CacheValueTests
                     {
                         Key = "my-key",
                         VariableName = "result",
+                        RefreshAfter = 14400,
                         ExpiresAfter = 28800
                     },
                     () =>
@@ -204,7 +209,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="my-key" variable-name="result" expires-after="28800">
+                <cache-value key="my-key" variable-name="result" expires-after="28800" refresh-after="14400">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -225,6 +230,7 @@ public class CacheValueTests
                     {
                         Key = "my-key",
                         VariableName = "result",
+                        RefreshAfter = 14400,
                         ExpiresAfter = ExpiresAfterExp(context.ExpressionContext)
                     },
                     () =>
@@ -239,7 +245,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="my-key" variable-name="result" expires-after="@((int)context.Variables["ttl"])">
+                <cache-value key="my-key" variable-name="result" expires-after="@((int)context.Variables["ttl"])" refresh-after="14400">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -260,6 +266,7 @@ public class CacheValueTests
                     {
                         Key = "my-key",
                         VariableName = "result",
+                        ExpiresAfter = 28800,
                         RefreshAfter = 14400
                     },
                     () =>
@@ -272,7 +279,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="my-key" variable-name="result" refresh-after="14400">
+                <cache-value key="my-key" variable-name="result" expires-after="28800" refresh-after="14400">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -293,6 +300,7 @@ public class CacheValueTests
                     {
                         Key = "my-key",
                         VariableName = "result",
+                        ExpiresAfter = 28800,
                         RefreshAfter = RefreshAfterExp(context.ExpressionContext)
                     },
                     () =>
@@ -307,7 +315,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="my-key" variable-name="result" refresh-after="@((int)context.Variables["refresh"])">
+                <cache-value key="my-key" variable-name="result" expires-after="28800" refresh-after="@((int)context.Variables["refresh"])">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -328,6 +336,8 @@ public class CacheValueTests
                     {
                         Key = "my-key",
                         VariableName = "result",
+                        ExpiresAfter = 28800,
+                        RefreshAfter = 14400,
                         DefaultValue = "NotInCache"
                     },
                     () =>
@@ -340,7 +350,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="my-key" variable-name="result" default-value="NotInCache">
+                <cache-value key="my-key" variable-name="result" expires-after="28800" refresh-after="14400" default-value="NotInCache">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -361,6 +371,8 @@ public class CacheValueTests
                     {
                         Key = "my-key",
                         VariableName = "result",
+                        ExpiresAfter = 28800,
+                        RefreshAfter = 14400,
                         DefaultValue = DefaultValueExp(context.ExpressionContext)
                     },
                     () =>
@@ -375,7 +387,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="my-key" variable-name="result" default-value="@((string)context.Variables["default"])">
+                <cache-value key="my-key" variable-name="result" expires-after="28800" refresh-after="14400" default-value="@((string)context.Variables["default"])">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -396,6 +408,8 @@ public class CacheValueTests
                     {
                         Key = "my-key",
                         VariableName = "result",
+                        ExpiresAfter = 28800,
+                        RefreshAfter = 14400,
                         CachingType = "prefer-external"
                     },
                     () =>
@@ -408,7 +422,7 @@ public class CacheValueTests
         """
         <policies>
             <inbound>
-                <cache-value key="my-key" variable-name="result" caching-type="prefer-external">
+                <cache-value key="my-key" variable-name="result" expires-after="28800" refresh-after="14400" caching-type="prefer-external">
                     <value>
                         <set-variable name="result" value="computed-value" />
                     </value>
@@ -421,5 +435,30 @@ public class CacheValueTests
     public void ShouldCompileCacheValuePolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    // API Management rejects cache-value without either duration when the policy is saved (Consumption gateway,
+    // eastus, 2026-09-22).
+    [TestMethod]
+    [DataRow("ExpiresAfter = 60", "RefreshAfter")]
+    [DataRow("RefreshAfter = 30", "ExpiresAfter")]
+    public void ShouldReportMissingDuration(string duration, string missing)
+    {
+        var result = $$"""
+                       [Document]
+                       public class PolicyDocument : IDocument
+                       {
+                           public void Inbound(IInboundContext context)
+                           {
+                               context.CacheValue(new CacheValueConfig { Key = "k", VariableName = "v", {{duration}} },
+                                   () =>
+                                   {
+                                       context.SetVariable("v", "computed");
+                                   });
+                           }
+                       }
+                       """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2006" && error.GetMessage(null).Contains(missing));
     }
 }

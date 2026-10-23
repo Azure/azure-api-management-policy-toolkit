@@ -5,9 +5,9 @@ using System.Xml.Linq;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling.Policy;
 
-public class InvokeDarpBindingDecompiler : IPolicyDecompiler
+public class InvokeDaprBindingDecompiler : IPolicyDecompiler
 {
-    public string PolicyName => "invoke-darp-binding";
+    public string PolicyName => "invoke-dapr-binding";
 
     public void Decompile(CodeWriter writer, XElement element, string contextVar, PolicyDecompilerContext context)
     {
@@ -32,9 +32,9 @@ public class InvokeDarpBindingDecompiler : IPolicyDecompiler
                     $"Key = {PolicyDecompilerContext.Literal(item.Attribute("key")?.Value ?? "")}",
                     $"Value = {context.HandleValue(PolicyDecompilerContext.GetElementText(item), "MetaDataValue")}"
                 };
-                return $"new DarpMetaData {{ {string.Join(", ", itemProps)} }}";
+                return $"new DaprMetaData {{ {string.Join(", ", itemProps)} }}";
             });
-            props.Add($"MetaData = new DarpMetaData[] {{ {string.Join(", ", items)} }}");
+            props.Add($"MetaData = new DaprMetaData[] {{ {string.Join(", ", items)} }}");
         }
 
         var dataEl = element.Element("data");
@@ -44,6 +44,6 @@ public class InvokeDarpBindingDecompiler : IPolicyDecompiler
             props.Add($"Data = {context.HandleValue(dataContent, "Data")}");
         }
 
-        PolicyDecompilerContext.EmitConfigCall(writer, prefix, "InvokeDarpBinding", "InvokeDarpBindingConfig", props);
+        PolicyDecompilerContext.EmitConfigCall(writer, prefix, "InvokeDaprBinding", "InvokeDaprBindingConfig", props);
     }
 }

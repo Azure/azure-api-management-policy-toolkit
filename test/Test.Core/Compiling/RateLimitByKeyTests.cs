@@ -261,6 +261,32 @@ public class RateLimitByKeyTests
         """,
         DisplayName = "Should compile rate limit by key policy with expression in increment count"
     )]
+    [DataRow(
+        """
+        [Document]
+        public class PolicyDocument : IDocument
+        {
+            public void Inbound(IInboundContext context) {
+                context.RateLimitByKey(Limit(context));
+            }
+            static RateLimitByKeyConfig Limit(IInboundContext context) => new RateLimitByKeyConfig()
+                {
+                    Calls = 100,
+                    RenewalPeriod = 10,
+                    CounterKey = CounterKeyExp(context.ExpressionContext)
+                };
+            static string CounterKeyExp(IExpressionContext context) => context.Product.Name;
+        }
+        """,
+        """
+        <policies>
+            <inbound>
+                <rate-limit-by-key calls="100" renewal-period="10" counter-key="@(context.Product.Name)" />
+            </inbound>
+        </policies>
+        """,
+        DisplayName = "Should compile rate limit by key policy from config factory taking section context"
+    )]
     public void ShouldCompileRateLimitByKeyPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);

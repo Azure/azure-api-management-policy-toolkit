@@ -4,11 +4,32 @@ This project builds a dotnet tool which can compile C# policy documents into Azu
 policy documents.
 
 ## Install
+
+The compiler requires the .NET 10 runtime.
+
 Install the Microsoft Azure Api Management Policy Toolkit compiler CLI tool with [NuGet][nuget]:
 
 ```shell
-dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
+dotnet tool install Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling
 ```
+
+## Output format
+
+By default the compiler emits documents in the `rawxml` policy format. Pass `--policy-format xml` to emit the
+standards-compliant `xml` content format instead. See the [Output format guide][of] for the trade-offs between the
+two formats and how they map to the API Management content format.
+
+## Usage
+
+```shell
+azure-apim-policy-compiler --s .\policies\src --o .\policies\output
+azure-apim-policy-compiler --help
+```
+
+`--s` / `--source` accepts a C# project file or source directory; `--o` / `--out` specifies the output
+directory. `--ext` selects the output extension (`xml` by default), `--format true|false` controls
+indentation (true by default), and `--pf` / `--policy-format` selects `rawxml` or `xml`. The
+`--output` alias is also supported for the output directory.
 
 ### Inspect generated policy
 
@@ -28,6 +49,7 @@ dotnet tool install Azure.ApiManagement.PolicyToolkit.Compiling
 Documentation is available to help you learn how to use this package:
 
 - [Quickstart][qs].
+- [Expression helpers][eh].
 
 ## Examples
 
@@ -62,9 +84,13 @@ more information, see the [Code of Conduct FAQ][coc_faq] or contact
 
 <!-- LINKS -->
 
-[nuget]: https://www.nuget.org/
+[nuget]: https://www.nuget.org/packages/Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling
 
 [qs]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/QuickStart.md
+
+[of]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/OutputFormat.md
+
+[eh]: https://github.com/Azure/azure-api-management-policy-toolkit/blob/main/docs/ExpressionHelpers.md
 
 [ep]: https://github.com/Azure/azure-api-management-policy-toolkit/tree/main/example
 

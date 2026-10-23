@@ -36,6 +36,20 @@ public class ExpressionDefinitionTests
     }
 
     [TestMethod]
+    public async Task ShouldNotApplyMethodRulesToExpressionLibraryMethods()
+    {
+        await VerifyAsync(
+            """
+            [Expression]
+            public static class Helpers
+            {
+                public static string Pick(IExpressionContext context, string name) => name;
+            }
+            """
+        );
+    }
+
+    [TestMethod]
     [DataRow("", 0)]
     [DataRow("IExpressionContext c1, IExpressionContext c2", 2)]
     [DataRow("IExpressionContext c1, IExpressionContext c2, IExpressionContext c3", 3)]

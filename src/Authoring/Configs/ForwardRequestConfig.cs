@@ -15,21 +15,21 @@ public record ForwardRequestConfig
     /// Policy expressions are allowed. You can specify either timeout or timeout-ms but not both.
     /// </summary>
     [ExpressionAllowed]
-    public uint? Timeout { get; init; }
+    public int? Timeout { get; init; }
 
     /// <summary>
     /// The amount of time in milliseconds to wait for the HTTP response headers to be returned by the backend service before a timeout error is raised.<br/>
     /// Minimum value is 0 ms. Policy expressions are allowed. You can specify either timeout or timeout-ms but not both.
     /// </summary>
     [ExpressionAllowed]
-    public uint? TimeoutMs { get; init; }
+    public int? TimeoutMs { get; init; }
 
     /// <summary>
     /// The amount of time in seconds to wait for a 100 Continue status code to be returned by the backend service before a timeout error is raised.<br/>
     /// Policy expressions are allowed.
     /// </summary>
     [ExpressionAllowed]
-    public uint? ContinueTimeout { get; init; }
+    public int? ContinueTimeout { get; init; }
 
     /// <summary>
     /// The HTTP spec version to use when sending the HTTP request to the backend service.<br/>

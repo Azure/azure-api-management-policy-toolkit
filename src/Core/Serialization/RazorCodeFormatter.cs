@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 using Microsoft.CodeAnalysis;
@@ -13,6 +14,39 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 public static class RazorCodeFormatter
 {
     private readonly static Regex CSharpCodeStart = new Regex("(@\\()|(@{)", RegexOptions.Compiled);
+
+    // A named value token such as {{port}} can be used as code; it would parse as nested blocks.
+    private readonly static Regex NamedValueToken = new Regex(@"\{\{[A-Za-z0-9_.\-]+\}\}", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Reflows the C# inside policy expressions (<c>@(...)</c> and <c>@{...}</c>) directly
+    /// on the document tree, operating on the raw (unescaped) expression text stored in
+    /// attribute and leaf element values.
+    /// <para>
+    /// This is used for the <c>xml</c> output format, where expressions are XML-encoded
+    /// during serialization and therefore cannot be reformatted from the serialized
+    /// string (the entities would be reparsed as C# and corrupted). Formatting the tree
+    /// before serialization lets the writer encode the already-formatted expressions.
+    /// </para>
+    /// </summary>
+    public static void FormatExpressions(XElement element)
+    {
+        foreach (var node in element.DescendantsAndSelf())
+        {
+            foreach (var attribute in node.Attributes())
+            {
+                if (CSharpCodeStart.IsMatch(attribute.Value))
+                {
+                    attribute.Value = Format(attribute.Value);
+                }
+            }
+
+            if (!node.HasElements && CSharpCodeStart.IsMatch(node.Value))
+            {
+                node.Value = Format(node.Value);
+            }
+        }
+    }
 
     public static string Format(string code)
     {
@@ -47,8 +81,9 @@ public static class RazorCodeFormatter
             result.Append(code, lastIndex, match.Index - lastIndex);
             var index = FindClosingIndex(code, match, out var isMultiline);
             var cSharpCode = code.Substring(match.Index + 2, index - match.Index - 2).Trim();
-            var formatlessCode = new TriviaRemoverRewriter().Visit(CSharpSyntaxTree.ParseText(cSharpCode).GetRoot())
-                .NormalizeWhitespace("", "\n").ToString();
+            var formatlessCode = WithNamedValuesProtected(cSharpCode, protectedCode =>
+                new TriviaRemoverRewriter().Visit(CSharpSyntaxTree.ParseText(protectedCode).GetRoot())
+                    .NormalizeWhitespace("", "\n").ToString());
             var marker = $"__expression__{Guid.NewGuid()}__";
             expressions.Add(marker, isMultiline ? $"@{{{formatlessCode}}}" : $"@({formatlessCode})");
             result.Append(marker);
@@ -79,10 +114,29 @@ public static class RazorCodeFormatter
 
     private static string FormatCSharpCode(string code)
     {
-        return CSharpSyntaxTree.ParseText(code)
+        return WithNamedValuesProtected(code, protectedCode => CSharpSyntaxTree.ParseText(protectedCode)
             .GetRoot()
             .NormalizeWhitespace(eol: Environment.NewLine)
             .ToFullString()
-            .Trim();
+            .Trim());
+    }
+
+    // Replaces named value tokens with identifiers while the code is reformatted, then restores them.
+    private static string WithNamedValuesProtected(string code, Func<string, string> format)
+    {
+        var tokens = new Dictionary<string, string>();
+        var protectedCode = NamedValueToken.Replace(code, match =>
+        {
+            var placeholder = $"__apim_named_value_{tokens.Count}__";
+            tokens.Add(placeholder, match.Value);
+            return placeholder;
+        });
+        var formatted = format(protectedCode);
+        foreach (var (placeholder, token) in tokens)
+        {
+            formatted = formatted.Replace(placeholder, token, StringComparison.Ordinal);
+        }
+
+        return formatted;
     }
 }

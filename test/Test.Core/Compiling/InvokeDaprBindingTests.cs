@@ -4,7 +4,7 @@
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
-public class InvokeDarpBindingTests
+public class InvokeDaprBindingTests
 {
     [TestMethod]
     [DataRow(
@@ -12,25 +12,25 @@ public class InvokeDarpBindingTests
         [Document]
         public class PolicyDocument : IDocument
         {
-            public void Inbound(IInboundContext context) { context.InvokeDarpBinding(new InvokeDarpBindingConfig { Name = "inbound" }); }
-            public void Outbound(IOutboundContext context) { context.InvokeDarpBinding(new InvokeDarpBindingConfig { Name = "outbound" }); }
-            public void OnError(IOnErrorContext context) { context.InvokeDarpBinding(new InvokeDarpBindingConfig { Name = "on-error" }); }
+            public void Inbound(IInboundContext context) { context.InvokeDaprBinding(new InvokeDaprBindingConfig { Name = "inbound" }); }
+            public void Outbound(IOutboundContext context) { context.InvokeDaprBinding(new InvokeDaprBindingConfig { Name = "outbound" }); }
+            public void OnError(IOnErrorContext context) { context.InvokeDaprBinding(new InvokeDaprBindingConfig { Name = "on-error" }); }
         }
         """,
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="inbound" />
+                <invoke-dapr-binding name="inbound" />
             </inbound>
             <outbound>
-                <invoke-darp-binding name="outbound" />
+                <invoke-dapr-binding name="outbound" />
             </outbound>
             <on-error>
-                <invoke-darp-binding name="on-error" />
+                <invoke-dapr-binding name="on-error" />
             </on-error>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy in sections"
+        DisplayName = "Should compile invoke-dapr-binding policy in sections"
     )]
     [DataRow(
         """
@@ -38,7 +38,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = GetBindingName(context.ExpressionContext)
                 });
             }
@@ -49,11 +49,11 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="@("binding-" + context.Variables["suffix"])" />
+                <invoke-dapr-binding name="@("binding-" + context.Variables["suffix"])" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with expression in name"
+        DisplayName = "Should compile invoke-dapr-binding policy with expression in name"
     )]
     [DataRow(
         """
@@ -61,7 +61,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     Operation = "operation1"
                 });
@@ -71,11 +71,11 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding" operation="operation1" />
+                <invoke-dapr-binding name="test-binding" operation="operation1" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with operation parameter"
+        DisplayName = "Should compile invoke-dapr-binding policy with operation parameter"
     )]
     [DataRow(
         """
@@ -83,7 +83,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     IgnoreError = true
                 });
@@ -93,11 +93,11 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding" ignore-error="true" />
+                <invoke-dapr-binding name="test-binding" ignore-error="true" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with ignore-error"
+        DisplayName = "Should compile invoke-dapr-binding policy with ignore-error"
     )]
     [DataRow(
         """
@@ -105,9 +105,9 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
-                    ResponseVariableName = "darp-response"
+                    ResponseVariableName = "dapr-response"
                 });
             }
         }
@@ -115,11 +115,11 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding" response-variable-name="darp-response" />
+                <invoke-dapr-binding name="test-binding" response-variable-name="dapr-response" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with response-variable-name"
+        DisplayName = "Should compile invoke-dapr-binding policy with response-variable-name"
     )]
     [DataRow(
         """
@@ -127,7 +127,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     Timeout = 5000
                 });
@@ -137,11 +137,11 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding" timeout="5000" />
+                <invoke-dapr-binding name="test-binding" timeout="5000" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with timeout"
+        DisplayName = "Should compile invoke-dapr-binding policy with timeout"
     )]
     [DataRow(
         """
@@ -149,7 +149,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     Timeout = GetTimeout(context.ExpressionContext)
                 });
@@ -161,11 +161,11 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding" timeout="@(1000 * int.Parse(context.Variables["multiplier"].ToString()))" />
+                <invoke-dapr-binding name="test-binding" timeout="@(1000 * int.Parse(context.Variables["multiplier"].ToString()))" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with expression in timeout"
+        DisplayName = "Should compile invoke-dapr-binding policy with expression in timeout"
     )]
     [DataRow(
         """
@@ -173,7 +173,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     Template = "liquid"
                 });
@@ -183,11 +183,11 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding" template="liquid" />
+                <invoke-dapr-binding name="test-binding" template="liquid" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with template"
+        DisplayName = "Should compile invoke-dapr-binding policy with template"
     )]
     [DataRow(
         """
@@ -195,7 +195,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     ContentType = "application/json"
                 });
@@ -205,11 +205,11 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding" content-type="application/json" />
+                <invoke-dapr-binding name="test-binding" content-type="application/json" />
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with content-type"
+        DisplayName = "Should compile invoke-dapr-binding policy with content-type"
     )]
     [DataRow(
         """
@@ -217,10 +217,10 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     MetaData = [
-                        new DarpMetaData { Key = "key1", Value = "value1" }
+                        new DaprMetaData { Key = "key1", Value = "value1" }
                     ]
                 });
             }
@@ -229,15 +229,15 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding">
+                <invoke-dapr-binding name="test-binding">
                     <metadata>
                         <item key="key1">value1</item>
                     </metadata>
-                </invoke-darp-binding>
+                </invoke-dapr-binding>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with single matadata item"
+        DisplayName = "Should compile invoke-dapr-binding policy with single metadata item"
     )]
     [DataRow(
         """
@@ -245,12 +245,12 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     MetaData = [
-                        new DarpMetaData { Key = "key1", Value = "value1" },
-                        new DarpMetaData { Key = "key2", Value = "value2" },
-                        new DarpMetaData { Key = "key3", Value = "value3" }
+                        new DaprMetaData { Key = "key1", Value = "value1" },
+                        new DaprMetaData { Key = "key2", Value = "value2" },
+                        new DaprMetaData { Key = "key3", Value = "value3" }
                     ]
                 });
             }
@@ -259,17 +259,17 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding">
+                <invoke-dapr-binding name="test-binding">
                     <metadata>
                         <item key="key1">value1</item>
                         <item key="key2">value2</item>
                         <item key="key3">value3</item>
                     </metadata>
-                </invoke-darp-binding>
+                </invoke-dapr-binding>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with multiple matadata items"
+        DisplayName = "Should compile invoke-dapr-binding policy with multiple metadata items"
     )]
     [DataRow(
         """
@@ -277,10 +277,10 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     MetaData = [
-                        new DarpMetaData { Key = "key1", Value = GetValue(context.ExpressionContext) }
+                        new DaprMetaData { Key = "key1", Value = GetValue(context.ExpressionContext) }
                     ]
                 });
             }
@@ -291,15 +291,15 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding">
+                <invoke-dapr-binding name="test-binding">
                     <metadata>
                         <item key="key1">@(context.Request.Headers["X-Custom-Header"])</item>
                     </metadata>
-                </invoke-darp-binding>
+                </invoke-dapr-binding>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with expression in matadata item value"
+        DisplayName = "Should compile invoke-dapr-binding policy with expression in metadata item value"
     )]
     [DataRow(
         """
@@ -307,7 +307,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     Data = "data-item1"
                 });
@@ -317,13 +317,13 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding">
+                <invoke-dapr-binding name="test-binding">
                     <data>data-item1</data>
-                </invoke-darp-binding>
+                </invoke-dapr-binding>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with data"
+        DisplayName = "Should compile invoke-dapr-binding policy with data"
     )]
     [DataRow(
         """
@@ -331,7 +331,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "test-binding",
                     Data = GetDataItem(context.ExpressionContext)
                 });
@@ -343,13 +343,13 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="test-binding">
+                <invoke-dapr-binding name="test-binding">
                     <data>@(context.Request.Body.As<string>())</data>
-                </invoke-darp-binding>
+                </invoke-dapr-binding>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with expression in data"
+        DisplayName = "Should compile invoke-dapr-binding policy with expression in data"
     )]
     [DataRow(
         """
@@ -357,7 +357,7 @@ public class InvokeDarpBindingTests
         public class PolicyDocument : IDocument
         {
             public void Inbound(IInboundContext context) {
-                context.InvokeDarpBinding(new InvokeDarpBindingConfig {
+                context.InvokeDaprBinding(new InvokeDaprBindingConfig {
                     Name = "comprehensive-test",
                     Operation = "test-operation",
                     IgnoreError = true,
@@ -366,8 +366,8 @@ public class InvokeDarpBindingTests
                     Template = "test-template",
                     ContentType = "application/json",
                     MetaData = [
-                        new DarpMetaData { Key = "key1", Value = "value1" },
-                        new DarpMetaData { Key = "key2", Value = "value2" }
+                        new DaprMetaData { Key = "key1", Value = "value1" },
+                        new DaprMetaData { Key = "key2", Value = "value2" }
                     ],
                     Data = "data1"
                 });
@@ -377,19 +377,19 @@ public class InvokeDarpBindingTests
         """
         <policies>
             <inbound>
-                <invoke-darp-binding name="comprehensive-test" operation="test-operation" ignore-error="true" response-variable-name="response-var" timeout="5000" template="test-template" content-type="application/json">
+                <invoke-dapr-binding name="comprehensive-test" operation="test-operation" ignore-error="true" response-variable-name="response-var" timeout="5000" template="test-template" content-type="application/json">
                     <metadata>
                         <item key="key1">value1</item>
                         <item key="key2">value2</item>
                     </metadata>
                     <data>data1</data>
-                </invoke-darp-binding>
+                </invoke-dapr-binding>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile invoke-darp-binding policy with all properties"
+        DisplayName = "Should compile invoke-dapr-binding policy with all properties"
     )]
-    public void ShouldCompileInvokeDarpBindingPolicy(string code, string expectedXml)
+    public void ShouldCompileInvokeDaprBindingPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }

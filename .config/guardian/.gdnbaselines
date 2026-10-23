@@ -1,0 +1,205 @@
+{
+  "properties": {
+    "helpUri": "https://eng.ms/docs/microsoft-security/security/azure-security/cloudai-security-fundamentals-engineering/security-integration/guardian-wiki/microsoft-guardian/general/baselines"
+  },
+  "version": "1.0.0",
+  "baselines": {
+    "default": {
+      "name": "default",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "lastUpdatedDate": "2026-08-24 06:11:50Z"
+    }
+  },
+  "results": {
+    "75fc06e207a657a122fab076602bab2e7aae468d34a764a1d0e3103bcea90609": {
+      "signature": "75fc06e207a657a122fab076602bab2e7aae468d34a764a1d0e3103bcea90609",
+      "alternativeSignatures": [
+        "ddd4324119d7935fefb6cb1d82351aac07a1e07cabc0e49ff1ced32af4c5cc69",
+        "5a3aba6a79fa7b9b69ae75f138cbfb68377c3ea320dabdab2c515506e5936336",
+        "a41a7997df696697adb3063042b9e705abd4dbdf41154892383cdebb5f6cc22a"
+      ],
+      "target": "test/Test.Core/TestingDocument.cs",
+      "line": 44,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "bfa99b23c084a691d99dab2b03f326481ee2fc66085a422507e7bed721975a1e": {
+      "signature": "bfa99b23c084a691d99dab2b03f326481ee2fc66085a422507e7bed721975a1e",
+      "alternativeSignatures": [
+        "ae71468f087af45b5f0f88357863fbc4f2e7c64c45a2975d43d0346c22cb8163",
+        "9125e4a8bde35ef86c781c9e90bc6d7c30ae488fa143b6e857d06a7e2e8cda3a",
+        "13020deacc3f98db70ad504fe0c673550ba1ecc7d1fbb3d5f298b3fb9784423c"
+      ],
+      "target": "test/Test.Testing/TestDocumentTests.cs",
+      "line": 155,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "d0b6ea69f15113a3c9d1dbcf3c9e76ff6af6017c4399ffc1d94aa89281f5926b": {
+      "signature": "d0b6ea69f15113a3c9d1dbcf3c9e76ff6af6017c4399ffc1d94aa89281f5926b",
+      "alternativeSignatures": [
+        "0b0a40ca12c21ba65ac9dd365390c204c3c5775c0a8d6138b7d28e30450fdf16",
+        "9a1076d0c7e5cb6b4fa9a32f32cb40cc0edacf2a56bde5693e3cd7b68eca2efd",
+        "a960e698628fa265162e2fd9c456e9fe56ae6120cc5925d29ad24129de4a113d"
+      ],
+      "target": "test/Test.Testing/TestDocumentTests.cs",
+      "line": 158,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "84ca45b601a32262a726c19a648f19784e807a5377bc2e8640ee5e1eb82a6b53": {
+      "signature": "84ca45b601a32262a726c19a648f19784e807a5377bc2e8640ee5e1eb82a6b53",
+      "alternativeSignatures": [
+        "78e6f1f453a6880a90402b4e6682f42fceafbcdad8f71c9b50a1a753e31b8e01",
+        "47ece001c8de811355bdaa35dc35047ec3fb568bb55c693c4f568f9e4ba7447e",
+        "52656996103d211e2653b3ca5bc3c07cea902e2ac78830c3661ab65009638fd0"
+      ],
+      "target": "src/Core/Decompiling/PolicyDecompilerContext.cs",
+      "line": 81,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "1a7db4de257628b9c12286527f7d9274159093b4d5f19fd8bd79ccc9a8f2a0d2": {
+      "signature": "1a7db4de257628b9c12286527f7d9274159093b4d5f19fd8bd79ccc9a8f2a0d2",
+      "alternativeSignatures": [
+        "fd4db2af71ae4b86b75a9a66c56fbd8cf7f82628f817239bda0a89831c6db896",
+        "f079fdb30f365a57c6e8df0ed729894c000254d5b57afcc2bb9faaf4ab27a51b",
+        "05602a5fe3c1c568b4ddcb3dfada1e7381869983869f3190c5b4aca8581231d0"
+      ],
+      "target": "src/Core/Decompiling/PolicyDecompilerContext.cs",
+      "line": 82,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "4c03975ca1daa3d5f3d68000fdca38b93ff92566ec5473b28e20a4382545703e": {
+      "signature": "4c03975ca1daa3d5f3d68000fdca38b93ff92566ec5473b28e20a4382545703e",
+      "alternativeSignatures": [
+        "30e3725666e1ff242c030abf9bf87151d3cfaea663c89599e56c9c4abf801c60",
+        "8c1f357744e58d705be9247e5eb9c6e364b00beba69ca137e381808c9178a090",
+        "586279cf10302999cb964bc2b7b22d50c556b5e5f4ecec1173a03242d3d49ec6"
+      ],
+      "target": "src/Core/Decompiling/PolicyDecompilerContext.cs",
+      "line": 175,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "6d1415a48b70b21585810beca75b1c94c053037a36b853d13c2f4b7c523c5874": {
+      "signature": "6d1415a48b70b21585810beca75b1c94c053037a36b853d13c2f4b7c523c5874",
+      "alternativeSignatures": [
+        "aa89816042b9def0469836055a886858dddc8e445206ddae6009052ffe5af094",
+        "20f0fa6647960a04bce70353189893c7857c7a828b0f19f84480f28f9f156432",
+        "e5ccd0c6baa76365c120f1a625f2d0c1a8567ed50441b3f276f73286ff241175"
+      ],
+      "target": "src/Core/Decompiling/PolicyDecompilerContext.cs",
+      "line": 180,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "1378b92bd26db0559b9c52ac0e19f01936b777930baa232270d055c338d8f545": {
+      "signature": "1378b92bd26db0559b9c52ac0e19f01936b777930baa232270d055c338d8f545",
+      "alternativeSignatures": [
+        "96a81a8d18c8e2fdba2ea95ceeea2ff1c5351c35844e613d87f8e9e22d14b300",
+        "cbed103e5916f683a599b4babe1f28f4266d278036588f79a7851d177920c4cc",
+        "9a81aa4cdee3b838aecc24b0b1b7afb9a4ef3623583525e485cc6a5c85bac10b"
+      ],
+      "target": "src/Core/Decompiling/PolicyDecompilerContext.cs",
+      "line": 254,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "71f62250c2f799aa48a5d0c9e3f22ad186a51ec3de895b4fba91e36ed0285bd0": {
+      "signature": "71f62250c2f799aa48a5d0c9e3f22ad186a51ec3de895b4fba91e36ed0285bd0",
+      "alternativeSignatures": [
+        "b29c838bbe1a982e4683a34ae3f7d7da956f9842035c1f17cdb5bdae07997132",
+        "046154bad2fbe4ebfa7836c3b4dc8302233f9a41ac6cb537cbe543e3398868c4",
+        "00e1376fd14e41d98d6d8f28e043692f24822b0e9d806f2812462322047df7aa"
+      ],
+      "target": "src/Core/Serialization/CustomXmlWriter.cs",
+      "line": 79,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    },
+    "912f48bb22ca1748da66d0631535fd2f3f56a56c0586fa30c927222e6425e474": {
+      "signature": "912f48bb22ca1748da66d0631535fd2f3f56a56c0586fa30c927222e6425e474",
+      "alternativeSignatures": [
+        "8ff493d5aa86672f4b108602c3794c46abde884d7d90107be3161f14e8471962",
+        "d07e6f0f36053b8f6de5a4ebb8c82f79d46324a01a298791b8f8f3db2b2633c3",
+        "264b2830dfe733bc77ab4e5d4edae2d2aa29c2635a67d1f5fc01e309489a8361"
+      ],
+      "target": "src/Core/Decompiling/Policy/XslTransformDecompiler.cs",
+      "line": 18,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "roslynanalyzers",
+      "ruleId": "CA1310",
+      "createdDate": "2026-08-24 06:11:50Z",
+      "expirationDate": "2027-02-10 06:13:49Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2026-08-24 06:13:49Z"
+    }
+  }
+}

@@ -6,7 +6,7 @@ namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 /// <summary>
 /// Configuration for invoking a Dapr binding.
 /// </summary>
-public record InvokeDarpBindingConfig
+public record InvokeDaprBindingConfig
 {
     /// <summary>
     /// Specifies the name of the Dapr binding to invoke. This is a required property.
@@ -48,7 +48,7 @@ public record InvokeDarpBindingConfig
     /// <summary>
     /// Specifies the metadata for the Dapr binding invocation.
     /// </summary>
-    public DarpMetaData[]? MetaData { get; init; }
+    public DaprMetaData[]? MetaData { get; init; }
 
     /// <summary>
     /// Specifies the data for the Dapr binding invocation.
@@ -60,7 +60,7 @@ public record InvokeDarpBindingConfig
 /// <summary>
 /// Represents metadata for a Dapr binding invocation.
 /// </summary>
-public record DarpMetaData
+public record DaprMetaData
 {
     /// <summary>
     /// Specifies the key of the Dapr metadata item. This is a required property.

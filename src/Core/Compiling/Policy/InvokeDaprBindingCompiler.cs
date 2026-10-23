@@ -10,45 +10,45 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Policy;
 
-public class InvokeDarpBindingCompiler : IMethodPolicyHandler
+public class InvokeDaprBindingCompiler : IMethodPolicyHandler
 {
-    public string MethodName => nameof(IInboundContext.InvokeDarpBinding);
+    public string MethodName => nameof(IInboundContext.InvokeDaprBinding);
 
     public void Handle(IDocumentCompilationContext context, InvocationExpressionSyntax node)
     {
-        if (!node.TryExtractingConfigParameter<InvokeDarpBindingConfig>(context, "invoke-darp-binding",
+        if (!node.TryExtractingConfigParameter<InvokeDaprBindingConfig>(context, "invoke-dapr-binding",
                 out IReadOnlyDictionary<string, InitializerValue>? values))
         {
             return;
         }
 
-        XElement element = new("invoke-darp-binding");
+        XElement element = new("invoke-dapr-binding");
 
         // Add the required Name attribute
-        if (!element.AddAttribute(values, nameof(InvokeDarpBindingConfig.Name), "name"))
+        if (!element.AddAttribute(values, nameof(InvokeDaprBindingConfig.Name), "name"))
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.RequiredParameterNotDefined,
                 node.GetLocation(),
-                "invoke-darp-binding",
-                nameof(InvokeDarpBindingConfig.Name)
+                "invoke-dapr-binding",
+                nameof(InvokeDaprBindingConfig.Name)
             ));
             return;
         }
 
-        element.AddAttribute(values, nameof(InvokeDarpBindingConfig.Operation), "operation");
-        element.AddAttribute(values, nameof(InvokeDarpBindingConfig.IgnoreError), "ignore-error");
-        element.AddAttribute(values, nameof(InvokeDarpBindingConfig.ResponseVariableName), "response-variable-name");
-        element.AddAttribute(values, nameof(InvokeDarpBindingConfig.Timeout), "timeout");
-        element.AddAttribute(values, nameof(InvokeDarpBindingConfig.Template), "template");
-        element.AddAttribute(values, nameof(InvokeDarpBindingConfig.ContentType), "content-type");
+        element.AddAttribute(values, nameof(InvokeDaprBindingConfig.Operation), "operation");
+        element.AddAttribute(values, nameof(InvokeDaprBindingConfig.IgnoreError), "ignore-error");
+        element.AddAttribute(values, nameof(InvokeDaprBindingConfig.ResponseVariableName), "response-variable-name");
+        element.AddAttribute(values, nameof(InvokeDaprBindingConfig.Timeout), "timeout");
+        element.AddAttribute(values, nameof(InvokeDaprBindingConfig.Template), "template");
+        element.AddAttribute(values, nameof(InvokeDaprBindingConfig.ContentType), "content-type");
 
-        if (values.TryGetValue(nameof(InvokeDarpBindingConfig.MetaData), out InitializerValue? mataDataValue))
+        if (values.TryGetValue(nameof(InvokeDaprBindingConfig.MetaData), out InitializerValue? mataDataValue))
         {
             HandleMataData(context, mataDataValue, element);
         }
 
-        if (values.TryGetValue(nameof(InvokeDarpBindingConfig.Data), out InitializerValue? dataValue))
+        if (values.TryGetValue(nameof(InvokeDaprBindingConfig.Data), out InitializerValue? dataValue))
         {
             element.Add(new XElement("data", dataValue.Value!));
         }
@@ -68,37 +68,37 @@ public class InvokeDarpBindingCompiler : IMethodPolicyHandler
 
         foreach (InitializerValue item in mataDataValue.UnnamedValues ?? [])
         {
-            if (!item.TryGetValues<DarpMetaData>(out var mataDataValues))
+            if (!item.TryGetValues<DaprMetaData>(out var mataDataValues))
             {
                 context.Report(Diagnostic.Create(
                     CompilationErrors.PolicyArgumentIsNotOfRequiredType,
                     item.Node.GetLocation(),
-                    "invoke-darp-binding.matadata",
-                    nameof(DarpMetaData)
+                    "invoke-dapr-binding.metadata",
+                    nameof(DaprMetaData)
                 ));
                 continue;
             }
 
             XElement mataDataElement = new("item");
 
-            if (!mataDataElement.AddAttribute(mataDataValues, nameof(DarpMetaData.Key), "key"))
+            if (!mataDataElement.AddAttribute(mataDataValues, nameof(DaprMetaData.Key), "key"))
             {
                 context.Report(Diagnostic.Create(
                     CompilationErrors.RequiredParameterNotDefined,
                     item.Node.GetLocation(),
-                    "invoke-darp-binding.matadata.item",
-                    nameof(DarpMetaData.Key)
+                    "invoke-dapr-binding.metadata.item",
+                    nameof(DaprMetaData.Key)
                 ));
                 continue;
             }
 
-            if (!mataDataValues.TryGetValue(nameof(DarpMetaData.Value), out var value))
+            if (!mataDataValues.TryGetValue(nameof(DaprMetaData.Value), out var value))
             {
                 context.Report(Diagnostic.Create(
                     CompilationErrors.RequiredParameterNotDefined,
                     item.Node.GetLocation(),
-                    "invoke-darp-binding.matadata.item",
-                    nameof(DarpMetaData.Value)
+                    "invoke-dapr-binding.metadata.item",
+                    nameof(DaprMetaData.Value)
                 ));
                 continue;
             }

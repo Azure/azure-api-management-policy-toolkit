@@ -7,5 +7,22 @@ version: 2
 updates:
   - package-ecosystem: "nuget" # See documentation for possible values
     directory: "/" # Location of package manifests
+    exclude-paths:
+      - "src/Analyzers/**"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "nuget"
+    directory: "/src/Analyzers"
+    ignore:
+      - dependency-name: "Microsoft.CodeAnalysis.CSharp"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7

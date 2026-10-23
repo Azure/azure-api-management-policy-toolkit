@@ -39,9 +39,9 @@ public class SetBodyCompiler : IMethodPolicyHandler
                     if (template.Value != "liquid")
                     {
                         context.Report(Diagnostic.Create(
-                            CompilationErrors.OnlyOneOfTwoShouldBeDefined,
+                            CompilationErrors.ValueShouldBe,
                             template.Node.GetLocation(),
-                            "forward-request.template",
+                            "set-body.template",
                             "liquid"
                         ));
                     }
@@ -56,11 +56,10 @@ public class SetBodyCompiler : IMethodPolicyHandler
                     if (xsiNil.Value != "blank" && xsiNil.Value != "null")
                     {
                         context.Report(Diagnostic.Create(
-                            CompilationErrors.OnlyOneOfTwoShouldBeDefined,
+                            CompilationErrors.ValueShouldBe,
                             xsiNil.Node.GetLocation(),
-                            "forward-request.xsi-nil",
-                            "blank",
-                            "null"
+                            "set-body.xsi-nil",
+                            "blank' or 'null"
                         ));
                     }
                     else

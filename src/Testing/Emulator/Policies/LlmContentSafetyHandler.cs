@@ -5,7 +5,7 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
 
-[Section(nameof(IInboundContext))]
+[Section(nameof(IInboundContext)), Section(nameof(IOutboundContext))]
 internal class LlmContentSafetyHandler : PolicyHandler<LlmContentSafetyConfig>
 {
     public override string PolicyName => nameof(IInboundContext.LlmContentSafety);

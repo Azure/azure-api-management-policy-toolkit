@@ -1,10 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
-public class PublishToDarpTests
+public class PublishToDaprTests
 {
     [TestMethod]
     [DataRow(
@@ -14,23 +16,7 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
-                {
-                    Topic = "my-topic",
-                    Content = "my-content"
-                });
-            }
-            public void Outbound(IOutboundContext context) 
-            {
-                context.PublishToDarp(new PublishToDarpConfig
-                {
-                    Topic = "my-topic",
-                    Content = "my-content"
-                });
-            }
-            public void OnError(IOnErrorContext context) 
-            {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content"
@@ -41,17 +27,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic">my-content</publish-to-dapr>
             </inbound>
-            <outbound>
-                <publish-to-darp topic="my-topic">my-content</publish-to-darp>
-            </outbound>
-            <on-error>
-                <publish-to-darp topic="my-topic">my-content</publish-to-darp>
-            </on-error>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with required properties in sections"
+        DisplayName = "Should compile publish-to-dapr policy with required properties in inbound"
     )]
     [DataRow(
         """
@@ -60,7 +40,7 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = GetTopic(context.ExpressionContext),
                     Content = "my-content"
@@ -73,11 +53,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="@($"topic-{context.Api.Id}")">my-content</publish-to-darp>
+                <publish-to-dapr topic="@($"topic-{context.Api.Id}")">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with expression in topic"
+        DisplayName = "Should compile publish-to-dapr policy with expression in topic"
     )]
     [DataRow(
         """
@@ -86,7 +66,7 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = GetContent(context.ExpressionContext)
@@ -99,11 +79,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic">@(context.Request.Body.As<string>())</publish-to-darp>
+                <publish-to-dapr topic="my-topic">@(context.Request.Body.As<string>())</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with expression in content"
+        DisplayName = "Should compile publish-to-dapr policy with expression in content"
     )]
     [DataRow(
         """
@@ -112,7 +92,7 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content",
@@ -124,11 +104,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic" pub-sub-name="my-pubsub">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic" pubsub-name="my-pubsub">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with pub-sub-name"
+        DisplayName = "Should compile publish-to-dapr policy with pubsub-name"
     )]
     [DataRow(
         """
@@ -137,7 +117,7 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content",
@@ -151,11 +131,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic" pub-sub-name="@($"pubsub-{context.Api.Name}")">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic" pubsub-name="@($"pubsub-{context.Api.Name}")">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with expression in pub-sub-name"
+        DisplayName = "Should compile publish-to-dapr policy with expression in pubsub-name"
     )]
     [DataRow(
         """
@@ -164,7 +144,7 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content",
@@ -176,11 +156,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic" ignore-error="true">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic" ignore-error="true">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with ignore-error"
+        DisplayName = "Should compile publish-to-dapr policy with ignore-error"
     )]
     [DataRow(
         """
@@ -189,11 +169,11 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content",
-                    ResponseVariableName = "darpResponse"
+                    ResponseVariableName = "daprResponse"
                 });
             }
         }
@@ -201,11 +181,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic" response-variable-name="darpResponse">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic" response-variable-name="daprResponse">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with response-variable-name"
+        DisplayName = "Should compile publish-to-dapr policy with response-variable-name"
     )]
     [DataRow(
         """
@@ -214,11 +194,11 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content",
-                    Timeout = 5000
+                    Timeout = 30
                 });
             }
         }
@@ -226,11 +206,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic" timeout="5000">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic" timeout="30">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with timeout"
+        DisplayName = "Should compile publish-to-dapr policy with timeout"
     )]
     [DataRow(
         """
@@ -239,7 +219,7 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content",
@@ -251,11 +231,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic" template="liquid">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic" template="liquid">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with template"
+        DisplayName = "Should compile publish-to-dapr policy with template"
     )]
     [DataRow(
         """
@@ -264,7 +244,7 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content",
@@ -276,11 +256,11 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic" content-type="application/json">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic" content-type="application/json">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with content-type"
+        DisplayName = "Should compile publish-to-dapr policy with content-type"
     )]
     [DataRow(
         """
@@ -289,14 +269,14 @@ public class PublishToDarpTests
         {
             public void Inbound(IInboundContext context) 
             {
-                context.PublishToDarp(new PublishToDarpConfig
+                context.PublishToDapr(new PublishToDaprConfig
                 {
                     Topic = "my-topic",
                     Content = "my-content",
                     PubSubName = "my-pubsub",
                     IgnoreError = true,
-                    ResponseVariableName = "darpResponse",
-                    Timeout = 5000,
+                    ResponseVariableName = "daprResponse",
+                    Timeout = 30,
                     Template = "liquid",
                     ContentType = "application/json"
                 });
@@ -306,14 +286,77 @@ public class PublishToDarpTests
         """
         <policies>
             <inbound>
-                <publish-to-darp topic="my-topic" pub-sub-name="my-pubsub" ignore-error="true" response-variable-name="darpResponse" timeout="5000" template="liquid" content-type="application/json">my-content</publish-to-darp>
+                <publish-to-dapr topic="my-topic" pubsub-name="my-pubsub" ignore-error="true" response-variable-name="daprResponse" timeout="30" template="liquid" content-type="application/json">my-content</publish-to-dapr>
             </inbound>
         </policies>
         """,
-        DisplayName = "Should compile publish-to-darp policy with all properties"
+        DisplayName = "Should compile publish-to-dapr policy with all properties"
     )]
-    public void ShouldCompilePublishToDarpPolicy(string code, string expectedXml)
+    public void ShouldCompilePublishToDaprPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow(1)]
+    [DataRow(240)]
+    public void ShouldAcceptTimeoutAtRangeBoundaries(int timeout)
+    {
+        var result = $$"""
+                       [Document]
+                       public class PolicyDocument : IDocument
+                       {
+                           public void Inbound(IInboundContext context)
+                           {
+                               context.PublishToDapr(new PublishToDaprConfig
+                               {
+                                   Topic = "my-topic",
+                                   Content = "my-content",
+                                   Timeout = {{timeout}}
+                               });
+                           }
+                       }
+                       """.CompileDocument();
+
+        result.Should().BeSuccessful();
+    }
+
+    [TestMethod]
+    [DataRow("0")]
+    [DataRow("241")]
+    [DataRow("5000")]
+    [DataRow("-1")]
+    [DataRow("Seconds")]
+    public void ShouldRejectTimeoutOutsideOfRange(string timeout)
+    {
+        var result = $$"""
+                       [Document]
+                       public class PolicyDocument : IDocument
+                       {
+                           private const int Seconds = 300;
+
+                           public void Inbound(IInboundContext context)
+                           {
+                               context.PublishToDapr(new PublishToDaprConfig
+                               {
+                                   Topic = "my-topic",
+                                   Content = "my-content",
+                                   Timeout = {{timeout}}
+                               });
+                           }
+                       }
+                       """.CompileDocument();
+
+        result.Errors.Should().ContainSingle(error => error.Id == "APIM2020");
+    }
+
+    [TestMethod]
+    [DataRow(typeof(IOutboundContext))]
+    [DataRow(typeof(IOnErrorContext))]
+    [DataRow(typeof(IBackendContext))]
+    public void ShouldOnlyBeAvailableInInbound(Type section)
+    {
+        // API Management only accepts publish-to-dapr in the inbound section.
+        section.GetMethod(nameof(IInboundContext.PublishToDapr)).Should().BeNull();
     }
 }

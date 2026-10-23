@@ -1,6 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text;
+using System.Xml;
+using System.Xml.Linq;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Serialization;
 
 [TestClass]
@@ -19,6 +23,12 @@ public class RazorCodeFormatterTests
     [DataRow(
         "<element>@(context.Request.IpAddress.StartsWith(\"10.0.0.\")?\"a\".ToString():\"b\")</element>",
         "<element>@(context.Request.IpAddress.StartsWith(\"10.0.0.\") ? \"a\".ToString() : \"b\")</element>")]
+    [DataRow(
+        "<element att1=\"@({{port}}+1)\" />",
+        "<element att1=\"@({{port}} + 1)\" />")]
+    [DataRow(
+        "<element>@($\"{context.User.Id}-{({{api-key}})}\")</element>",
+        "<element>@($\"{context.User.Id}-{({{api-key}})}\")</element>")]
     public void ShouldFormatOneLineCode(string notFormatted, string formatted)
     {
         var result = RazorCodeFormatter.Format(notFormatted);
@@ -80,6 +90,12 @@ public class RazorCodeFormatterTests
         }
         }" />
         """)]
+    [DataRow("<element>@{return {{port}}+1;}</element>",
+        """
+        <element>@{
+        return {{port}} + 1;
+        }</element>
+        """)]
     public void ShouldFormatMultiLineCode(string notFormatted, string formatted)
     {
         var result = RazorCodeFormatter.Format(notFormatted.ReplaceLineEndings());
@@ -103,6 +119,10 @@ public class RazorCodeFormatterTests
         "<element>@{var a=1;}</element>",
         "@{var a = 1;}",
         "<element>{0}</element>")]
+    [DataRow(
+        "<element att1=\"@({{port}}+1)\" />",
+        "@({{port}} + 1)",
+        "<element att1=\"{0}\" />")]
     public void ShouldReplaceCodeWithMarkers(string code, string expression, string expected)
     {
         var result = RazorCodeFormatter.ToCleanXml(code, out var markerToCode);
@@ -141,5 +161,44 @@ public class RazorCodeFormatterTests
                                   <v>*</v>
                               <element>
                               """.ReplaceLineEndings());
+    }
+
+    [TestMethod]
+    public void ShouldFormatExpressionsOnElementValueBeforeEncoding()
+    {
+        var element = new XElement("element", "@(context.Request.Body.As<string>()  ??  \"x\")");
+
+        RazorCodeFormatter.FormatExpressions(element);
+        var result = SerializeXml(element);
+
+        result.Should().Be("<element>@(context.Request.Body.As&lt;string&gt;() ?? \"x\")</element>");
+    }
+
+    [TestMethod]
+    public void ShouldFormatExpressionsInAttributeBeforeEncoding()
+    {
+        var element = new XElement("element",
+            new XAttribute("condition", "@(context.Request.Url.Path.StartsWith( \"/v1/\" ))"));
+
+        RazorCodeFormatter.FormatExpressions(element);
+        var result = SerializeXml(element);
+
+        result.Should()
+            .Be("<element condition=\"@(context.Request.Url.Path.StartsWith(&quot;/v1/&quot;))\" />");
+    }
+
+    private static string SerializeXml(XElement element)
+    {
+        var settings = new XmlWriterSettings
+        {
+            OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Fragment,
+        };
+        var builder = new StringBuilder();
+        using (var writer = CustomXmlWriter.Create(builder, settings, rawExpressions: false))
+        {
+            writer.Write(element);
+        }
+
+        return builder.ToString();
     }
 }

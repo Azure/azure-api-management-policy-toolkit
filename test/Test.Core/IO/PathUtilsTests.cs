@@ -9,7 +9,7 @@ namespace Test.Core.IO;
 public class PathUtilsTests
 {
     [TestMethod]
-    [DynamicData(nameof(PrepareOutputPath_ShouldHandlePathsCorrectly_Data), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(PrepareOutputPath_ShouldHandlePathsCorrectly_Data))]
     public void PrepareOutputPath_ShouldHandlePathsCorrectly(string actualPath, string extension, string expectedPath)
     {
         var actual = PathUtils.PrepareOutputPath(actualPath, extension);
@@ -23,8 +23,6 @@ public class PathUtilsTests
         yield return ["UserPolicy", "cshtml", "UserPolicy.cshtml"];
         yield return ["UserPolicy", ".cshtml", "UserPolicy.cshtml"];
         yield return ["UserPolicy.cshtml", "xml", "UserPolicy.cshtml"];
-        yield return [$"{Path.DirectorySeparatorChar}UserPolicy", "xml", "UserPolicy.xml"];
-        yield return [$"{Path.AltDirectorySeparatorChar}UserPolicy", "xml", "UserPolicy.xml"];
         yield return
         [
             $"Folder{Path.DirectorySeparatorChar}UserPolicy", "xml",
@@ -33,26 +31,6 @@ public class PathUtilsTests
         yield return
         [
             $"Folder{Path.AltDirectorySeparatorChar}UserPolicy", "xml",
-            $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
-        ];
-        yield return
-        [
-            $"{Path.DirectorySeparatorChar}Folder{Path.DirectorySeparatorChar}UserPolicy", "xml",
-            $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
-        ];
-        yield return
-        [
-            $"{Path.AltDirectorySeparatorChar}Folder{Path.AltDirectorySeparatorChar}UserPolicy", "xml",
-            $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
-        ];
-        yield return
-        [
-            $"{Path.DirectorySeparatorChar}Folder{Path.AltDirectorySeparatorChar}UserPolicy", "xml",
-            $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
-        ];
-        yield return
-        [
-            $"{Path.AltDirectorySeparatorChar}Folder{Path.DirectorySeparatorChar}UserPolicy", "xml",
             $"Folder{Path.DirectorySeparatorChar}UserPolicy.xml"
         ];
         yield return
@@ -68,7 +46,33 @@ public class PathUtilsTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(IsNotInObjOrBinFolder_ChecksCorrectly_Data), DynamicDataSourceType.Method)]
+    [DataRow("../UserPolicy")]
+    [DataRow("Folder/../../UserPolicy")]
+    [DataRow(@"..\UserPolicy.xml")]
+    [DataRow(@"Folder\..\UserPolicy")]
+    public void PrepareOutputPath_WithParentDirectorySegment_ShouldThrow(string path)
+    {
+        var action = () => PathUtils.PrepareOutputPath(path, "xml");
+
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot contain parent directory segments*");
+    }
+
+    [TestMethod]
+    [DataRow("/UserPolicy")]
+    [DataRow(@"\UserPolicy")]
+    [DataRow("C:/UserPolicy")]
+    [DataRow(@"C:\UserPolicy.xml")]
+    public void PrepareOutputPath_WithRootedPath_ShouldThrow(string path)
+    {
+        var action = () => PathUtils.PrepareOutputPath(path, "xml");
+
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*must be relative*");
+    }
+
+    [TestMethod]
+    [DynamicData(nameof(IsNotInObjOrBinFolder_ChecksCorrectly_Data))]
     public void IsNotInObjOrBinFolder_ChecksCorrectly(string path, bool expected)
     {
         PathUtils.IsNotInObjOrBinFolder(path).Should().Be(expected);

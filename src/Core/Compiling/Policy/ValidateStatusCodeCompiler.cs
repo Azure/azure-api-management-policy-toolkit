@@ -33,7 +33,7 @@ public class ValidateStatusCodeCompiler : IMethodPolicyHandler
             return;
         }
 
-        element.AddAttribute(values, nameof(ValidateStatusCodeConfig.ErrorVariableName), "error-variable-name");
+        element.AddAttribute(values, nameof(ValidateStatusCodeConfig.ErrorsVariableName), "errors-variable-name");
 
         if (values.TryGetValue(nameof(ValidateStatusCodeConfig.StatusCodes), out var statusCodesValue))
         {

@@ -69,7 +69,7 @@ public class AppendQueryParameterTests
         test.SetupInbound().AppendQueryParameter().WithCallback(((context, name, values) =>
         {
             callbackExecuted = true;
-            context.Request.Url.Query.Add(name, values.Reverse().ToArray());
+            context.Request.Url.Query.Add(name, Enumerable.Reverse(values).ToArray());
         }));
 
         // Act

@@ -17,11 +17,14 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
       - name: Restore dependencies
         run: dotnet restore
       - name: Build with dotnet
@@ -30,7 +33,7 @@ jobs:
         run: dotnet test --no-build --logger trx --results-directory "TestResults"
       - name: Upload dotnet test results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dotnet-test-results-${{ matrix.os }}
           path: TestResults
@@ -39,7 +42,7 @@ jobs:
         run: dotnet format style --verify-no-changes --report "FormatReport"
       - name: Upload format report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dotnet-format-report-${{ matrix.os }}
           path: FormatReport
@@ -51,13 +54,24 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
       - name: Create new packages
         run: dotnet pack
+      - name: Verify generated .NET 9 and .NET 10 solutions
+        shell: bash
+        run: |
+          dotnet new install ./output/Microsoft.Azure.ApiManagement.PolicyToolkit.Templates.1.0.0.nupkg
+          dotnet new policytoolkitsolution --Framework net9.0 --output ./template-net9
+          dotnet build ./template-net9
+          dotnet new policytoolkitsolution --Framework net10.0 --output ./template-net10
+          dotnet build ./template-net10
       - name: Rename example project
         working-directory: ./example
         run: mv Example.sln.example Example.sln
@@ -81,10 +95,72 @@ jobs:
         run: dotnet test --no-build --logger trx --results-directory "TestResults"
       - name: Upload dotnet test results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dotnet-test-results-example-${{ matrix.os }}
           path: ./example/TestResults
       - name: Compile policies
         working-directory: ./example
         run: dotnet azure-apim-policy-compiler --s ./source/ --o ./target/ --format true
+
+  analyzer-sdk-compatibility:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: "8.0"
+            framework: net8.0
+          - sdk: "9.0"
+            framework: net9.0
+          - sdk: "10.0"
+            framework: net10.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+      - name: Create packages
+        run: dotnet pack
+      - name: Prepare example source
+        shell: bash
+        run: |
+          mv ./example/source/Source.Example.csproj.example ./example/source/Source.Example.csproj
+          dotnet new globaljson \
+            --sdk-version "${{ matrix.sdk }}.100" \
+            --roll-forward latestFeature \
+            --output ./example \
+            --force
+      - name: Verify analyzer with .NET ${{ matrix.sdk }}
+        working-directory: ./example
+        shell: bash
+        run: |
+          dotnet --version
+          dotnet restore ./source/Source.Example.csproj -p:ExampleTargetFramework=${{ matrix.framework }}
+          dotnet build ./source/Source.Example.csproj --no-restore -p:ExampleTargetFramework=${{ matrix.framework }}
+          cat > ./source/AnalyzerCompatibilityProbe.cs <<'EOF'
+          using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+          using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
+
+          public class AnalyzerCompatibilityProbe
+          {
+              [Expression]
+              public void InvalidExpression(IExpressionContext context)
+              {
+              }
+          }
+          EOF
+          set +e
+          dotnet build ./source/Source.Example.csproj --no-restore \
+            -p:ExampleTargetFramework=${{ matrix.framework }} 2>&1 | tee analyzer-probe.log
+          build_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$build_status" -eq 0 ]; then
+            echo "Expected the analyzer probe build to fail."
+            exit 1
+          fi
+          grep -q "APIM101" analyzer-probe.log

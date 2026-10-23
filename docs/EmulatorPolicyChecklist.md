@@ -25,7 +25,7 @@ Track progress of emulator policy handler implementation. Each policy needs a ha
 | ⬜ | LlmContentSafety | Inbound | LlmContentSafetyConfig | No-op + callbacks | `emulator/llm-content-safety` |
 | ⬜ | LlmTokenLimit | Inbound | LlmTokenLimitConfig | No-op + callbacks | `emulator/llm-token-limit` |
 | ⬜ | Proxy | Inbound | ProxyConfig | Context mutation | `emulator/proxy` |
-| ⬜ | PublishToDapr | Inbound, Outbound, OnError | PublishToDaprConfig | External service mock | `emulator/publish-to-dapr` |
+| ⬜ | PublishToDapr | Inbound | PublishToDaprConfig | External service mock | `emulator/publish-to-dapr` |
 | ✅ | QuotaByKey | Inbound | QuotaByKeyConfig | No-op + callbacks | `emulator/quota-by-key` |
 | ✅ | RedirectContentUrls | Outbound | None (no-arg) | No-op + callbacks | `emulator/redirect-content-urls` |
 | ✅ | Retry | Inbound, Outbound, Backend, OnError | RetryConfig + delegate | Wrapper/flow control | `emulator/retry` |

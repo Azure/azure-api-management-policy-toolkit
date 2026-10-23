@@ -5,6 +5,6 @@ using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Expressions;
 
-public record MockBasicAuthCredentials(string Username, string Password) : BasicAuthCredentials
+public record MockBasicAuthCredentials(string UserId, string Password) : BasicAuthCredentials
 {
 }

@@ -84,6 +84,13 @@ To make sure that `policy.xml` file is produced for each C# policy class make su
 [Document("policy.xml")]
 ```
 
+The name can also be a compile-time string constant, including concatenated constants, so a shared constant can be
+used for every policy class.
+
+```csharp
+[Document(PolicyFiles.Name)]
+```
+
 In the above example, we used a hierarchical structure of the policy toolkit project.
 Please refer to the [hierarchical structure](../docs/SolutionStructureRecommendation.md) for more information on that
 structure and other recommended structures.

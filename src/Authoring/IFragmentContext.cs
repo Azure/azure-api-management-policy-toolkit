@@ -293,7 +293,7 @@ public interface IFragmentContext : IHaveExpressionContext
     /// <param name="config">
     /// Configuration specifying the Dapr binding name, operation, metadata, and other settings.
     /// </param>
-    void InvokeDarpBinding(InvokeDarpBindingConfig config);
+    void InvokeDaprBinding(InvokeDaprBindingConfig config);
 
     /// <summary>
     /// Filters (allows/denies) calls from specific IP addresses and/or ranges.<br/>
@@ -427,7 +427,7 @@ public interface IFragmentContext : IHaveExpressionContext
     /// <param name="config">
     /// Configuration specifying the topic, content, and other optional settings for the publish-to-dapr policy.
     /// </param>
-    void PublishToDarp(PublishToDarpConfig config);
+    void PublishToDapr(PublishToDaprConfig config);
 
     /// <summary>
     /// Enforces a quota on the number of calls or bandwidth usage within a specified renewal period.<br />
@@ -747,7 +747,27 @@ public interface IFragmentContext : IHaveExpressionContext
     /// Determines whether the wait policy waits for all immediate child policies to be completed or just one.<br/>
     /// Policy expressions are allowed.
     /// </param>
+    [Obsolete("Use Wait(waitFor, branches) with branch-scoped lambdas instead.")]
     void Wait(Action section, [ExpressionAllowed] string? waitFor = null);
+
+    /// <summary>
+    /// Executes branch child policies in parallel and waits for all or one to complete.<br/>
+    /// Each branch compiles to exactly one immediate send-request, cache-lookup-value, or choose policy.<br/>
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/wait-policy">wait</a> policy.
+    /// </summary>
+    /// <param name="waitFor">
+    /// Whether to wait for "all" or "any" branches. A null value omits the for attribute, whose default is "all".
+    /// Policy expressions are allowed.
+    /// </param>
+    /// <param name="branches">
+    /// One or more individual synchronous lambdas invoking child policies on their branch context parameter.
+    /// Each lambda must contain one direct SendRequest or CacheLookupValue call, or one if/else-if/else chain.
+    /// WithId metadata chaining is supported with constant string IDs.
+    /// Conditions and configuration expressions must also use the branch context, not a captured outer section or expression context.
+    /// Context-producing helpers must have a provable branch-local origin; unproven factories are rejected by the compiler.
+    /// Conditional bodies may contain multiple sequential policies. Arrays and delegate references are not supported by the compiler.
+    /// </param>
+    void Wait([ExpressionAllowed] string? waitFor, params Action<IFragmentContext>[] branches);
 
     /// <summary>
     /// Converts XML content to JSON format.<br />
