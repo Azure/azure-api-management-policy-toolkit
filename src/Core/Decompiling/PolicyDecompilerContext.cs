@@ -19,6 +19,7 @@ public class PolicyDecompilerContext
 {
     private readonly List<ExpressionMethodInfo> _expressionMethods = new();
     private int _expressionCounter;
+    private string _currentContextVariable = "context";
     private readonly Dictionary<string, IPolicyDecompiler> _decompilers = new();
     private IPolicyDecompiler? _fallbackDecompiler;
 
@@ -38,6 +39,7 @@ public class PolicyDecompilerContext
     {
         _expressionMethods.Clear();
         _expressionCounter = 0;
+        _currentContextVariable = "context";
     }
 
     #region Policy Dispatch
@@ -52,14 +54,23 @@ public class PolicyDecompilerContext
 
     public void EmitPolicy(CodeWriter writer, XElement element, string contextVar)
     {
-        var policyName = element.Name.LocalName;
-        if (_decompilers.TryGetValue(policyName, out var decompiler))
+        var previousContextVariable = _currentContextVariable;
+        _currentContextVariable = contextVar;
+        try
         {
-            decompiler.Decompile(writer, element, contextVar, this);
+            var policyName = element.Name.LocalName;
+            if (_decompilers.TryGetValue(policyName, out var decompiler))
+            {
+                decompiler.Decompile(writer, element, contextVar, this);
+            }
+            else if (_fallbackDecompiler != null)
+            {
+                _fallbackDecompiler.Decompile(writer, element, contextVar, this);
+            }
         }
-        else if (_fallbackDecompiler != null)
+        finally
         {
-            _fallbackDecompiler.Decompile(writer, element, contextVar, this);
+            _currentContextVariable = previousContextVariable;
         }
     }
 
@@ -190,7 +201,7 @@ public class PolicyDecompilerContext
         body = ReplaceNamedValueTokens(body);
         var name = GenerateUniqueMethodName(suggestedName);
         _expressionMethods.Add(new ExpressionMethodInfo(name, returnType, body, isMultiLine));
-        return $"{name}(context.ExpressionContext)";
+        return $"{name}({_currentContextVariable}.ExpressionContext)";
     }
 
     public string GenerateUniqueMethodName(string suggestedName)
@@ -222,7 +233,7 @@ public class PolicyDecompilerContext
         _expressionMethods.Add(new ExpressionMethodInfo(
             methodName, "dynamic", body, IsMultiLine: false,
             NamedValueTemplateLiteral: value));
-        return $"{methodName}(context.ExpressionContext)";
+        return $"{methodName}({_currentContextVariable}.ExpressionContext)";
     }
 
     public string NamedValueCall(string token, string returnType = "dynamic")
@@ -234,7 +245,7 @@ public class PolicyDecompilerContext
             $"context.NamedValue(\"{name}\")",
             IsMultiLine: false,
             NamedValueName: name));
-        return $"{methodName}(context.ExpressionContext)";
+        return $"{methodName}({_currentContextVariable}.ExpressionContext)";
     }
 
     public static bool TryParseIsoDuration(string value, out long seconds)

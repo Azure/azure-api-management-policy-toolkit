@@ -410,6 +410,15 @@ internal sealed partial class PolicyExpressionCompiler
                    memberAccess.Name.Identifier.ValueText == "ExecutionContext";
         }
 
+        if (argument is InvocationExpressionSyntax invocation &&
+            model.GetOperation(invocation) is IInvocationOperation operation &&
+            operation.Type is { } type && IsContextParameter(type))
+        {
+            return IsSourceContextAlias(operation, model,
+                new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default),
+                new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default));
+        }
+
         if (argument is not IdentifierNameSyntax identifier ||
             model.GetSymbolInfo(identifier).Symbol is not IParameterSymbol parameter)
         {
@@ -422,5 +431,82 @@ internal sealed partial class PolicyExpressionCompiler
         }
 
         return IsExpressionContext(parameter.Type) || IsAuthoringSectionContext(parameter.Type);
+    }
+
+    private bool IsSourceContextAlias(
+        IOperation origin, SemanticModel model, IReadOnlyDictionary<IParameterSymbol, bool> bindings,
+        HashSet<IMethodSymbol> visiting)
+    {
+        switch (origin)
+        {
+            case IConversionOperation conversion when conversion.OperatorMethod is null:
+                return IsSourceContextAlias(conversion.Operand, model, bindings, visiting);
+            case IParameterReferenceOperation parameter:
+                return bindings.TryGetValue(parameter.Parameter, out var proven)
+                    ? proven
+                    : visiting.Count == 0 && IsContextParameter(parameter.Parameter.Type);
+            case IPropertyReferenceOperation property when property.Property.Name == "ExpressionContext" &&
+                                                            property.Type is { } type && IsExpressionContext(type) &&
+                                                            property.Instance is not null:
+                return IsSourceContextAlias(property.Instance, model, bindings, visiting);
+            case IInvocationOperation invocation when invocation.TargetMethod.Name == "WithId" &&
+                                                     IsAuthoringSectionContext(invocation.TargetMethod.ContainingType) &&
+                                                     invocation.Instance is not null:
+                return IsSourceContextAlias(invocation.Instance, model, bindings, visiting);
+            case IInvocationOperation invocation when invocation.Type is { } type && IsContextParameter(type):
+                return IsSourceContextHelper(invocation, model, bindings, visiting);
+            default:
+                return false;
+        }
+    }
+
+    private bool IsSourceContextHelper(
+        IInvocationOperation invocation, SemanticModel model,
+        IReadOnlyDictionary<IParameterSymbol, bool> bindings, HashSet<IMethodSymbol> visiting)
+    {
+        var method = invocation.TargetMethod;
+        if (invocation.Syntax is not InvocationExpressionSyntax syntax ||
+            !IsSafeSourceHelper(syntax, model, method) ||
+            !TryGetMethodDeclaration(method, out var declaration) ||
+            ReturnExpression(declaration) is not { } returned ||
+            ModelFor(returned.SyntaxTree) is not { } sourceModel ||
+            sourceModel.GetDeclaredSymbol(declaration) is not IMethodSymbol sourceMethod ||
+            visiting.Count >= MaxExpansionDepth || visiting.Contains(method.OriginalDefinition))
+        {
+            return false;
+        }
+
+        var bound = new Dictionary<IParameterSymbol, bool>(SymbolEqualityComparer.Default);
+        foreach (var binding in bindings)
+        {
+            bound.Add(binding.Key, binding.Value);
+        }
+
+        foreach (var argument in invocation.Arguments)
+        {
+            if (argument.Parameter is null || argument.Parameter.Ordinal >= sourceMethod.Parameters.Length ||
+                argument.Value.Syntax is not ExpressionSyntax argumentSyntax)
+            {
+                return false;
+            }
+
+            var proven = IsSourceContextAlias(argument.Value, model, bindings, visiting);
+            if (!proven && !IsSafeSubstitutionArgument(argumentSyntax))
+            {
+                return false;
+            }
+
+            bound[sourceMethod.Parameters[argument.Parameter.Ordinal]] = proven;
+        }
+
+        if (sourceModel.GetOperation(returned) is not { } returnedOperation)
+        {
+            return false;
+        }
+
+        visiting.Add(method.OriginalDefinition);
+        var result = IsSourceContextAlias(returnedOperation, sourceModel, bound, visiting);
+        visiting.Remove(method.OriginalDefinition);
+        return result;
     }
 }
