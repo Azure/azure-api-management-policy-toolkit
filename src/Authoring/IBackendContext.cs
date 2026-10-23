@@ -123,6 +123,13 @@ public interface IBackendContext : IHaveExpressionContext
     void IncludeFragment(string fragmentId);
 
     /// <summary>
+    /// Includes a typed policy fragment instance. The fragment's policies are inserted at this location.<br />
+    /// Compiled to <a href="https://learn.microsoft.com/en-us/azure/api-management/include-fragment-policy">include-fragment</a> policy.
+    /// </summary>
+    /// <param name="fragment">The fragment instance to include. Fragment variables are set from the instance's properties.</param>
+    void IncludeFragment<TFragment>(TFragment fragment) where TFragment : IFragment;
+
+    /// <summary>
     /// Inlines the specified policy as is to policy document.
     /// </summary>
     /// <param name="policy">

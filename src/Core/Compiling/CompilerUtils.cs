@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
@@ -42,6 +43,22 @@ public static class CompilerUtils
                 return FindCode(syntax, context);
             case MemberAccessExpressionSyntax syntax:
                 return FindCode(syntax, context);
+            case IdentifierNameSyntax syntax:
+            {
+                if (semanticModel?.GetSymbolInfo(syntax).Symbol is IPropertySymbol property &&
+                    GetFragmentVariableAttribute(property) is { } attribute &&
+                    context.SyntaxRoot is ClassDeclarationSyntax fragmentClass)
+                {
+                    var fragmentId = fragmentClass.ExtractDocumentFileName(semanticModel);
+                    var variableName = GetFragmentVariableName(property, attribute);
+                    var key = SymbolDisplay.FormatLiteral($"{fragmentId}-{variableName}", true);
+                    var defaultValue = SymbolDisplay.FormatLiteral(
+                        GetFragmentVariableDefaultValue(property, attribute, context), true);
+                    var nullFallback = SymbolDisplay.FormatLiteral(GetFragmentVariableFallback(attribute), true);
+                    return $"@(context.Variables.GetValueOrDefault<string>({key}, {defaultValue}) ?? {nullFallback})";
+                }
+                goto default;
+            }
             // case InterpolatedStringExpressionSyntax syntax:
             //     var interpolationParts = syntax.Contents.Select(c => c switch
             //     {
@@ -308,6 +325,35 @@ public static class CompilerUtils
 
         values = result;
         return true;
+    }
+
+    internal static AttributeData? GetFragmentVariableAttribute(IPropertySymbol property) =>
+        property.GetAttributes().FirstOrDefault(attribute =>
+            attribute.AttributeClass?.ToDisplayString() == typeof(FragmentVariableAttribute).FullName);
+
+    internal static string GetFragmentVariableName(IPropertySymbol property, AttributeData attribute) =>
+        attribute.ConstructorArguments.FirstOrDefault().Value as string ?? property.Name;
+
+    internal static string GetFragmentVariableFallback(AttributeData attribute) =>
+        attribute.NamedArguments.FirstOrDefault(argument =>
+            argument.Key == nameof(FragmentVariableAttribute.DefaultValue)).Value.Value as string ?? "";
+
+    internal static string GetFragmentVariableDefaultValue(
+        IPropertySymbol property, AttributeData attribute, IDocumentCompilationContext context)
+    {
+        var initializer = property.DeclaringSyntaxReferences
+            .Select(reference => reference.GetSyntax())
+            .OfType<PropertyDeclarationSyntax>()
+            .FirstOrDefault()?.Initializer?.Value;
+        if (initializer is null)
+            return GetFragmentVariableFallback(attribute);
+
+        var constant = CachedModel(context.Compilation, initializer.SyntaxTree).GetConstantValue(initializer);
+        if (constant.HasValue)
+            return constant.Value as string ?? GetFragmentVariableFallback(attribute);
+
+        context.Report(Diagnostic.Create(CompilationErrors.NotSupportedParameter, initializer.GetLocation()));
+        return "";
     }
 
     // A config factory is a source method returning a single object creation expression,

@@ -78,6 +78,29 @@ public class DocumentTypeTests
     )]
     [DataRow(
         """
+        [Document( Type = DocumentType.Fragment )] 
+        public class PolicyFragment : IFragment
+        {
+            [FragmentVariable(DefaultValue = "fragment-fallback-value")]
+            public string XFragmentValue { get; set; };
+
+            public void Fragment(IFragmentContext context)
+            {
+                context.SetHeader("X-Fragment", XFragmentValue);
+            }
+        }
+        """,
+        """
+        <fragment>
+            <set-header name="X-Fragment">
+                <value>@(context.Variables.GetValueOrDefault<string>("PolicyFragment-XFragmentValue", "fragment-fallback-value") ?? "fragment-fallback-value")</value>
+            </set-header>
+        </fragment>
+        """,
+        DisplayName = "Should compile policy fragment with fragment variables using Fragment method"
+    )]
+    [DataRow(
+        """
         [Document("my-fragment", Type = DocumentType.Fragment)]
         public class NamedPolicyFragment : IFragment
         {
@@ -97,6 +120,29 @@ public class DocumentTypeTests
         </fragment>
         """,
         DisplayName = "Should compile named policy fragment with multiple policies using Fragment method"
+    )]
+    [DataRow(
+        """
+        [Document("my-fragment", Type = DocumentType.Fragment)]
+        public class NamedPolicyFragment : IFragment
+        {
+            [FragmentVariable("my-variable")]
+            public string XNamedFragmentValue { get; set; };
+
+            public void Fragment(IFragmentContext context)
+            {
+                context.SetHeader("X-Named-Fragment", XNamedFragmentValue);
+            }
+        }
+        """,
+        """
+        <fragment>
+            <set-header name="X-Named-Fragment">
+                <value>@(context.Variables.GetValueOrDefault<string>("my-fragment-my-variable", "") ?? "")</value>
+            </set-header>
+        </fragment>
+        """,
+        DisplayName = "Should compile named policy fragment with variables using Fragment method"
     )]
     public void ShouldCompileDocumentWithCorrectType(string code, string expectedXml)
     {
@@ -264,5 +310,60 @@ public class DocumentTypeTests
 
         result.Should().BeSuccessful();
         result.Document.Name.LocalName.Should().Be("fragment");
+    }
+
+    [TestMethod]
+    [DataRow("a\"b")]
+    [DataRow(@"a\b")]
+    [DataRow("a\r\nb")]
+    [DataRow("")]
+    public void ShouldEscapeFragmentVariableNamesAndDefaults(string defaultValue)
+    {
+        var code = $$"""
+            [Document("named")]
+            public class ValueFragment : IFragment
+            {
+                private const string VariableName = "quoted\"\\key";
+                private const string Fallback = {{SymbolDisplay.FormatLiteral(defaultValue, true)}};
+                [FragmentVariable(VariableName, DefaultValue = Fallback)]
+                public string Value { get; set; }
+                public void Fragment(IFragmentContext context) { context.SetHeader("X", Value); }
+            }
+            """;
+
+        var result = code.CompileDocument();
+
+        result.Should().BeSuccessful();
+        var expression = result.Document.Descendants("value").Single().Value;
+        var syntax = SyntaxFactory.ParseExpression(expression[2..^1]);
+        syntax.GetDiagnostics().Should().BeEmpty();
+        syntax.DescendantNodes().OfType<LiteralExpressionSyntax>()
+            .Select(literal => literal.Token.ValueText)
+            .Should().Equal("named-quoted\"\\key", defaultValue, defaultValue);
+    }
+
+    [TestMethod]
+    [DataRow("initial")]
+    [DataRow("")]
+    public void ShouldPreserveFragmentPropertyInitializers(string initialValue)
+    {
+        var code = $$"""
+            [Document("named")]
+            public class ValueFragment : IFragment
+            {
+                [FragmentVariable(DefaultValue = "fallback")]
+                public string Value { get; set; } = {{SymbolDisplay.FormatLiteral(initialValue, true)}};
+                public void Fragment(IFragmentContext context) { context.SetHeader("X", Value); }
+            }
+            """;
+
+        var result = code.CompileDocument();
+
+        result.Should().BeSuccessful();
+        var expression = result.Document.Descendants("value").Single().Value;
+        SyntaxFactory.ParseExpression(expression[2..^1]).DescendantNodes()
+            .OfType<LiteralExpressionSyntax>()
+            .Select(literal => literal.Token.ValueText)
+            .Should().Equal("named-Value", initialValue, "fallback");
     }
 }
