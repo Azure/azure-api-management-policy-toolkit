@@ -105,19 +105,24 @@ public class IncludeFragmentTests
         """
         <policies>
             <inbound>
-                <set-variable name="inbound-fragment-XFragmentValue" value="inbound-value" />
-                <include-fragment fragment-id="inbound-fragment" />
+                <set-variable name="InboundFragment-XFragmentValue" value="inbound-value" />
+                <include-fragment fragment-id="InboundFragment" />
             </inbound>
             <outbound>
                 <set-variable name="my-fragment-XFragmentValue" value="outbound-value" />
                 <include-fragment fragment-id="my-fragment" />
             </outbound>
             <backend>
-                <include-fragment fragment-id="backend-fragment" />
+                <choose>
+                    <when condition="@(true)">
+                        <set-variable name="BackendFragment-XFragmentValue" value="" />
+                        <include-fragment fragment-id="BackendFragment" />
+                    </when>
+                </choose>
             </backend>
             <on-error>
-                <set-variable name="on-error-fragment-my-variable" value="on-error-value" />
-                <include-fragment fragment-id="on-error-fragment" />
+                <set-variable name="OnErrorFragment-my-variable" value="on-error-value" />
+                <include-fragment fragment-id="OnErrorFragment" />
             </on-error>
         </policies>
         """,
@@ -126,5 +131,88 @@ public class IncludeFragmentTests
     public void ShouldCompileIncludeFragmentPolicyWithVariables(string code, string fragment, string expectedXml)
     {
         code.CompileDocument(fragment).Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    [DataRow("[Document]", "NamedFragment")]
+    [DataRow("[Document(\"explicit-name\")]", "explicit-name")]
+    [DataRow("[Document(Names.Fragment)]", "constant-name")]
+    [DataRow("[Document(nameof(NamedFragment))]", "NamedFragment")]
+    public void ShouldUseTheExportedFragmentName(string attribute, string expectedName)
+    {
+        const string code = """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context) { context.IncludeFragment(new Test.NamedFragment()); }
+            }
+            """;
+        var fragment = $$"""
+            {{attribute}}
+            public class NamedFragment : IFragment
+            {
+                public void Fragment(IFragmentContext context) { context.SetHeader("X", "value"); }
+            }
+            public static class Names
+            {
+                public const string Fragment = "constant-name";
+            }
+            """;
+        var expected = $$"""
+            <policies>
+                <inbound>
+                    <include-fragment fragment-id="{{expectedName}}" />
+                </inbound>
+            </policies>
+            """;
+
+        code.CompileDocument(fragment).Should().BeSuccessful().And.DocumentEquivalentTo(expected);
+    }
+
+    [TestMethod]
+    [DataRow("", "", "fallback")]
+    [DataRow(" = null;", "", "fallback")]
+    [DataRow(" = null!;", "", "fallback")]
+    [DataRow(" = \"initial\";", "", "initial")]
+    [DataRow(" = \"\";", "", "")]
+    [DataRow("", "{ Value = \"\" }", "")]
+    [DataRow(" = \"initial\";", "{ Value = null }", "fallback")]
+    [DataRow(" = \"initial\";", "{ Value = null! }", "fallback")]
+    [DataRow("", "{ Value = \"second\" }", "second")]
+    public void ShouldResetFragmentVariablesForEachInstance(
+        string propertyInitializer, string objectInitializer, string expectedValue)
+    {
+        var code = $$"""
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.IncludeFragment(new ValueFragment { Value = "first" });
+                    context.IncludeFragment(new ValueFragment() {{objectInitializer}});
+                }
+            }
+            """;
+        var fragment = $$"""
+            [Document("values")]
+            public class ValueFragment : IFragment
+            {
+                [FragmentVariable("value", DefaultValue = "fallback")]
+                public string Value { get; set; }{{propertyInitializer}}
+                public void Fragment(IFragmentContext context) { context.SetHeader("X", Value); }
+            }
+            """;
+        var expected = $$"""
+            <policies>
+                <inbound>
+                    <set-variable name="values-value" value="first" />
+                    <include-fragment fragment-id="values" />
+                    <set-variable name="values-value" value="{{expectedValue}}" />
+                    <include-fragment fragment-id="values" />
+                </inbound>
+            </policies>
+            """;
+
+        code.CompileDocument(fragment).Should().BeSuccessful().And.DocumentEquivalentTo(expected);
     }
 }

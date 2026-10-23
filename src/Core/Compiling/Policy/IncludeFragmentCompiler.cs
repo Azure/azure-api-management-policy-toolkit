@@ -43,8 +43,13 @@ public class IncludeFragmentCompiler : IMethodPolicyHandler
         IDocumentCompilationContext context,
         ObjectCreationExpressionSyntax objectCreation)
     {
-        var className = (objectCreation.Type as IdentifierNameSyntax)?.Identifier.ValueText;
-        if (className is null)
+        var model = CompilerUtils.CachedModel(context.Compilation, objectCreation.SyntaxTree);
+        var fragmentType = model.GetTypeInfo(objectCreation).Type as INamedTypeSymbol;
+        var fragmentClass = fragmentType?.DeclaringSyntaxReferences
+            .Select(reference => reference.GetSyntax())
+            .OfType<ClassDeclarationSyntax>()
+            .FirstOrDefault();
+        if (fragmentType is null || fragmentClass is null)
         {
             context.Report(Diagnostic.Create(
                 CompilationErrors.NotSupportedParameter,
@@ -53,34 +58,62 @@ public class IncludeFragmentCompiler : IMethodPolicyHandler
             return;
         }
 
-        ClassDeclarationSyntax? fragmentClass = null;
-        foreach (var tree in context.Compilation.SyntaxTrees)
+        var fragmentCompilation = context.Compilation.ContainsSyntaxTree(fragmentClass.SyntaxTree)
+            ? context.Compilation
+            : CompilerUtils.FindCompilation(context.Compilation, fragmentClass.SyntaxTree);
+        if (fragmentCompilation is null)
         {
-            fragmentClass = tree.GetRoot()
-                .DescendantNodes()
-                .OfType<ClassDeclarationSyntax>()
-                .FirstOrDefault(c => c.Identifier.ValueText == className);
-            if (fragmentClass is not null) break;
+            context.Report(Diagnostic.Create(
+                CompilationErrors.NotSupportedParameter,
+                objectCreation.GetLocation()
+            ));
+            return;
         }
 
-        var fragmentId = CompilerUtils.ExtractFragmentId(fragmentClass ?? context.SyntaxRoot as ClassDeclarationSyntax);
-        if (fragmentClass is null)
-            fragmentId = CompilerUtils.ToKebabCase(className);
-
-        foreach (var expression in objectCreation.Initializer?.Expressions ?? [])
+        var fragmentContext = fragmentCompilation == context.Compilation
+            ? context
+            : new ReferencedCompilationContext(context, fragmentCompilation);
+        var fragmentId = fragmentClass.ExtractDocumentFileName(
+            CompilerUtils.CachedModel(fragmentCompilation, fragmentClass.SyntaxTree));
+        var assignments = objectCreation.Initializer?.Expressions
+            .OfType<AssignmentExpressionSyntax>()
+            .ToDictionary(assignment => assignment.Left.ToString(), assignment => assignment.Right)
+            ?? [];
+        var policies = new List<XElement>();
+        foreach (var property in fragmentType.GetMembers().OfType<IPropertySymbol>())
         {
-            if (expression is not AssignmentExpressionSyntax assignment)
+            if (CompilerUtils.GetFragmentVariableAttribute(property) is not { } attribute)
                 continue;
 
-            var propName = assignment.Left.ToString();
-            var varName = CompilerUtils.GetFragmentVariableName(fragmentClass, propName) ?? propName;
-            var value = assignment.Right.ProcessParameter(context);
+            var variableName = CompilerUtils.GetFragmentVariableName(property, attribute);
+            string value;
+            if (assignments.TryGetValue(property.Name, out var expression))
+            {
+                var constant = model.GetConstantValue(expression);
+                value = constant is { HasValue: true, Value: null }
+                    ? CompilerUtils.GetFragmentVariableFallback(attribute)
+                    : expression.ProcessParameter(context);
+            }
+            else
+            {
+                value = CompilerUtils.GetFragmentVariableDefaultValue(property, attribute, fragmentContext);
+            }
 
-            context.AddPolicy(new XElement("set-variable",
-                new XAttribute("name", $"{fragmentId}-{varName}"),
+            policies.Add(new XElement("set-variable",
+                new XAttribute("name", $"{fragmentId}-{variableName}"),
                 new XAttribute("value", value)));
         }
 
-        context.AddPolicy(new XElement("include-fragment", new XAttribute("fragment-id", fragmentId)));
+        policies.Add(new XElement("include-fragment", new XAttribute("fragment-id", fragmentId)));
+        if (context.CurrentElement.Name.LocalName == "backend" && policies.Count > 1)
+        {
+            context.AddPolicy(new XElement("choose",
+                new XElement("when", new XAttribute("condition", "@(true)"), policies)));
+        }
+        else
+        {
+            foreach (var policy in policies)
+                context.AddPolicy(policy);
+        }
     }
 }

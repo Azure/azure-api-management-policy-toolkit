@@ -6,12 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling.Diagnostics;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
@@ -45,34 +45,17 @@ public static class CompilerUtils
                 return FindCode(syntax, context);
             case IdentifierNameSyntax syntax:
             {
-                var identifierName = syntax.Identifier.ValueText;
-                var property = context.SyntaxRoot
-                    .DescendantNodes()
-                    .OfType<PropertyDeclarationSyntax>()
-                    .FirstOrDefault(p => p.Identifier.ValueText == identifierName);
-                if (property is not null)
+                if (semanticModel?.GetSymbolInfo(syntax).Symbol is IPropertySymbol property &&
+                    GetFragmentVariableAttribute(property) is { } attribute &&
+                    context.SyntaxRoot is ClassDeclarationSyntax fragmentClass)
                 {
-                    var fragVarAttr = property.AttributeLists
-                        .SelectMany(al => al.Attributes)
-                        .FirstOrDefault(a => a.Name.ToString() is "FragmentVariable" or "FragmentVariableAttribute");
-                    if (fragVarAttr is not null)
-                    {
-                        var classDecl = property.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault();
-                        var fragmentId = ExtractFragmentId(classDecl);
-                        string? varName = null;
-                        var defaultValue = "";
-                        foreach (var arg in fragVarAttr.ArgumentList?.Arguments
-                                     ?? Enumerable.Empty<AttributeArgumentSyntax>())
-                        {
-                            if (arg.NameEquals is null)
-                                varName = (arg.Expression as LiteralExpressionSyntax)?.Token.ValueText;
-                            else if (arg.NameEquals.Name.Identifier.ValueText == "DefaultValue")
-                                defaultValue = (arg.Expression as LiteralExpressionSyntax)?.Token.ValueText ?? "";
-                        }
-                        varName ??= identifierName;
-                        return
-                            $"@(context.Variables.GetValueOrDefault<string>(\"{fragmentId}-{varName}\", \"{defaultValue}\"))";
-                    }
+                    var fragmentId = fragmentClass.ExtractDocumentFileName(semanticModel);
+                    var variableName = GetFragmentVariableName(property, attribute);
+                    var key = SymbolDisplay.FormatLiteral($"{fragmentId}-{variableName}", true);
+                    var defaultValue = SymbolDisplay.FormatLiteral(
+                        GetFragmentVariableDefaultValue(property, attribute, context), true);
+                    var nullFallback = SymbolDisplay.FormatLiteral(GetFragmentVariableFallback(attribute), true);
+                    return $"@(context.Variables.GetValueOrDefault<string>({key}, {defaultValue}) ?? {nullFallback})";
                 }
                 goto default;
             }
@@ -344,40 +327,33 @@ public static class CompilerUtils
         return true;
     }
 
-    private static readonly Regex KebabCasePattern = new(@"(?<!^)([A-Z])", RegexOptions.Compiled);
+    internal static AttributeData? GetFragmentVariableAttribute(IPropertySymbol property) =>
+        property.GetAttributes().FirstOrDefault(attribute =>
+            attribute.AttributeClass?.ToDisplayString() == typeof(FragmentVariableAttribute).FullName);
 
-    internal static string ToKebabCase(string name) =>
-        KebabCasePattern.Replace(name, "-$1").ToLowerInvariant();
+    internal static string GetFragmentVariableName(IPropertySymbol property, AttributeData attribute) =>
+        attribute.ConstructorArguments.FirstOrDefault().Value as string ?? property.Name;
 
-    internal static string ExtractFragmentId(ClassDeclarationSyntax? classDecl)
+    internal static string GetFragmentVariableFallback(AttributeData attribute) =>
+        attribute.NamedArguments.FirstOrDefault(argument =>
+            argument.Key == nameof(FragmentVariableAttribute.DefaultValue)).Value.Value as string ?? "";
+
+    internal static string GetFragmentVariableDefaultValue(
+        IPropertySymbol property, AttributeData attribute, IDocumentCompilationContext context)
     {
-        if (classDecl is not null)
-        {
-            var docAttr = classDecl.AttributeLists
-                .SelectMany(al => al.Attributes)
-                .FirstOrDefault(a => a.Name.ToString() is "Document" or "DocumentAttribute");
-            var firstPositionalArg = docAttr?.ArgumentList?.Arguments
-                .FirstOrDefault(a => a.NameEquals is null);
-            var attrName = (firstPositionalArg?.Expression as LiteralExpressionSyntax)?.Token.ValueText;
-            if (attrName is not null) return attrName;
-            return ToKebabCase(classDecl.Identifier.ValueText);
-        }
-        return "unknown";
-    }
-
-    internal static string? GetFragmentVariableName(ClassDeclarationSyntax? classDecl, string propertyName)
-    {
-        if (classDecl is null) return propertyName;
-        var property = classDecl.DescendantNodes()
+        var initializer = property.DeclaringSyntaxReferences
+            .Select(reference => reference.GetSyntax())
             .OfType<PropertyDeclarationSyntax>()
-            .FirstOrDefault(p => p.Identifier.ValueText == propertyName);
-        if (property is null) return propertyName;
-        var fragVarAttr = property.AttributeLists
-            .SelectMany(al => al.Attributes)
-            .FirstOrDefault(a => a.Name.ToString() is "FragmentVariable" or "FragmentVariableAttribute");
-        if (fragVarAttr is null) return null;
-        var positionalArg = fragVarAttr.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals is null);
-        return (positionalArg?.Expression as LiteralExpressionSyntax)?.Token.ValueText ?? propertyName;
+            .FirstOrDefault()?.Initializer?.Value;
+        if (initializer is null)
+            return GetFragmentVariableFallback(attribute);
+
+        var constant = CachedModel(context.Compilation, initializer.SyntaxTree).GetConstantValue(initializer);
+        if (constant.HasValue)
+            return constant.Value as string ?? GetFragmentVariableFallback(attribute);
+
+        context.Report(Diagnostic.Create(CompilationErrors.NotSupportedParameter, initializer.GetLocation()));
+        return "";
     }
 
     // A config factory is a source method returning a single object creation expression,

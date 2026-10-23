@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Reflection;
+
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Testing.Emulator.Policies;
@@ -107,6 +109,19 @@ internal class IncludeFragmentHandler : IPolicyHandler
         var handlers = context.CurrentSectionHandlers
             ?? throw new InvalidOperationException(
                 "IncludeFragment must be called from within a section context.");
+
+        foreach (var property in fragment.GetType().GetProperties())
+        {
+            if (property.GetCustomAttribute<FragmentVariableAttribute>() is not { } attribute ||
+                property.GetValue(fragment) is not null)
+                continue;
+
+            if (property.PropertyType != typeof(string) || property.SetMethod is null)
+                throw new InvalidOperationException(
+                    $"Fragment variable '{property.Name}' must be a writable string property to apply its default value.");
+
+            property.SetValue(fragment, attribute.DefaultValue);
+        }
 
         var proxy = SectionContextProxy<IFragmentContext>.CreateWithHandlers<IFragmentContext>(context, handlers);
         try
