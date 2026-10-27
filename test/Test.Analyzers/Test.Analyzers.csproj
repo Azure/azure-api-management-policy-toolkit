@@ -7,7 +7,7 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.12" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.13" />
     <PackageReference Include="MSTest" Version="4.5.1" />
     <PackageReference Include="coverlet.collector" Version="10.1.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" Version="1.1.4" />
