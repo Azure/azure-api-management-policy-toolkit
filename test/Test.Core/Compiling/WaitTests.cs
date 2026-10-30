@@ -26,6 +26,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -35,6 +37,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -44,6 +48,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -53,6 +59,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     });
@@ -63,22 +71,34 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
             <backend>
                 <wait>
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </backend>
             <outbound>
                 <wait>
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </outbound>
             <on-error>
                 <wait>
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </on-error>
         </policies>
@@ -95,6 +115,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     },
@@ -106,7 +128,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait for="any">
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -123,6 +148,8 @@ public class WaitTests
                 context.Wait(() =>
                     {
                         context.SendRequest(new SendRequestConfig {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "variable"
                         });
                     },
@@ -135,7 +162,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait for="@(context.Variables.ContainsKey("any") ? "any" : "all")">
-                    <send-request response-variable-name="variable" />
+                    <send-request response-variable-name="variable">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -161,6 +191,8 @@ public class WaitTests
                         if(RequestCondition(context.ExpressionContext))
                         {
                             context.SendRequest(new SendRequestConfig {
+                                Url = "https://example.com/api",
+                                Method = "GET",
                                 ResponseVariableName = "request"
                             });
                         }
@@ -181,7 +213,10 @@ public class WaitTests
                     </choose>
                     <choose>
                         <when condition="@(!context.Variables.ContainsKey("request"))">
-                            <send-request response-variable-name="request" />
+                            <send-request response-variable-name="request">
+                                <set-url>https://example.com/api</set-url>
+                                <set-method>GET</set-method>
+                            </send-request>
                         </when>
                     </choose>
                 </wait>
@@ -244,6 +279,8 @@ public class WaitTests
                 {
                     context.Wait(null, branch => branch.SendRequest(new SendRequestConfig
                     {
+                        Url = "https://example.com/api",
+                        Method = "GET",
                         ResponseVariableName = "request"
                     }));
                 }
@@ -253,7 +290,10 @@ public class WaitTests
             <policies>
                 <{{section}}>
                     <wait>
-                        <send-request response-variable-name="request" />
+                        <send-request response-variable-name="request">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                     </wait>
                 </{{section}}>
             </policies>
@@ -307,6 +347,8 @@ public class WaitTests
                     context.Wait("{{waitFor}}",
                         branch => branch.SendRequest(new SendRequestConfig
                         {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "first"
                         }),
                         branch =>
@@ -319,6 +361,8 @@ public class WaitTests
                         },
                         branch => branch.SendRequest(new SendRequestConfig
                         {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "last"
                         }));
                 }
@@ -328,9 +372,15 @@ public class WaitTests
             <policies>
                 <inbound>
                     <wait for="{{waitFor}}">
-                        <send-request response-variable-name="first" />
+                        <send-request response-variable-name="first">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                         <cache-lookup-value key="key" variable-name="cache" />
-                        <send-request response-variable-name="last" />
+                        <send-request response-variable-name="last">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                     </wait>
                 </inbound>
             </policies>
@@ -358,6 +408,8 @@ public class WaitTests
                     {
                         branch.SendRequest(new SendRequestConfig
                         {
+                            Url = "https://example.com/api",
+                            Method = "GET",
                             ResponseVariableName = "request"
                         });
                     });
@@ -370,7 +422,10 @@ public class WaitTests
             <policies>
                 <inbound>
                     <wait>
-                        <send-request response-variable-name="request" />
+                        <send-request response-variable-name="request">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                     </wait>
                 </inbound>
             </policies>
@@ -382,14 +437,17 @@ public class WaitTests
         """
         context.Wait(null, branch =>
         {
-            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
         })
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="request" />
+                    <send-request response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -416,13 +474,16 @@ public class WaitTests
     [DataRow(
         """
         context.Wait(null, (IInboundContext branch) =>
-            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="request" />
+                    <send-request response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -431,13 +492,16 @@ public class WaitTests
     [DataRow(
         """
         context.Wait(null, static (branch) =>
-            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="request" />
+                    <send-request response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -447,6 +511,7 @@ public class WaitTests
         """
         context.Wait(null, branch => branch.SendRequest(new SendRequestConfig
         {
+            Method = "GET",
             ResponseVariableName = ResponseVariableNameExp(branch.ExpressionContext),
             Url = UrlExp(branch.ExpressionContext)
         }))
@@ -457,6 +522,7 @@ public class WaitTests
                 <wait>
                     <send-request response-variable-name="@(context.Request.Method)">
                         <set-url>@(context.Request.Url.ToString())</set-url>
+                        <set-method>GET</set-method>
                     </send-request>
                 </wait>
             </inbound>
@@ -467,14 +533,17 @@ public class WaitTests
         """
         context.Wait(WaitForExp(context.ExpressionContext), branch =>
         {
-            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
         })
         """,
         """
         <policies>
             <inbound>
                 <wait for="@(context.Variables.ContainsKey("any") ? "any" : "all")">
-                    <send-request response-variable-name="request" />
+                    <send-request response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -483,13 +552,16 @@ public class WaitTests
     [DataRow(
         """
         context.Wait(waitFor: null, branch =>
-            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="request" />
+                    <send-request response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -513,7 +585,7 @@ public class WaitTests
                     {
                         if (FirstExp(branch.ExpressionContext))
                         {
-                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                             branch.SetHeader("X-Result", "first");
                             if (NestedExp(branch.ExpressionContext))
                             {
@@ -533,7 +605,7 @@ public class WaitTests
                         else
                         {
                             branch.SetHeader("X-Result", "none");
-                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "fallback" });
+                            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "fallback" });
                         }
                     });
                 }
@@ -549,7 +621,10 @@ public class WaitTests
                     <wait>
                         <choose>
                             <when condition="@(context.Variables.ContainsKey("first"))">
-                                <send-request response-variable-name="request" />
+                                <send-request response-variable-name="request">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                                 <set-header name="X-Result">
                                     <value>first</value>
                                 </set-header>
@@ -570,7 +645,10 @@ public class WaitTests
                                 <set-header name="X-Result">
                                     <value>none</value>
                                 </set-header>
-                                <send-request response-variable-name="fallback" />
+                                <send-request response-variable-name="fallback">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                             </otherwise>
                         </choose>
                     </wait>
@@ -595,7 +673,7 @@ public class WaitTests
                         {
                             if (ConditionExp(branch.ExpressionContext))
                             {
-                                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                             }
                         },
                         branch =>
@@ -620,7 +698,10 @@ public class WaitTests
                     <wait>
                         <choose>
                             <when condition="@(context.Variables.ContainsKey("condition"))">
-                                <send-request response-variable-name="request" />
+                                <send-request response-variable-name="request">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                             </when>
                         </choose>
                         <choose>
@@ -673,7 +754,7 @@ public class WaitTests
         """
         null, new Action<IInboundContext>[]
         {
-            branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+            branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })
         }
         """,
         "APIM2022", "individual lambdas", DisplayName = "Reject explicit branch array")]
@@ -682,13 +763,13 @@ public class WaitTests
         null, new[]
         {
             (Action<IInboundContext>)(branch =>
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
         }
         """,
         "APIM2022", "individual lambdas", DisplayName = "Reject implicit branch array")]
     [DataRow(
         """
-        null, [branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })]
+        null, [branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })]
         """,
         "APIM2022", "individual lambdas", DisplayName = "Reject branch collection expression")]
     [DataRow(
@@ -700,12 +781,12 @@ public class WaitTests
     [DataRow(
         """
         null, (Action<IInboundContext>)(branch =>
-            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
         """,
         "APIM2022", "individual lambdas", DisplayName = "Reject cast branch argument")]
     [DataRow(
         """
-        branches: branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        branches: branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })
         """,
         "APIM2006", "waitFor", DisplayName = "Reject missing waitFor argument")]
     public void ShouldRejectUnsupportedWaitArguments(string arguments, string diagnosticId, string reason)
@@ -721,7 +802,7 @@ public class WaitTests
         """
         branch =>
         {
-            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cache" });
         }
         """,
@@ -732,11 +813,11 @@ public class WaitTests
         {
             if (ConditionExp(branch.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "first" });
             }
             if (ConditionExp(branch.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "second" });
             }
         }
         """,
@@ -757,7 +838,7 @@ public class WaitTests
         "send-request, cache-lookup-value, or choose", DisplayName = "Reject immediate nested Wait policy")]
     [DataRow(
         """
-        branch => { { branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }); } }
+        branch => { { branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }); } }
         """,
         "send-request, cache-lookup-value, or choose", DisplayName = "Reject nested top-level block")]
     [DataRow(
@@ -768,27 +849,27 @@ public class WaitTests
         "send-request, cache-lookup-value, or choose", DisplayName = "Reject branch return statement")]
     [DataRow(
         """
-        async branch => { branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }); }
+        async branch => { branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }); }
         """,
         "synchronous", DisplayName = "Reject async Wait branch")]
     [DataRow(
         """
-        () => { context.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }); }
+        () => { context.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }); }
         """,
         "exactly one context parameter", DisplayName = "Reject parameterless new Wait branch")]
     [DataRow(
         """
-        (branch, otherBranch) => { branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }); }
+        (branch, otherBranch) => { branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }); }
         """,
         "exactly one context parameter", DisplayName = "Reject multi-parameter Wait branch")]
     [DataRow(
         """
-        branch => context.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        branch => context.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })
         """,
         "branch context parameter", DisplayName = "Reject outer-context immediate policy")]
     [DataRow(
         """
-        branch => other.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        branch => other.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })
         """,
         "branch context parameter", DisplayName = "Reject different-context immediate policy")]
     [DataRow(
@@ -797,7 +878,7 @@ public class WaitTests
         {
             if (ConditionExp(branch.ExpressionContext))
             {
-                context.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                context.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
@@ -808,7 +889,7 @@ public class WaitTests
         {
             if (ConditionExp(branch.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
             else
             {
@@ -833,7 +914,7 @@ public class WaitTests
         "branch context parameter", DisplayName = "Reject outer-context policy inside nested choose")]
     [DataRow(
         """
-        (IOutboundContext branch) => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        (IOutboundContext branch) => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })
         """,
         "same context type", DisplayName = "Reject mismatched branch context type")]
     [DataRow(
@@ -848,20 +929,22 @@ public class WaitTests
 
     [TestMethod]
     [DataRow(
-        "branch => branch.SendRequest(new SendRequestConfig { })",
+        """branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET" })""",
         "APIM2006", "ResponseVariableName", DisplayName = "Propagate send-request branch compiler error")]
     [DataRow(
         """branch => branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key" })""",
         "APIM2006", "VariableName", DisplayName = "Propagate cache-lookup-value branch compiler error")]
     [DataRow(
         """
-        branch => { if (true) { branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }); } }
+        branch => { if (true) { branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }); } }
         """,
         "APIM2016", "TrueLiteralExpression", DisplayName = "Propagate choose condition compiler error")]
     [DataRow(
         """
         branch => { if (ConditionExp(branch.ExpressionContext)) branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = "request"
         }); }
         """,
@@ -878,7 +961,7 @@ public class WaitTests
     {
         var code = CreateInboundDocument(
             """
-            context.Wait(() => context.SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+            context.Wait(() => context.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
             """);
 
         AssertRejectedWait(CompileBranchDocument(code), "APIM9993", "ParenthesizedLambdaExpressionSyntax");
@@ -941,7 +1024,7 @@ public class WaitTests
 
             void SendBranch(IInboundContext branch)
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
 
             bool ConditionExp(IExpressionContext context) => context.Variables.ContainsKey("condition");
@@ -968,6 +1051,8 @@ public class WaitTests
         """
         context.Wait(null, branch => branch.WithId("id").SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = "request"
         }))
         """,
@@ -975,7 +1060,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request id="id" response-variable-name="request" />
+                    <send-request id="id" response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -985,14 +1073,17 @@ public class WaitTests
         """
         context.Wait(null, branch =>
         {
-            branch.WithId("id").SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+            branch.WithId("id").SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
         })
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request id="id" response-variable-name="request" />
+                    <send-request id="id" response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -1036,13 +1127,16 @@ public class WaitTests
     [DataRow(
         """
         context.Wait(null, branch => branch.WithId("first").WithId("second").WithId("last")
-            .SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+            .SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request id="last" response-variable-name="request" />
+                    <send-request id="last" response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -1051,13 +1145,16 @@ public class WaitTests
     [DataRow(
         """
         context.Wait(null, branch => branch.WithId(id: "id")
-            .SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+            .SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request id="id" response-variable-name="request" />
+                    <send-request id="id" response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -1066,13 +1163,16 @@ public class WaitTests
     [DataRow(
         """
         context.Wait(null, branch => branch.WithId(nameof(context))
-            .SendRequest(new SendRequestConfig { ResponseVariableName = "request" }))
+            .SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }))
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request id="context" response-variable-name="request" />
+                    <send-request id="context" response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -1082,6 +1182,7 @@ public class WaitTests
         """
         context.Wait(null, branch => branch.WithId("id").SendRequest(new SendRequestConfig
         {
+            Method = "GET",
             ResponseVariableName = ResponseVariableNameExp(branch.ExpressionContext),
             Url = UrlExp(branch.ExpressionContext)
         }))
@@ -1092,6 +1193,7 @@ public class WaitTests
                 <wait>
                     <send-request id="id" response-variable-name="@(context.Request.Method)">
                         <set-url>@(context.Request.Url.ToString())</set-url>
+                        <set-method>GET</set-method>
                     </send-request>
                 </wait>
             </inbound>
@@ -1118,6 +1220,8 @@ public class WaitTests
                 {
                     context.Wait(null, branch => branch.WithId("id").SendRequest(new SendRequestConfig
                     {
+                        Url = "https://example.com/api",
+                        Method = "GET",
                         ResponseVariableName = "request"
                     }));
                 }
@@ -1127,7 +1231,10 @@ public class WaitTests
             <policies>
                 <{{section}}>
                     <wait>
-                        <send-request id="id" response-variable-name="request" />
+                        <send-request id="id" response-variable-name="request">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                     </wait>
                 </{{section}}>
             </policies>
@@ -1147,6 +1254,8 @@ public class WaitTests
                 {
                     context.Wait(null, branch => branch.WithId("id").SendRequest(new SendRequestConfig
                     {
+                        Url = "https://example.com/api",
+                        Method = "GET",
                         ResponseVariableName = "request"
                     }));
                 }
@@ -1155,7 +1264,10 @@ public class WaitTests
         var expectedXml = """
             <fragment>
                 <wait>
-                    <send-request id="id" response-variable-name="request" />
+                    <send-request id="id" response-variable-name="request">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </fragment>
             """;
@@ -1177,6 +1289,8 @@ public class WaitTests
                 {
                     context.Wait(null, branch => branch.WithId(PolicyId).SendRequest(new SendRequestConfig
                     {
+                        Url = "https://example.com/api",
+                        Method = "GET",
                         ResponseVariableName = PolicyDocument.VariableName
                     }));
                 }
@@ -1186,7 +1300,10 @@ public class WaitTests
             <policies>
                 <inbound>
                     <wait>
-                        <send-request id="constant-id" response-variable-name="request" />
+                        <send-request id="constant-id" response-variable-name="request">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                     </wait>
                 </inbound>
             </policies>
@@ -1201,8 +1318,8 @@ public class WaitTests
         var code = CreateInboundDocument(
             """
             context.WithId("wait").Wait("any",
-                branch => branch.WithId("first").SendRequest(new SendRequestConfig { ResponseVariableName = "first" }),
-                branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" }),
+                branch => branch.WithId("first").SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "first" }),
+                branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "second" }),
                 branch => branch.WithId("last").CacheLookupValue(new CacheLookupValueConfig
                 {
                     Key = "key",
@@ -1213,8 +1330,14 @@ public class WaitTests
             <policies>
                 <inbound>
                     <wait id="wait" for="any">
-                        <send-request id="first" response-variable-name="first" />
-                        <send-request response-variable-name="second" />
+                        <send-request id="first" response-variable-name="first">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
+                        <send-request response-variable-name="second">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                         <cache-lookup-value id="last" key="key" variable-name="cache" />
                     </wait>
                 </inbound>
@@ -1233,9 +1356,9 @@ public class WaitTests
             {
                 if (ConditionExp(branch.ExpressionContext))
                 {
-                    branch.WithId("request").SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                    branch.WithId("request").SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                     branch.WithId("header").SetHeader("X-Metadata", "value");
-                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" });
+                    branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "second" });
                 }
             })
             """);
@@ -1245,11 +1368,17 @@ public class WaitTests
                     <wait>
                         <choose>
                             <when condition="@(context.Variables.ContainsKey("condition"))">
-                                <send-request id="request" response-variable-name="request" />
+                                <send-request id="request" response-variable-name="request">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                                 <set-header id="header" name="X-Metadata">
                                     <value>value</value>
                                 </set-header>
-                                <send-request response-variable-name="second" />
+                                <send-request response-variable-name="second">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                             </when>
                         </choose>
                     </wait>
@@ -1267,14 +1396,17 @@ public class WaitTests
             """
             context.Wait(() =>
             {
-                context.WithId("legacy").SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                context.WithId("legacy").SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             })
             """);
         var expectedXml = """
             <policies>
                 <inbound>
                     <wait>
-                        <send-request id="legacy" response-variable-name="request" />
+                        <send-request id="legacy" response-variable-name="request">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                     </wait>
                 </inbound>
             </policies>
@@ -1290,7 +1422,7 @@ public class WaitTests
         {
             if (ConditionExp(context.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
@@ -1299,6 +1431,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = ResponseVariableNameExp(context.ExpressionContext)
         })
         """,
@@ -1307,6 +1441,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = context.ExpressionContext.Request.Method
         })
         """,
@@ -1317,11 +1453,11 @@ public class WaitTests
         {
             if (ConditionExp(branch.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "first" });
             }
             else if (ConditionExp(context.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "second" });
             }
         }
         """,
@@ -1332,12 +1468,14 @@ public class WaitTests
         {
             if (ConditionExp(branch.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "first" });
             }
             else
             {
                 branch.SendRequest(new SendRequestConfig
                 {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = ResponseVariableNameExp(context.ExpressionContext)
                 });
             }
@@ -1352,7 +1490,7 @@ public class WaitTests
             {
                 if (ConditionExp(context.ExpressionContext))
                 {
-                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                    branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                 }
             }
         }
@@ -1364,7 +1502,7 @@ public class WaitTests
         {
             if (ConditionExp(other.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
@@ -1377,6 +1515,8 @@ public class WaitTests
             {
                 branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
                 {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = ResponseVariableNameExp(context.ExpressionContext)
                 }));
             }
@@ -1391,6 +1531,8 @@ public class WaitTests
             {
                 branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
                 {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = ResponseVariableNameExp(branch.ExpressionContext)
                 }));
             }
@@ -1421,7 +1563,7 @@ public class WaitTests
                     {
                         if (ConditionExp(context.ExpressionContext))
                         {
-                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                         }
                     });
                 }
@@ -1446,7 +1588,7 @@ public class WaitTests
                     {
                         if (ConditionExp(context.ExpressionContext))
                         {
-                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                         }
                     });
                 }
@@ -1473,7 +1615,7 @@ public class WaitTests
                     {
                         if (ConditionExp(other.ExpressionContext))
                         {
-                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                         }
                     });
                 }
@@ -1498,7 +1640,7 @@ public class WaitTests
                     {
                         if (ConditionExp(context))
                         {
-                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                         }
                     });
                 }
@@ -1522,7 +1664,7 @@ public class WaitTests
                 public void Inbound(IInboundContext context)
                 {
                     context.Wait(null, branch => GetOtherContext(branch).WithId("id")
-                        .SendRequest(new SendRequestConfig { ResponseVariableName = "request" }));
+                        .SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" }));
                 }
 
                 IInboundContext GetOtherContext(IInboundContext branch) => other;
@@ -1543,6 +1685,8 @@ public class WaitTests
                 {
                     branch.Wait(null, inner => inner.WithId("inner").SendRequest(new SendRequestConfig
                     {
+                        Url = "https://example.com/api",
+                        Method = "GET",
                         ResponseVariableName = ResponseVariableNameExp(inner.ExpressionContext)
                     }));
                 }
@@ -1555,7 +1699,10 @@ public class WaitTests
                         <choose>
                             <when condition="@(context.Variables.ContainsKey("condition"))">
                                 <wait>
-                                    <send-request id="inner" response-variable-name="@(context.Request.Method)" />
+                                    <send-request id="inner" response-variable-name="@(context.Request.Method)">
+                                        <set-url>https://example.com/api</set-url>
+                                        <set-method>GET</set-method>
+                                    </send-request>
                                 </wait>
                             </when>
                         </choose>
@@ -1570,18 +1717,18 @@ public class WaitTests
     [TestMethod]
     [DataRow(
         """
-        branch => context.WithId("id").SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        branch => context.WithId("id").SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })
         """,
         "branch context parameter", DisplayName = "Reject captured outer WithId receiver")]
     [DataRow(
         """
-        branch => other.WithId("id").SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+        branch => other.WithId("id").SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })
         """,
         "branch context parameter", DisplayName = "Reject unrelated WithId receiver")]
     [DataRow(
         """
         branch => branch.WithId(branch.ExpressionContext.Request.Method)
-            .SendRequest(new SendRequestConfig { ResponseVariableName = "request" })
+            .SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" })
         """,
         "constant string", DisplayName = "Reject nonconstant Wait branch ID")]
     public void ShouldRejectInvalidWaitBranchMetadata(string branch, string reason)
@@ -1601,7 +1748,7 @@ public class WaitTests
                 branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cached" });
                 if (Missing(_outer))
                 {
-                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "fallback" });
+                    branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "fallback" });
                 }
             }
         }
@@ -1613,19 +1760,19 @@ public class WaitTests
         {
             if (Missing(_outer))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
         DisplayName = "Reject expression-context field in Wait condition")]
     [DataRow(
         """
-        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(_outer) })
+        branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = NameExp(_outer) })
         """,
         DisplayName = "Reject expression-context field in Wait config expression")]
     [DataRow(
         """
-        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = _outer.Request.Method })
+        branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = _outer.Request.Method })
         """,
         DisplayName = "Reject expression-context field in direct Wait config")]
     [DataRow(
@@ -1634,11 +1781,11 @@ public class WaitTests
         {
             if (Always(branch.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "first" });
             }
             else if (Missing(_outer))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "second" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "second" });
             }
         }
         """,
@@ -1649,11 +1796,11 @@ public class WaitTests
         {
             if (Always(branch.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "first" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "first" });
             }
             else
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(_outer) });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = NameExp(_outer) });
             }
         }
         """,
@@ -1666,6 +1813,8 @@ public class WaitTests
             {
                 branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
                 {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = NameExp(_outer)
                 }));
             }
@@ -1680,7 +1829,7 @@ public class WaitTests
             {
                 if (Missing(_outer))
                 {
-                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                    branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                 }
             }
         }
@@ -1705,7 +1854,7 @@ public class WaitTests
                     {
                         if (Missing(outer))
                         {
-                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                         }
                     });
                 }
@@ -1735,6 +1884,8 @@ public class WaitTests
                 {
                     context.Wait(null, branch => branch.SendRequest(new SendRequestConfig
                     {
+                        Url = "https://example.com/api",
+                        Method = "GET",
                         ResponseVariableName = NameExp(Outer)
                     }));
                 }
@@ -1758,7 +1909,7 @@ public class WaitTests
                     IExpressionContext alias = _outer;
                     if (Missing(alias))
                     {
-                        branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                        branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                     }
                 }
             }
@@ -1789,7 +1940,7 @@ public class WaitTests
                     {
                         if (Missing(_outer))
                         {
-                            branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                            branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
                         }
                     });
                 }
@@ -1808,7 +1959,7 @@ public class WaitTests
         {
             if (Missing(branch.ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
@@ -1818,7 +1969,10 @@ public class WaitTests
                 <wait>
                     <choose>
                         <when condition="@(!context.Variables.ContainsKey("cached"))">
-                            <send-request response-variable-name="request" />
+                            <send-request response-variable-name="request">
+                                <set-url>https://example.com/api</set-url>
+                                <set-method>GET</set-method>
+                            </send-request>
                         </when>
                     </choose>
                 </wait>
@@ -1832,7 +1986,7 @@ public class WaitTests
         {
             if (Missing(branch.WithId("projection").ExpressionContext))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
@@ -1842,7 +1996,10 @@ public class WaitTests
                 <wait>
                     <choose>
                         <when condition="@(!context.Variables.ContainsKey("cached"))">
-                            <send-request response-variable-name="request" />
+                            <send-request response-variable-name="request">
+                                <set-url>https://example.com/api</set-url>
+                                <set-method>GET</set-method>
+                            </send-request>
                         </when>
                     </choose>
                 </wait>
@@ -1852,13 +2009,16 @@ public class WaitTests
         DisplayName = "Allow WithId branch expression context in Wait condition")]
     [DataRow(
         """
-        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(branch.ExpressionContext) })
+        branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = NameExp(branch.ExpressionContext) })
         """,
         """
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -1868,6 +2028,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(branch.WithId("projection").ExpressionContext)
         })
         """,
@@ -1875,7 +2037,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -1894,6 +2059,8 @@ public class WaitTests
             """
             branch => branch.WithId(nameof(_outer)).SendRequest(new SendRequestConfig
             {
+                Url = "https://example.com/api",
+                Method = "GET",
                 ResponseVariableName = "request"
             })
             """);
@@ -1901,7 +2068,10 @@ public class WaitTests
             <policies>
                 <inbound>
                     <wait>
-                        <send-request id="_outer" response-variable-name="request" />
+                        <send-request id="_outer" response-variable-name="request">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                     </wait>
                 </inbound>
             </policies>
@@ -1921,6 +2091,8 @@ public class WaitTests
                 {
                     branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
                     {
+                        Url = "https://example.com/api",
+                        Method = "GET",
                         ResponseVariableName = NameExp(inner.WithId("projection").ExpressionContext)
                     }));
                 }
@@ -1933,7 +2105,10 @@ public class WaitTests
                         <choose>
                             <when condition="@(true)">
                                 <wait>
-                                    <send-request response-variable-name="@(context.Request.Method)" />
+                                    <send-request response-variable-name="@(context.Request.Method)">
+                                        <set-url>https://example.com/api</set-url>
+                                        <set-method>GET</set-method>
+                                    </send-request>
                                 </wait>
                             </when>
                         </choose>
@@ -1977,7 +2152,7 @@ public class WaitTests
                 branch.CacheLookupValue(new CacheLookupValueConfig { Key = "key", VariableName = "cached" });
                 if (Missing(GetOuter()))
                 {
-                    branch.SendRequest(new SendRequestConfig { ResponseVariableName = "fallback" });
+                    branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "fallback" });
                 }
             }
         }
@@ -1989,19 +2164,19 @@ public class WaitTests
         {
             if (Missing(GetOuter()))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
         DisplayName = "Reject context factory in Wait condition")]
     [DataRow(
         """
-        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(GetOuter()) })
+        branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = NameExp(GetOuter()) })
         """,
         DisplayName = "Reject context factory in Wait config expression")]
     [DataRow(
         """
-        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = GetOuter().Request.Method })
+        branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = GetOuter().Request.Method })
         """,
         DisplayName = "Reject context factory in direct Wait config")]
     [DataRow(
@@ -2012,6 +2187,8 @@ public class WaitTests
             {
                 branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
                 {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = NameExp(GetOuter())
                 }));
             }
@@ -2022,19 +2199,23 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(GetOuterIgnoring(branch.ExpressionContext))
         })
         """,
         DisplayName = "Reject factory ignoring supplied branch context")]
     [DataRow(
         """
-        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(Forward(GetOuter())) })
+        branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = NameExp(Forward(GetOuter())) })
         """,
         DisplayName = "Reject factory wrapped in context identity helper")]
     [DataRow(
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(ChooseContext(branch.ExpressionContext))
         })
         """,
@@ -2043,19 +2224,23 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(ContextLoop(branch.ExpressionContext))
         })
         """,
         DisplayName = "Reject recursive context factory without overflow")]
     [DataRow(
         """
-        branch => branch.SendRequest(new SendRequestConfig { ResponseVariableName = NameExp(_factory()) })
+        branch => branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = NameExp(_factory()) })
         """,
         DisplayName = "Reject captured context delegate factory")]
     [DataRow(
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(GetOtherSection().ExpressionContext)
         })
         """,
@@ -2064,6 +2249,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(GetVirtualContext(branch.ExpressionContext))
         })
         """,
@@ -2081,7 +2268,7 @@ public class WaitTests
         {
             if (Missing(Identity(branch.ExpressionContext)))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
@@ -2091,7 +2278,10 @@ public class WaitTests
                 <wait>
                     <choose>
                         <when condition="@(!context.Variables.ContainsKey("cached"))">
-                            <send-request response-variable-name="request" />
+                            <send-request response-variable-name="request">
+                                <set-url>https://example.com/api</set-url>
+                                <set-method>GET</set-method>
+                            </send-request>
                         </when>
                     </choose>
                 </wait>
@@ -2103,6 +2293,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(BlockIdentity(branch.ExpressionContext))
         })
         """,
@@ -2110,7 +2302,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -2122,7 +2317,7 @@ public class WaitTests
         {
             if (Missing(FromSection(branch)))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
@@ -2132,7 +2327,10 @@ public class WaitTests
                 <wait>
                     <choose>
                         <when condition="@(!context.Variables.ContainsKey("cached"))">
-                            <send-request response-variable-name="request" />
+                            <send-request response-variable-name="request">
+                                <set-url>https://example.com/api</set-url>
+                                <set-method>GET</set-method>
+                            </send-request>
                         </when>
                     </choose>
                 </wait>
@@ -2146,7 +2344,7 @@ public class WaitTests
         {
             if (Missing(Forward(FromSection(branch.WithId("projection")))))
             {
-                branch.SendRequest(new SendRequestConfig { ResponseVariableName = "request" });
+                branch.SendRequest(new SendRequestConfig { Url = "https://example.com/api", Method = "GET", ResponseVariableName = "request" });
             }
         }
         """,
@@ -2156,7 +2354,10 @@ public class WaitTests
                 <wait>
                     <choose>
                         <when condition="@(!context.Variables.ContainsKey("cached"))">
-                            <send-request response-variable-name="request" />
+                            <send-request response-variable-name="request">
+                                <set-url>https://example.com/api</set-url>
+                                <set-method>GET</set-method>
+                            </send-request>
                         </when>
                     </choose>
                 </wait>
@@ -2172,6 +2373,8 @@ public class WaitTests
             {
                 branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
                 {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = NameExp(Forward(inner.ExpressionContext))
                 }));
             }
@@ -2184,7 +2387,10 @@ public class WaitTests
                     <choose>
                         <when condition="@(true)">
                             <wait>
-                                <send-request response-variable-name="@(context.Request.Method)" />
+                                <send-request response-variable-name="@(context.Request.Method)">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                             </wait>
                         </when>
                     </choose>
@@ -2197,6 +2403,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(Identity(context: branch.WithId("projection").ExpressionContext))
         })
         """,
@@ -2204,7 +2412,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -2283,6 +2494,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(SectionIdentity(branch).ExpressionContext)
         })
         """,
@@ -2290,7 +2503,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -2300,6 +2516,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(SectionIdentity(branch.WithId("projection")).ExpressionContext)
         })
         """,
@@ -2307,7 +2525,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -2341,6 +2562,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(Forward(Identity(branch.ExpressionContext)))
         })
         """,
@@ -2348,7 +2571,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -2358,6 +2584,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(Identity(Forward(Identity(branch.ExpressionContext))))
         })
         """,
@@ -2365,7 +2593,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -2379,6 +2610,8 @@ public class WaitTests
             {
                 branch.Wait(null, inner => inner.SendRequest(new SendRequestConfig
                 {
+                    Url = "https://example.com/api",
+                    Method = "GET",
                     ResponseVariableName = NameExp(Identity(Identity(inner.ExpressionContext)))
                 }));
             }
@@ -2391,7 +2624,10 @@ public class WaitTests
                     <choose>
                         <when condition="@(context.Variables.ContainsKey("check"))">
                             <wait>
-                                <send-request response-variable-name="@(context.Request.Method)" />
+                                <send-request response-variable-name="@(context.Request.Method)">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                             </wait>
                         </when>
                     </choose>
@@ -2404,6 +2640,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(SectionIdentity(SectionIdentity(branch)).ExpressionContext)
         })
         """,
@@ -2411,7 +2649,10 @@ public class WaitTests
         <policies>
             <inbound>
                 <wait>
-                    <send-request response-variable-name="@(context.Request.Method)" />
+                    <send-request response-variable-name="@(context.Request.Method)">
+                        <set-url>https://example.com/api</set-url>
+                        <set-method>GET</set-method>
+                    </send-request>
                 </wait>
             </inbound>
         </policies>
@@ -2428,6 +2669,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(Identity(ContextLoop(branch.ExpressionContext)))
         })
         """,
@@ -2436,6 +2679,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(Identity(Identity(GetOuter())))
         })
         """,
@@ -2444,6 +2689,8 @@ public class WaitTests
         """
         branch => branch.SendRequest(new SendRequestConfig
         {
+            Url = "https://example.com/api",
+            Method = "GET",
             ResponseVariableName = NameExp(SectionIdentity(GetOtherSection()).ExpressionContext)
         })
         """,
