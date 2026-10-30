@@ -174,6 +174,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
 
         #region Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions
 
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.Authorization",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.BasicAuthCredentials",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.DictionaryExtensions",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IApi",
@@ -188,6 +189,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IOperation",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IPrivateEndpointConnection",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IProduct",
+        "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ProductState",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IRequest",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.IResponse",
         "Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions.ISubscription",
@@ -327,15 +329,31 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        // Invoking a delegate typed member, like context.Trace("message"), is a use of that member and not of the
+        // delegate type.
+        if (nodeSymbol is IMethodSymbol { MethodKind: MethodKind.DelegateInvoke } &&
+            node is InvocationExpressionSyntax delegateInvocation &&
+            context.SemanticModel.GetSymbolInfo(delegateInvocation.Expression).Symbol is
+                { Kind: SymbolKind.Property or SymbolKind.Field } delegateMember)
+        {
+            nodeSymbol = delegateMember;
+        }
+
         var symbol = nodeSymbol.ContainingType;
         if (symbol == null)
         {
             return;
         }
 
+        // API Management accepts anonymous types: new { a = 1 }.a
+        if (symbol.IsAnonymousType)
+        {
+            return;
+        }
+
         // Indexers are named "this[]" in Roslyn; the allow lists use their metadata name ("Item").
         var memberName = nodeSymbol is IPropertySymbol { IsIndexer: true } ? nodeSymbol.MetadataName : nodeSymbol.Name;
-        var typeName = (symbol.IsGenericType ? symbol.OriginalDefinition : symbol)?.ToFullyQualifiedString() ?? "";
+        var typeName = GetTypeName(symbol);
         if (AllowedTypes.Contains(typeName))
         {
             if (AllowedInTypes.TryGetValue(typeName, out var allowed) && !allowed.Contains(memberName))
@@ -354,5 +372,19 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         {
             context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.DisallowedType, node.GetLocation(), typeName));
         }
+    }
+
+    private static string GetTypeName(INamedTypeSymbol symbol)
+    {
+        if (!symbol.IsGenericType)
+        {
+            return symbol.ToFullyQualifiedString();
+        }
+
+        // System.Nullable and System.Tuple are listed without type parameters and are allowed with any number of them.
+        var nameWithoutTypeParameters = symbol.OriginalDefinition.ToFullyQualifiedStringWithoutTypeParameters();
+        return AllowedTypes.Contains(nameWithoutTypeParameters)
+            ? nameWithoutTypeParameters
+            : symbol.OriginalDefinition.ToFullyQualifiedString();
     }
 }

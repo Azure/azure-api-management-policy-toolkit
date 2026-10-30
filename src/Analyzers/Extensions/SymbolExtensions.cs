@@ -14,5 +14,11 @@ public static class SymbolExtensions
         miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
     );
 
+    private readonly static SymbolDisplayFormat FormatWithoutTypeParameters =
+        Format.WithGenericsOptions(SymbolDisplayGenericsOptions.None);
+
     public static string ToFullyQualifiedString(this ISymbol symbol) => symbol.ToDisplayString(Format);
+
+    internal static string ToFullyQualifiedStringWithoutTypeParameters(this ISymbol symbol) =>
+        symbol.ToDisplayString(FormatWithoutTypeParameters);
 }
