@@ -42,9 +42,9 @@ public sealed class CustomXmlWriter : IDisposable
             WriteAttributes(element.Attributes());
         }
 
-        if (element.HasElements)
+        if (element.Nodes().Any(node => node is not XText or XCData))
         {
-            WriteElements(element.Elements());
+            WriteNodes(element.Nodes());
         }
         else if (!string.IsNullOrEmpty(element.Value))
         {
@@ -54,11 +54,33 @@ public sealed class CustomXmlWriter : IDisposable
         _xmlWriter.WriteEndElement();
     }
 
-    private void WriteElements(IEnumerable<XElement> elements)
+    // Text, CDATA and comments next to child elements are written in document order.
+    private void WriteNodes(IEnumerable<XNode> nodes)
     {
-        foreach (var element in elements)
+        // Whitespace between elements is indentation, the writer produces its own. Next to text it is content.
+        var hasText = nodes.Any(node => node is XText text and not XCData && !string.IsNullOrWhiteSpace(text.Value));
+        foreach (var node in nodes)
         {
-            Write(element);
+            switch (node)
+            {
+                case XElement element:
+                    Write(element);
+                    break;
+                case XCData cdata:
+                    cdata.WriteTo(_xmlWriter);
+                    break;
+                case XText text:
+                    // Only a whole value can be an expression, so text next to anything else is plain text.
+                    if (hasText || !string.IsNullOrWhiteSpace(text.Value))
+                    {
+                        _xmlWriter.WriteString(text.Value);
+                    }
+
+                    break;
+                default:
+                    node.WriteTo(_xmlWriter);
+                    break;
+            }
         }
     }
 
