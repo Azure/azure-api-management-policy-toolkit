@@ -33,11 +33,7 @@ public class CorsDecompiler : IPolicyDecompiler
         var methodsEl = element.Element("allowed-methods");
         if (methodsEl != null)
         {
-            var preflightMaxAge = methodsEl.Attribute("preflight-result-max-age")?.Value;
-            if (preflightMaxAge != null)
-            {
-                props.Add($"PreflightResultMaxAge = {preflightMaxAge}");
-            }
+            context.AddOptionalUIntProp(props, methodsEl, "preflight-result-max-age", "PreflightResultMaxAge");
 
             var methods = methodsEl.Elements("method").Select(e => PolicyDecompilerContext.GetElementText(e)).ToList();
             if (methods.Count > 0)

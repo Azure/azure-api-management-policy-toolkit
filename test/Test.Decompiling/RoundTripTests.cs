@@ -242,6 +242,142 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    [DataRow("""<backend><set-backend-service base-url="{{scheme}}://{{host}}" /></backend>""",
+        DisplayName = "Two named values in one value")]
+    [DataRow("""<inbound><set-header name="X-Trace"><value>@(context.Request.IpAddress)-@(context.Request.Method)</value></set-header></inbound>""",
+        DisplayName = "Two expressions in one element value")]
+    [DataRow("""<inbound><set-variable name="pair" value="@(context.Request.Method) and @{return context.Request.IpAddress;}" /></inbound>""",
+        DisplayName = "Two expressions in one attribute value")]
+    public void ExpressionValues_RoundTrip(string sections)
+    {
+        AssertRoundTrip($"<policies>{sections}</policies>");
+    }
+
+    [TestMethod]
+    public void MultiLineAttributeExpression_KeepsCodeAfterLineComment()
+    {
+        var xml = """
+            <policies>
+                <inbound>
+                    <set-variable name="total" value="@{
+                        // a comment on the first line
+                        var a = 1;
+                        return a + 41;
+                    }" />
+                    <choose>
+                        <when condition="@{
+                            // another comment
+                            return context.Request.Method == &quot;GET&quot;;
+                        }">
+                            <base />
+                        </when>
+                    </choose>
+                </inbound>
+            </policies>
+            """;
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+        var result = CompileCSharp(csharp);
+
+        CSharpSyntaxTree.ParseText(csharp).GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Should().BeEmpty("the decompiled C# should be syntactically valid.\nGenerated C#:\n{0}", csharp);
+        result.Errors.Should().BeEmpty("the decompiled C# should compile.\nGenerated C#:\n{0}", csharp);
+        var value = result.Document.Descendants("set-variable").Single().Attribute("value")!.Value;
+        value.Should().Contain("var a = 1;").And.Contain("return a + 41;");
+        var condition = result.Document.Descendants("when").Single().Attribute("condition")!.Value;
+        condition.Should().Contain("context.Request.Method == \"GET\"");
+    }
+
+    [TestMethod]
+    [DataRow("@(a)", true)]
+    [DataRow("@{return a;}", true)]
+    [DataRow("@(a)-@(b)", false)]
+    [DataRow("@(a) @{return b;}", false)]
+    [DataRow("@(\")\" + a)", true)]
+    [DataRow("@(')' + a)", true)]
+    [DataRow("@(a /* ) */ + b)", true)]
+    [DataRow("@(a", false)]
+    [DataRow("text @(a)", false)]
+    public void IsExpression_RequiresOneBalancedExpression(string value, bool expected)
+    {
+        new PolicyDecompilerContext().IsExpression(value).Should().Be(expected);
+    }
+
+    [TestMethod]
+    [DataRow("_x", DisplayName = "Starting with an underscore")]
+    [DataRow("1x", DisplayName = "Starting with a digit")]
+    [DataRow("a.b-c_d", DisplayName = "With every name character")]
+    public void NamedValueTokenNamedWithAnyNameCharacters_IsANamedValue(string name)
+    {
+        var xml = $"<policies><inbound><set-variable name=\"key\" value=\"{{{{{name}}}}}\" /></inbound></policies>";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain($"\"{name}\"").And.NotContain($"{{{{{name}}}}}");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void NamedValueTokenWithoutALetter_IsText()
+    {
+        var xml = """<policies><inbound><set-variable name="key" value="{{123}}" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("\"{{123}}\"");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("""<set-body>Hello @(context.Request.Method) <b>!</b></set-body>""")]
+    [DataRow("""<set-body><![CDATA[@(context.Request.Method)]]></set-body>""")]
+    [DataRow("""<unknown-policy a="b"><!-- @(context.Request.Method) --><c /></unknown-policy>""")]
+    public void RawPolicy_LeavesNoPlaceholderInTextNextToElements(string policy)
+    {
+        // the unescaped quotes make this document one that is read through the raw policy fallback
+        var xml = $$"""<policies><inbound><set-variable name="a" value="@(context.Request.Headers.GetValueOrDefault("x",""))" />{{policy}}</inbound></policies>""";
+
+        s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest").Should().NotContain("__APIM_EXPR_");
+    }
+
+    [TestMethod]
+    public void LineBreakInALiteralAttribute_IsWhitespaceAsForAnXmlParser()
+    {
+        var xml = "<policies><inbound><set-header name=\"a\nb\" exists-action=\"override\"><value>v</value></set-header></inbound></policies>";
+
+        s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest").Should().Contain("\"a b\"");
+    }
+
+    [TestMethod]
+    public void LineBreakInALiteralAttributeNextToAMultiLineExpression_IsWhitespace()
+    {
+        var xml = "<policies><inbound><set-variable name=\"v\" value=\"@(1 +\n2)\" /><set-header name=\"a\nb\" exists-action=\"override\"><value>v</value></set-header></inbound></policies>";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("\"a b\"").And.Contain("1 +\n");
+    }
+
+    [TestMethod]
+    public void NamedValueForAUIntValue_GetsAUIntHelper()
+    {
+        var xml = """<policies><outbound><llm-semantic-cache-store duration="{{d}}" /></outbound></policies>""";
+
+        s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest").Should().Contain("uint NamedValue_D");
+    }
+
+    [TestMethod]
+    public void CharacterReferenceInALiteralAttributeNextToAMultiLineExpression_StaysALineBreak()
+    {
+        var xml = "<policies><inbound><set-variable name=\"v\" value=\"@(1 +\n2)\" /><set-header name=\"a&#10;b\" exists-action=\"override\"><value>v</value></set-header></inbound></policies>";
+
+        var preprocessed = PolicyDecompiler.PreprocessXml(xml);
+
+        System.Xml.Linq.XDocument.Parse(preprocessed).Descendants("set-header").Single().Attribute("name")!.Value.Should().Be("a\nb");
+    }
+
+    [TestMethod]
     [DataRow("inbound")]
     [DataRow("backend")]
     [DataRow("outbound")]
@@ -284,6 +420,16 @@ public class RoundTripTests
     {
         var xml = """<policies><backend><set-backend-service base-url="https://api.example.com" /></backend></policies>""";
         AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("""<inbound><cors><allowed-origins><origin>*</origin></allowed-origins><allowed-headers><header>*</header></allowed-headers><allowed-methods preflight-result-max-age="@((uint)300)"><method>GET</method></allowed-methods></cors></inbound>""",
+        DisplayName = "cors preflight-result-max-age expression")]
+    [DataRow("""<inbound><cors><allowed-origins><origin>*</origin></allowed-origins><allowed-headers><header>*</header></allowed-headers><allowed-methods preflight-result-max-age="{{max-age}}"><method>GET</method></allowed-methods></cors></inbound>""",
+        DisplayName = "cors preflight-result-max-age named value")]
+    public void CorsPreflightMaxAgeValue_RoundTrips(string sections)
+    {
+        AssertRoundTrip($"<policies>{sections}</policies>");
     }
 
     [TestMethod]

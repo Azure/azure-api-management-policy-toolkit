@@ -274,7 +274,7 @@ public class PolicyDecompiler
         try
         {
             XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
-            return xml;
+            return PreserveAttributeLineBreaks(xml);
         }
         catch (XmlException)
         {
@@ -283,7 +283,7 @@ public class PolicyDecompiler
 
         // Scan for all @(...) and @{...} expression spans
         var spans = CollectExpressionSpans(xml);
-        if (spans.Count == 0) return xml;
+        if (spans.Count == 0) return PreserveAttributeLineBreaks(xml);
 
         // Replace expressions with XML-safe placeholders
         var exprMap = new Dictionary<string, string>(spans.Count, StringComparer.Ordinal);
@@ -344,49 +344,101 @@ public class PolicyDecompiler
     }
 
     /// <summary>
-    /// Walks the DOM tree and replaces placeholder tokens with original expression text
-    /// in attribute values and leaf-element text content.
-    /// Decodes XML entities in restored expressions since the original text was extracted
-    /// from raw XML before entity decoding.
+    /// XML parsing normalizes line breaks and tabs in attribute values to spaces, which would join the lines
+    /// of a multi-line expression (so a line comment would swallow the code after it). When an attribute holds
+    /// such an expression, the document is re-read without normalization and written back with its line breaks
+    /// as character references, which survive parsing. In any other attribute they stay whitespace.
     /// </summary>
-    private static void RestorePlaceholders(XElement root, Dictionary<string, string> map)
+    private static string PreserveAttributeLineBreaks(string xml)
     {
-        foreach (var element in root.DescendantsAndSelf())
+        if (!CollectExpressionSpans(xml).Any(span => xml.AsSpan(span.start, span.length).IndexOfAny('\n', '\r', '\t') >= 0))
         {
-            foreach (var attribute in element.Attributes().ToList())
+            return xml;
+        }
+
+        XDocument doc;
+        XDocument parsed;
+        try
+        {
+            using var sr = new StringReader(xml);
+            using var xr = new XmlTextReader(sr)
             {
-                var value = attribute.Value;
-                foreach (var kvp in map)
-                {
-                    if (value.Contains(kvp.Key, StringComparison.Ordinal))
-                    {
-                        value = value.Replace(kvp.Key, DecodeXmlEntities(kvp.Value), StringComparison.Ordinal);
-                    }
-                }
+                DtdProcessing = DtdProcessing.Prohibit,
+                Normalization = false,
+                WhitespaceHandling = WhitespaceHandling.All
+            };
+            doc = XDocument.Load(xr, LoadOptions.PreserveWhitespace);
+            parsed = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
+        }
+        catch (XmlException)
+        {
+            return xml;
+        }
 
-                if (!ReferenceEquals(value, attribute.Value))
-                {
-                    attribute.Value = value;
-                }
-            }
-
-            if (!element.HasElements && !string.IsNullOrEmpty(element.Value))
+        // Only an expression keeps its line breaks. Any other attribute keeps the value an XML parser gives it:
+        // its line breaks are spaces, while a character reference such as &#10; is a real line break.
+        var spansLines = false;
+        foreach (var (element, parsedElement) in doc.Descendants().Zip(parsed.Descendants()))
+        {
+            foreach (var (attribute, parsedAttribute) in element.Attributes().Zip(parsedElement.Attributes()))
             {
-                var inner = element.Value;
-                foreach (var kvp in map)
+                if (CollectExpressionSpans(attribute.Value).Count == 0)
                 {
-                    if (inner.Contains(kvp.Key, StringComparison.Ordinal))
-                    {
-                        inner = inner.Replace(kvp.Key, DecodeXmlEntities(kvp.Value), StringComparison.Ordinal);
-                    }
+                    attribute.Value = parsedAttribute.Value;
                 }
-
-                if (!ReferenceEquals(inner, element.Value))
+                else if (attribute.Value.IndexOfAny(['\n', '\r', '\t']) >= 0)
                 {
-                    element.Value = inner;
+                    spansLines = true;
                 }
             }
         }
+
+        return spansLines ? doc.ToString(SaveOptions.DisableFormatting) : xml;
+    }
+
+    /// <summary>
+    /// Walks the DOM tree and replaces placeholder tokens with original expression text
+    /// in attribute values, text, CDATA sections and comments.
+    /// Decodes XML entities in restored expressions since the original text was extracted
+    /// from raw XML before entity decoding. The content of a CDATA section or a comment isn't
+    /// parsed, so an entity in it stays as it was written.
+    /// </summary>
+    private static void RestorePlaceholders(XElement root, Dictionary<string, string> map)
+    {
+        foreach (var attribute in root.DescendantsAndSelf().Attributes())
+        {
+            attribute.Value = Restore(attribute.Value, map, decode: true);
+        }
+
+        // Node by node, so text next to child elements is covered and a CDATA section stays one.
+        foreach (var node in root.DescendantNodes().ToList())
+        {
+            switch (node)
+            {
+                case XCData cdata:
+                    cdata.Value = Restore(cdata.Value, map, decode: false);
+                    break;
+                case XText text:
+                    text.Value = Restore(text.Value, map, decode: true);
+                    break;
+                case XComment comment:
+                    comment.Value = Restore(comment.Value, map, decode: false);
+                    break;
+            }
+        }
+    }
+
+    private static string Restore(string value, Dictionary<string, string> map, bool decode)
+    {
+        foreach (var kvp in map)
+        {
+            if (value.Contains(kvp.Key, StringComparison.Ordinal))
+            {
+                value = value.Replace(kvp.Key, decode ? DecodeXmlEntities(kvp.Value) : kvp.Value, StringComparison.Ordinal);
+            }
+        }
+
+        return value;
     }
 
     /// <summary>
@@ -440,7 +492,7 @@ public class PolicyDecompiler
     /// Handles nested braces, string literals (regular, verbatim, interpolated),
     /// char literals, line comments, and block comments.
     /// </summary>
-    private static bool TryScanBalanced(string text, int startAt, char open, char close, out int length)
+    internal static bool TryScanBalanced(string text, int startAt, char open, char close, out int length)
     {
         length = 0;
         int i = startAt;
