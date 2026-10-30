@@ -19,6 +19,14 @@ public class WaitDecompiler : IPolicyDecompiler
             throw new ArgumentException("The wait policy requires at least one child policy.", nameof(element));
         }
 
+        // A request kept as InlinePolicy can't be in a typed branch, however deep, so the wait is kept as written with it.
+        if (element.Descendants("send-request")
+            .Any(request => SendRequestDecompilerHelper.HasLiteralCertificateBody(request, context)))
+        {
+            new InlinePolicyDecompiler().Decompile(writer, element, contextVar, context);
+            return;
+        }
+
         writer.AppendLine($"{prefix}Wait({(waitFor is null ? "null" : context.HandleValue(waitFor, "WaitFor"))},");
         writer.IncreaseIndent();
         for (var i = 0; i < children.Count; i++)
