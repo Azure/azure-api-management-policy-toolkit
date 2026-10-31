@@ -772,7 +772,8 @@ public class PolicyDecompilerContext
     {
         if (string.IsNullOrEmpty(kebabOrSnakeCase)) return "Value";
 
-        var parts = kebabOrSnakeCase.Split('-', '_', '.');
+        // Any character that can't be part of an identifier separates words.
+        var parts = Regex.Split(kebabOrSnakeCase, @"[^\p{L}\p{Nd}]+");
         var sb = new StringBuilder();
         foreach (var part in parts)
         {
