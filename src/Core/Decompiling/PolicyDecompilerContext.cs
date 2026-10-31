@@ -737,12 +737,12 @@ public class PolicyDecompilerContext
 
         foreach (var node in clone.DescendantsAndSelf())
         {
-            foreach (var attribute in node.Attributes().Where(a => !a.IsNamespaceDeclaration).ToList())
+            foreach (var attribute in node.Attributes().ToList())
             {
                 attribute.Value = ProtectExpressions(attribute.Value, expressions);
             }
 
-            foreach (var text in node.Nodes().OfType<XText>().Where(t => t is not XCData).ToList())
+            foreach (var text in node.Nodes().OfType<XText>().ToList())
             {
                 text.Value = ProtectExpressions(text.Value, expressions);
             }
@@ -760,11 +760,6 @@ public class PolicyDecompilerContext
     private static string ProtectExpressions(string value, Dictionary<string, string> expressions)
     {
         var spans = PolicyDecompiler.CollectExpressionSpans(value);
-        if (spans.Count == 0)
-        {
-            return value;
-        }
-
         var sb = new StringBuilder(value.Length);
         int cursor = 0;
         foreach (var (start, length) in spans)

@@ -57,8 +57,8 @@ public sealed class CustomXmlWriter : IDisposable
     // Text, CDATA and comments next to child elements are written in document order.
     private void WriteNodes(IEnumerable<XNode> nodes)
     {
-        // Whitespace between elements is indentation, the writer produces its own. Next to text it is content.
-        var hasText = nodes.Any(node => node is XText text and not XCData && !string.IsNullOrWhiteSpace(text.Value));
+        // Whitespace between elements is indentation, the writer produces its own. Next to text or CDATA it is content.
+        var hasText = nodes.Any(node => node is XText text && !string.IsNullOrWhiteSpace(text.Value));
         foreach (var node in nodes)
         {
             switch (node)

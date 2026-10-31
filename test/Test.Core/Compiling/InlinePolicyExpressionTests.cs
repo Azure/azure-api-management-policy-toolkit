@@ -63,6 +63,12 @@ public class InlinePolicyExpressionTests
     }
 
     [TestMethod]
+    public void ShouldReportAProcessingInstructionThatARestoredExpressionMakesInvalid()
+    {
+        Compile("""<a><?note @("?>")?><b /></a>""").Errors.Should().ContainSingle(error => error.Id == "APIM2008");
+    }
+
+    [TestMethod]
     public void ShouldRestoreExpressionsInAProcessingInstruction()
     {
         var element = CompileInlinePolicy("""<a><?note @(1 + 1)?><b /></a>""");

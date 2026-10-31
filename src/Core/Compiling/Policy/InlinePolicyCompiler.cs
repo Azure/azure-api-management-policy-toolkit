@@ -80,7 +80,7 @@ public class InlinePolicyCompiler : IMethodPolicyHandler
                 comment.Value = RestoreExpressions(comment.Value, markerToCode);
 
                 // The marker hid it from the parser, but a comment can't hold this and can't be written.
-                if (comment.Value.Contains("--", StringComparison.Ordinal) || comment.Value.EndsWith('-'))
+                if (comment.Value.Contains("--", StringComparison.Ordinal))
                 {
                     throw new XmlException($"The comment '{comment.Value}' holds an expression that isn't valid in a comment.");
                 }

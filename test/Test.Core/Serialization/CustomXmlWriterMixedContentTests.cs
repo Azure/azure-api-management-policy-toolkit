@@ -92,6 +92,25 @@ public class CustomXmlWriterMixedContentTests
     }
 
     [TestMethod]
+    public void ShouldKeepWhitespaceNextToCData()
+    {
+        var element = XElement.Parse("<foo><![CDATA[a]]> <b /></foo>", LoadOptions.PreserveWhitespace);
+        var builder = new StringBuilder();
+
+        using (var writer = CustomXmlWriter.Create(builder, new XmlWriterSettings
+        {
+            OmitXmlDeclaration = true,
+            ConformanceLevel = ConformanceLevel.Fragment,
+            Indent = true,
+        }))
+        {
+            writer.Write(element);
+        }
+
+        builder.ToString().Should().Be("<foo><![CDATA[a]]> <b /></foo>");
+    }
+
+    [TestMethod]
     public void ShouldKeepWhitespaceBetweenElementsNextToText()
     {
         var element = XElement.Parse("<foo>Hello <b>a</b> <i>b</i></foo>", LoadOptions.PreserveWhitespace);
