@@ -42,9 +42,11 @@ internal static class NullExpression
         // default for a nullable value type, such as bool?, is null without being a constant. A directory is compiled
         // without a reference to System.Runtime, so there Nullable<T> doesn't resolve and default has no type to be a
         // value of.
+        // default(bool) given for a bool? is false: only a default of the literal form takes its type from the target.
+        var typeInfo = model.GetTypeInfo(expression);
         return expression is LiteralExpressionSyntax or DefaultExpressionSyntax &&
                expression.Kind() is SyntaxKind.DefaultLiteralExpression or SyntaxKind.DefaultExpression &&
-               model.GetTypeInfo(expression).ConvertedType is { } type &&
+               (typeInfo.Type ?? typeInfo.ConvertedType) is { } type &&
                (type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T ||
                 type.TypeKind == TypeKind.Error);
     }

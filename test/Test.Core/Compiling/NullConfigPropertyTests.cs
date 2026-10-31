@@ -1,11 +1,64 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+using Microsoft.Azure.ApiManagement.PolicyToolkit.IoC;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Microsoft.Azure.ApiManagement.PolicyToolkit.Compiling;
 
 [TestClass]
 public class NullConfigPropertyTests
 {
+    // Compiled with the references of a project, as only there bool? resolves and default(bool) converts to it.
+    [TestMethod]
+    [DataRow("default(bool)", """<llm-content-safety backend-id="b" shield-prompt="false" />""")]
+    [DataRow("default", """<llm-content-safety backend-id="b" />""")]
+    [DataRow("default(bool?)", """<llm-content-safety backend-id="b" />""")]
+    public void ShouldReadADefaultByItsOwnTypeInAProject(string value, string expected)
+    {
+        var tree = CSharpSyntaxTree.ParseText(
+            $$"""
+            using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.LlmContentSafety(new LlmContentSafetyConfig { BackendId = "b", ShieldPrompt = {{value}} });
+                }
+            }
+            """);
+        var runtime = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
+        var compilation = CSharpCompilation.Create(
+            Guid.NewGuid().ToString(),
+            syntaxTrees: [tree],
+            references:
+            [
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(Path.Combine(runtime, "System.Runtime.dll")),
+                MetadataReference.CreateFromFile(typeof(IDocument).Assembly.Location)
+            ]);
+        using var services = new ServiceCollection().SetupCompiler().BuildServiceProvider();
+
+        var result = services.GetRequiredService<DocumentCompiler>().Compile(
+            compilation,
+            tree.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>().Single());
+
+        result.Should().BeSuccessful().And.DocumentEquivalentTo(
+            $"""
+            <policies>
+                <inbound>
+                    {expected}
+                </inbound>
+            </policies>
+            """);
+    }
+
     [TestMethod]
     [DataRow("null")]
     [DataRow("default")]
