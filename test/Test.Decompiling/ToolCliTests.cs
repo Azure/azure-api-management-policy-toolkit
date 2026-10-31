@@ -47,6 +47,34 @@ public class ToolCliTests
     }
 
     [TestMethod]
+    public async Task Decompiler_WarnsAboutSyntaxErrorsInGeneratedCode_UnlessNoValidate()
+    {
+        var temp = CreateTempDirectory();
+        try
+        {
+            // "1 2" is not a number, so the generated C# does not parse.
+            var policy = Path.Combine(temp, "policy.xml");
+            await File.WriteAllTextAsync(policy,
+                """<policies><inbound><rate-limit calls="1 2" renewal-period="60" /></inbound></policies>""");
+
+            var validated = await RunToolAsync("Decompiling", "--source", policy, "--out", Path.Combine(temp, "a"));
+            var notValidated = await RunToolAsync("Decompiling", "--source", policy, "--out", Path.Combine(temp, "b"),
+                "--no-validate");
+
+            Assert.AreEqual(0, validated.ExitCode, validated.Error);
+            StringAssert.Contains(validated.Error, "syntax errors");
+            Assert.IsTrue(File.Exists(Path.Combine(temp, "a", "policy.cs")));
+            Assert.AreEqual(0, notValidated.ExitCode, notValidated.Error);
+            Assert.AreEqual("", notValidated.Error.Trim());
+            Assert.IsTrue(File.Exists(Path.Combine(temp, "b", "policy.cs")));
+        }
+        finally
+        {
+            Directory.Delete(temp, recursive: true);
+        }
+    }
+
+    [TestMethod]
     public async Task Compiler_AcceptsShortAndLongOptions()
     {
         var temp = CreateTempDirectory();

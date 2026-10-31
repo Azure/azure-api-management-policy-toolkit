@@ -56,6 +56,8 @@ Common options:
 - `--doc-id-root`: root path used to compute relative `DocumentId` values
 - `--document-suffix` / `--fragment-suffix`: name suffixes for generated class names
 - `--verbose`: print progress information while generating files
+- `--no-validate`: skip the syntax check of the generated C#, which prints a warning with the errors it
+  finds and doesn't change the exit code
 
 Run `azure-apim-policy-decompiler --help` for all options and defaults. The existing
 `generate` subcommand remains available. The legacy `-s` alias still means `--scope`;
