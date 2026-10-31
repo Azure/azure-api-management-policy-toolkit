@@ -18,6 +18,10 @@ public class NullConfigPropertyTests
     [DataRow("default(bool)", """<llm-content-safety backend-id="b" shield-prompt="false" />""")]
     [DataRow("default", """<llm-content-safety backend-id="b" />""")]
     [DataRow("default(bool?)", """<llm-content-safety backend-id="b" />""")]
+    [DataRow("(bool?)null", """<llm-content-safety backend-id="b" />""")]
+    [DataRow("(bool?)default", """<llm-content-safety backend-id="b" />""")]
+    [DataRow("((bool?)null)", """<llm-content-safety backend-id="b" />""")]
+    [DataRow("(default)", """<llm-content-safety backend-id="b" />""")]
     public void ShouldReadADefaultByItsOwnTypeInAProject(string value, string expected)
     {
         var tree = CSharpSyntaxTree.ParseText(

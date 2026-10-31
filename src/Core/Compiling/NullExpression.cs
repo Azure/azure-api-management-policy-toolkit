@@ -14,23 +14,13 @@ internal static class NullExpression
     // any other.
     internal static bool IsNull(ExpressionSyntax expression, IDocumentCompilationContext context)
     {
-        if (expression.IsKind(SyntaxKind.NullLiteralExpression))
-        {
-            return true;
-        }
-
-        // (bool?)null is not a constant either
+        // (bool?)default is not a constant
         switch (expression)
         {
             case CastExpressionSyntax cast:
                 return IsNull(cast.Expression, context);
             case ParenthesizedExpressionSyntax parenthesized:
                 return IsNull(parenthesized.Expression, context);
-        }
-
-        if (!context.Compilation.ContainsSyntaxTree(expression.SyntaxTree))
-        {
-            return false;
         }
 
         var model = CompilerUtils.CachedModel(context.Compilation, expression.SyntaxTree);
@@ -44,8 +34,7 @@ internal static class NullExpression
         // value of.
         // default(bool) given for a bool? is false: only a default of the literal form takes its type from the target.
         var typeInfo = model.GetTypeInfo(expression);
-        return expression is LiteralExpressionSyntax or DefaultExpressionSyntax &&
-               expression.Kind() is SyntaxKind.DefaultLiteralExpression or SyntaxKind.DefaultExpression &&
+        return expression.Kind() is SyntaxKind.DefaultLiteralExpression or SyntaxKind.DefaultExpression &&
                (typeInfo.Type ?? typeInfo.ConvertedType) is { } type &&
                (type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T ||
                 type.TypeKind == TypeKind.Error);
