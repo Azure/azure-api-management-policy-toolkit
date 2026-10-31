@@ -88,9 +88,23 @@ public class PolicyDecompilerContext
 
     #region Expression Handling
 
-    public bool IsExpression(string value) =>
-        (value.StartsWith("@(") && value.EndsWith(")")) ||
-        (value.StartsWith("@{") && value.EndsWith("}"));
+    public bool IsExpression(string value) => IsSingleExpression(value);
+
+    /// <summary>
+    /// True when the whole value is one balanced @(...) or @{...} expression. A value such as
+    /// "@(a)-@(b)" is text with embedded expressions and has to be kept as a string.
+    /// </summary>
+    private static bool IsSingleExpression(string value)
+    {
+        if (value.Length < 2 || (value[1] != '(' && value[1] != '{'))
+        {
+            return false;
+        }
+
+        char open = value[1];
+        char close = open == '(' ? ')' : '}';
+        return PolicyDecompiler.TryScanBalanced(value, 0, open, close, out int length) && length == value.Length;
+    }
 
     public string HandleValue(string value, string suggestedName, string returnType = "string")
     {
@@ -119,6 +133,10 @@ public class PolicyDecompilerContext
         {
             return NamedValueCall(value, "int");
         }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
+        }
         if (TryParseIsoDuration(value, out var seconds))
         {
             return seconds.ToString();
@@ -136,6 +154,10 @@ public class PolicyDecompilerContext
         {
             return NamedValueCall(value, "bool");
         }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
+        }
         return value.ToLowerInvariant();
     }
 
@@ -147,9 +169,9 @@ public class PolicyDecompilerContext
         }
         if (IsNamedValueToken(value))
         {
-            return NamedValueCall(value, "int");
+            return NamedValueCall(value, "uint");
         }
-        return value;
+        return ContainsNamedValueToken(value) ? CreateNamedValueStringExpression(value, suggestedName) : value;
     }
 
     public string HandleDoubleValue(string value, string suggestedName)
@@ -162,36 +184,38 @@ public class PolicyDecompilerContext
         {
             return NamedValueCall(value, "double");
         }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
+        }
         return value;
     }
 
     public string HandleConditionExpression(string value, string suggestedName)
     {
         value = value.Trim();
-        if (value.StartsWith("@(") && value.EndsWith(")"))
+        if (IsExpression(value))
         {
             var body = value.Substring(2, value.Length - 3);
-            return CreateExpressionMethod(body, suggestedName, "bool", false);
+            return CreateExpressionMethod(body, suggestedName, "bool", value[1] == '{');
         }
-        if (value.StartsWith("@{") && value.EndsWith("}"))
+        if (IsNamedValueToken(value))
         {
-            var body = value.Substring(2, value.Length - 3);
-            return CreateExpressionMethod(body, suggestedName, "bool", true);
+            return NamedValueCall(value, "bool");
+        }
+        if (ContainsNamedValueToken(value))
+        {
+            return CreateNamedValueStringExpression(value, suggestedName);
         }
         return value.ToLowerInvariant();
     }
 
     public string CreateExpressionMethodReference(string value, string suggestedName, string returnType)
     {
-        if (value.StartsWith("@(") && value.EndsWith(")"))
+        if (IsExpression(value))
         {
             var body = value.Substring(2, value.Length - 3);
-            return CreateExpressionMethod(body, suggestedName, returnType, false);
-        }
-        if (value.StartsWith("@{") && value.EndsWith("}"))
-        {
-            var body = value.Substring(2, value.Length - 3);
-            return CreateExpressionMethod(body, suggestedName, returnType, true);
+            return CreateExpressionMethod(body, suggestedName, returnType, value[1] == '{');
         }
         return Literal(value);
     }
@@ -217,6 +241,11 @@ public class PolicyDecompilerContext
         int pos = 0;
         foreach (Match match in NamedValueTokenPattern.Matches(value))
         {
+            if (!IsValidTokenName(match.Groups[1].Value))
+            {
+                continue;
+            }
+
             if (match.Index > pos)
             {
                 parts.Add(Literal(value.Substring(pos, match.Index - pos)));
@@ -262,10 +291,11 @@ public class PolicyDecompilerContext
     }
 
     public static bool IsNamedValueToken(string value) =>
-        NamedValueTokenPattern.IsMatch(value) && value.StartsWith("{{") && value.EndsWith("}}");
+        NamedValueTokenPattern.Match(value) is { Success: true } match && match.Length == value.Length &&
+        IsValidTokenName(match.Groups[1].Value);
 
     public static bool ContainsNamedValueToken(string value) =>
-        NamedValueTokenPattern.IsMatch(value);
+        NamedValueTokenPattern.Matches(value).Any(match => IsValidTokenName(match.Groups[1].Value));
 
     public static string ReplaceNamedValueTokens(string body)
     {
@@ -457,8 +487,9 @@ public class PolicyDecompilerContext
         @"\G\{\{\s*([A-Za-z0-9_.\-]+)\s*\}\}",
         RegexOptions.Compiled);
 
+    // A {{name}} token in a value; a name is one with IsValidTokenName, as in a string
     public static readonly Regex NamedValueTokenPattern = new(
-        @"\{\{([A-Za-z][A-Za-z0-9_.\-]*)\}\}",
+        @"\{\{([A-Za-z0-9_.\-]+)\}\}",
         RegexOptions.Compiled);
 
     #endregion
@@ -602,7 +633,7 @@ public class PolicyDecompilerContext
         var value = element.Attribute(xmlAttr)?.Value;
         if (value != null)
         {
-            props.Add($"{propName} = {HandleIntValue(value, propName)}");
+            props.Add($"{propName} = {HandleUintValue(value, propName)}");
         }
     }
 
