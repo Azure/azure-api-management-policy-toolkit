@@ -7,6 +7,8 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Decompiling;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 var sourceOption = new Option<string?>("--s", "--source")
 {
@@ -72,7 +74,7 @@ var fragmentSuffixOption = new Option<string>("--fragment-suffix")
 
 var noValidateOption = new Option<bool>("--no-validate")
 {
-    Description = "Skip validation"
+    Description = "Skip checking that the generated C# is syntactically valid"
 };
 
 var verboseOption = new Option<bool>("--verbose", "-v")
@@ -120,6 +122,7 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
     var docIdRoot = parseResult.GetValue(docIdRootOption);
     var documentSuffix = parseResult.GetValue(documentSuffixOption)!;
     var fragmentSuffix = parseResult.GetValue(fragmentSuffixOption)!;
+    var noValidate = parseResult.GetValue(noValidateOption);
     var verbose = parseResult.GetValue(verboseOption);
 
     // Discover XML files
@@ -261,6 +264,23 @@ Func<ParseResult, Task<int>> handler = async parseResult =>
 
             Directory.CreateDirectory(outputDir);
             await File.WriteAllTextAsync(outputFile, result);
+
+            if (!noValidate)
+            {
+                var syntaxErrors = CSharpSyntaxTree.ParseText(result).GetDiagnostics()
+                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                    .ToList();
+                if (syntaxErrors.Count > 0)
+                {
+                    await Console.Error.WriteLineAsync(
+                        $"Warning: the C# generated from {relativePath} in {outputFile} has syntax errors and needs fixing by hand (use --no-validate to skip this check):");
+                    foreach (var error in syntaxErrors)
+                    {
+                        await Console.Error.WriteLineAsync($"  {error}");
+                    }
+                }
+            }
+
             succeeded++;
 
             if (verbose)
