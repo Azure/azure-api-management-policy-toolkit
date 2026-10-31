@@ -11,6 +11,12 @@ public class SendRequestDecompiler : IPolicyDecompiler
 
     public void Decompile(CodeWriter writer, XElement element, string contextVar, PolicyDecompilerContext context)
     {
+        if (SendRequestDecompilerHelper.HasLiteralCertificateBody(element, context))
+        {
+            new InlinePolicyDecompiler().Decompile(writer, element, contextVar, context);
+            return;
+        }
+
         var prefix = PolicyDecompilerContext.GetContextPrefix(element, contextVar);
         var props = new List<string>();
         context.AddRequiredStringProp(props, element, "response-variable-name", "ResponseVariableName");

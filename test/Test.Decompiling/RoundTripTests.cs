@@ -133,6 +133,44 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    [DataRow("""<inbound><validate-parameters specified-parameter-action="prevent" unspecified-parameter-action="ignore" errors-variable-name="errors"><headers specified-parameter-action="detect" unspecified-parameter-action="ignore"><parameter name="Authorization" action="prevent" /></headers><query specified-parameter-action="prevent" unspecified-parameter-action="detect"><parameter name="id" action="ignore" /><parameter name="filter" action="detect" /></query><path specified-parameter-action="prevent"><parameter name="orderId" action="detect" /></path></validate-parameters></inbound>""",
+        DisplayName = "validate-parameters with headers, query and path")]
+    [DataRow("""<inbound><validate-parameters specified-parameter-action="prevent" unspecified-parameter-action="ignore"><query specified-parameter-action="@(&quot;detect&quot;)" unspecified-parameter-action="{{action}}" /></validate-parameters></inbound>""",
+        DisplayName = "validate-parameters group with expression and named value actions")]
+    [DataRow("""<outbound><validate-headers specified-header-action="ignore" unspecified-header-action="prevent" errors-variable-name="errors"><header name="X-One" action="detect" /><header name="X-Two" action="prevent" /></validate-headers></outbound>""",
+        DisplayName = "validate-headers with headers")]
+    [DataRow("""<inbound><authentication-certificate body="@(context.Variables.GetValueOrDefault&lt;byte[]&gt;(&quot;cert&quot;))" password="secret" /></inbound>""",
+        DisplayName = "authentication-certificate with body")]
+    [DataRow("""<inbound><authentication-certificate body="not-an-expression" /></inbound>""",
+        DisplayName = "authentication-certificate with literal body")]
+    [DataRow("""<inbound><validate-content unspecified-content-type-action="prevent" max-size="1024" size-exceeded-action="detect"><content-type-map><type to="application/json" from="a/b" when="@(context.Request.Method == &quot;POST&quot;)" /><type to="application/json" from="c/d" when="{{map-enabled}}" /></content-type-map><content validate-as="json" action="detect" allow-additional-properties="{{allow}}" case-insensitive-property-names="true" /></validate-content></inbound>""",
+        DisplayName = "validate-content bool attributes as expression and named value")]
+    [DataRow("""<inbound><send-request mode="new" response-variable-name="r"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="AAECAw==" password="p" /></send-request></inbound>""",
+        DisplayName = "send-request with a literal certificate body")]
+    [DataRow("""<inbound><send-request response-variable-name="r" mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="{{certificate}}" /></send-request></inbound>""",
+        DisplayName = "send-request with a certificate body from a named value")]
+    [DataRow("""<inbound><validate-content unspecified-content-type-action="prevent" max-size="1024" size-exceeded-action="detect"><content validate-as="json" action="detect" case-insensitive-property-names="@(context.Request.Method == &quot;POST&quot;)" /></validate-content></inbound>""",
+        DisplayName = "validate-content case-insensitive-property-names as expression")]
+    public void ValidationAndAuthenticationChildren_RoundTrip(string sections)
+    {
+        AssertRoundTrip($"<policies>{sections}</policies>");
+    }
+
+    [TestMethod]
+    [DataRow("""<send-request response-variable-name="r" mode="new"><set-url>https://api.example.com</set-url><set-method>GET</set-method><authentication-certificate thumbprint="ABCDEF" password="{{cert-password}}" /></send-request>""",
+        DisplayName = "send-request certificate password")]
+    [DataRow("""<send-request response-variable-name="r" mode="new"><set-url>https://api.example.com</set-url><set-method>GET</set-method><authentication-certificate body="@(context.Variables.GetValueOrDefault&lt;byte[]&gt;(&quot;cert&quot;))" password="secret" /></send-request>""",
+        DisplayName = "send-request certificate body")]
+    [DataRow("""<send-request response-variable-name="r" mode="new"><set-url>https://api.example.com</set-url><set-method>GET</set-method><authentication-managed-identity resource="https://vault.azure.net" output-token-variable-name="token" ignore-error="true" /></send-request>""",
+        DisplayName = "send-request managed identity token variable and ignore-error")]
+    [DataRow("""<send-one-way-request mode="new"><set-url>https://api.example.com</set-url><set-method>POST</set-method><authentication-managed-identity resource="https://vault.azure.net" client-id="abc" output-token-variable-name="token" ignore-error="false" /></send-one-way-request>""",
+        DisplayName = "send-one-way-request managed identity token variable and ignore-error")]
+    public void NestedAuthentication_RoundTrips(string policy)
+    {
+        AssertRoundTripSemantic($"<policies><inbound>{policy}</inbound></policies>");
+    }
+
+    [TestMethod]
     public void Wait_WithChooseAndBranchExpressions_RoundTrips()
     {
         var xml = """
@@ -157,6 +195,43 @@ public class RoundTripTests
         var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
         csharp.Should().Contain("Wait(\"any\",")
             .And.MatchRegex(@"Condition\d+\(waitBranch\d+\.ExpressionContext\)");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("""<authentication-certificate body="{{certificate}}" />""", DisplayName = "On its own")]
+    [DataRow("""<send-request response-variable-name="r" mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="{{certificate}}" /></send-request>""", DisplayName = "In send-request")]
+    public void CertificateBodyFromANamedValue_StaysTyped(string policy)
+    {
+        var csharp = s_decompiler.DecompileDocument($"<policies><inbound>{policy}</inbound></policies>", "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("Body =").And.NotContain("InlinePolicy");
+    }
+
+    [TestMethod]
+    public void SendOneWayRequestWithALiteralCertificateBody_IsKeptAsWritten()
+    {
+        var xml = """<policies><inbound><send-one-way-request mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="AAECAw==" password="p" /></send-one-way-request></inbound></policies>""";
+
+        s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest").Should().Contain("InlinePolicy");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void WaitWithALiteralCertificateBodyInAChoose_IsKeptAsWritten()
+    {
+        var xml = """<policies><inbound><wait><choose><when condition="@(context.Request.Method == &quot;GET&quot;)"><send-request response-variable-name="r" mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="not-an-expression" /></send-request></when></choose></wait></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("context.InlinePolicy(").And.NotContain("waitBranch");
+    }
+
+    [TestMethod]
+    public void WaitWithALiteralCertificateBody_IsKeptAsWritten()
+    {
+        var xml = """<policies><inbound><wait><send-request response-variable-name="r" mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="AAECAw==" password="p" /></send-request></wait></inbound></policies>""";
+
         AssertRoundTrip(xml);
     }
 
