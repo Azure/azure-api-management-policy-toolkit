@@ -133,6 +133,12 @@ public static class CompilerUtils
                 continue;
             }
 
+            // Prop = null is the same as not setting the property
+            if (NullExpression.IsNull(assignment.Right, context))
+            {
+                continue;
+            }
+
             var name = assignment.Left.ToString();
             result[name] = assignment.Right.ProcessExpression(context);
         }
