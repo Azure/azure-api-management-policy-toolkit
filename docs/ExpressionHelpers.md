@@ -118,6 +118,16 @@ non-constant field of a compiled library is reported, although its constants can
   the hole's braces.
 - An expression that is only a named value compiles to the plain attribute value, `{{name}}`.
 
+## Ambiguous type names
+
+API Management resolves type names against all the namespaces it imports, whatever the `using` directives of the
+source file are. `Formatting` exists in both `Newtonsoft.Json` and `System.Xml`, so the analyzer reports a bare
+`Formatting` in a policy expression with `APIM003`. Write it with its namespace:
+
+```csharp
+JsonConvert.SerializeObject(value, Newtonsoft.Json.Formatting.Indented)
+```
+
 ## C# language version
 
 API Management compiles policy expressions as C# 7, so helper code that uses a newer language feature, such as switch

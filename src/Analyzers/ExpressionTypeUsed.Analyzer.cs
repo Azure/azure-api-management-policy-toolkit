@@ -27,6 +27,38 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
             SyntaxKind.ObjectCreationExpression,
             SyntaxKind.ObjectInitializerExpression,
             SyntaxKind.AnonymousObjectCreationExpression);
+        context.RegisterSyntaxNodeAction(AnalyzeTypeName, SyntaxKind.IdentifierName);
+    }
+
+    // API Management resolves type names against every namespace it imports, so a name declared in two of them is
+    // rejected unless it is written with its namespace, whatever the using directives of the source file are.
+    private readonly static IReadOnlyDictionary<string, IReadOnlyCollection<string>> AmbiguousTypeNames =
+        new Dictionary<string, IReadOnlyCollection<string>>()
+        {
+            { "Formatting", new HashSet<string>() { "Newtonsoft.Json.Formatting", "System.Xml.Formatting" } },
+        };
+
+    private static void AnalyzeTypeName(SyntaxNodeAnalysisContext context)
+    {
+        var name = (IdentifierNameSyntax)context.Node;
+        if (!AmbiguousTypeNames.TryGetValue(name.Identifier.ValueText, out var candidates) ||
+            name.Parent is MemberAccessExpressionSyntax memberAccess && memberAccess.Name == name ||
+            name.Parent is QualifiedNameSyntax qualifiedName && qualifiedName.Right == name ||
+            name.Parent is AliasQualifiedNameSyntax ||
+            !name.IsPartOfPolicyExpressionMethod(context.SemanticModel) &&
+            !name.IsPartOfPolicyExpressionDelegate(context.SemanticModel))
+        {
+            return;
+        }
+
+        // The compiler writes a using alias out as the name it stands for, so that is not a bare name.
+        if (context.SemanticModel.GetAliasInfo(name) is null &&
+            context.SemanticModel.GetSymbolInfo(name).Symbol is INamedTypeSymbol type &&
+            candidates.Contains(type.ToFullyQualifiedString()))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(Rules.TypeUsed.AmbiguousTypeName, name.GetLocation(),
+                name.Identifier.ValueText, type.ToFullyQualifiedString()));
+        }
     }
 
     private readonly static IReadOnlyCollection<string> AllowedTypes = new HashSet<string>()
@@ -134,6 +166,7 @@ public class TypeUsedAnalyzer : DiagnosticAnalyzer
         "System.UInt64",
         "System.Uri",
         "System.UriPartial",
+        "System.Xml.Formatting",
         "System.Xml.Linq.Extensions",
         "System.Xml.Linq.XAttribute",
         "System.Xml.Linq.XCData",
