@@ -24,6 +24,11 @@ public class SendOneWayRequestCompiler : IMethodPolicyHandler
 
         XElement element = new("send-one-way-request");
 
+        if (SendRequestCompiler.ReportMissingUrlOrMethod(context, node, values, "send-one-way-request"))
+        {
+            return;
+        }
+
         element.AddAttribute(values, nameof(SendOneWayRequestConfig.Mode), "mode");
         element.AddAttribute(values, nameof(SendOneWayRequestConfig.Timeout), "timeout");
 
@@ -74,9 +79,6 @@ public class SendOneWayRequestCompiler : IMethodPolicyHandler
             case nameof(CertificateAuthenticationConfig):
                 AuthenticationCertificateCompiler.HandleCertificateAuthentication(context, element, values,
                     authentication.Node);
-                break;
-            case nameof(BasicAuthenticationConfig):
-                AuthenticationBasicCompiler.HandleBasicAuthentication(context, element, values, authentication.Node);
                 break;
             case nameof(ManagedIdentityAuthenticationConfig):
                 AuthenticationManagedIdentityCompiler.HandleManagedIdentityAuthentication(context, element, values,

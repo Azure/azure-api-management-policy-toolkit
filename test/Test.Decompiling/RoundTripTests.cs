@@ -139,14 +139,23 @@ public class RoundTripTests
             <policies>
                 <inbound>
                     <wait for="any">
-                        <send-request response-variable-name="primary" />
+                        <send-request response-variable-name="primary">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                         <choose>
                             <when condition="@(context.Variables.ContainsKey(&quot;use-cache&quot;))">
                                 <cache-lookup-value key="lookup" variable-name="value" />
-                                <send-request response-variable-name="fallback" />
+                                <send-request response-variable-name="fallback">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                             </when>
                             <otherwise>
-                                <send-request response-variable-name="backup" />
+                                <send-request response-variable-name="backup">
+                                    <set-url>https://example.com/api</set-url>
+                                    <set-method>GET</set-method>
+                                </send-request>
                             </otherwise>
                         </choose>
                     </wait>
@@ -169,6 +178,7 @@ public class RoundTripTests
                     <wait for="@(context.Variables.ContainsKey(&quot;race&quot;) ? &quot;any&quot; : &quot;all&quot;)">
                         <send-request response-variable-name="response">
                             <set-url>@(context.Request.Url.ToString())</set-url>
+                            <set-method>GET</set-method>
                         </send-request>
                     </wait>
                 </inbound>
@@ -192,6 +202,7 @@ public class RoundTripTests
                     </wait>
                     <send-request response-variable-name="later">
                         <set-url>@(context.Request.Url.ToString())</set-url>
+                        <set-method>GET</set-method>
                     </send-request>
                 </inbound>
             </policies>
@@ -231,7 +242,10 @@ public class RoundTripTests
             <policies>
                 <inbound>
                     <wait id="wait-id" for="all">
-                        <send-request id="first" response-variable-name="response" />
+                        <send-request id="first" response-variable-name="response">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                         <cache-lookup-value id="second" key="key" variable-name="cached" />
                     </wait>
                 </inbound>
@@ -252,7 +266,10 @@ public class RoundTripTests
             <policies>
                 <{section}>
                     <wait>
-                        <send-request response-variable-name="response" />
+                        <send-request response-variable-name="response">
+                            <set-url>https://example.com/api</set-url>
+                            <set-method>GET</set-method>
+                        </send-request>
                     </wait>
                 </{section}>
             </policies>
