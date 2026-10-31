@@ -726,6 +726,55 @@ public class PolicyDecompilerContext
         return element.Value;
     }
 
+    /// <summary>
+    /// Serializes an element as raw policy text: like XML, but policy expressions are written verbatim
+    /// (unescaped quotes, angle brackets and ampersands), as in API Management's rawxml format.
+    /// </summary>
+    internal static string ToRawXml(XElement element)
+    {
+        var clone = new XElement(element);
+        var expressions = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var node in clone.DescendantsAndSelf())
+        {
+            foreach (var attribute in node.Attributes().ToList())
+            {
+                attribute.Value = ProtectExpressions(attribute.Value, expressions);
+            }
+
+            foreach (var text in node.Nodes().OfType<XText>().ToList())
+            {
+                text.Value = ProtectExpressions(text.Value, expressions);
+            }
+        }
+
+        var xml = clone.ToString(SaveOptions.DisableFormatting);
+        foreach (var (placeholder, expression) in expressions)
+        {
+            xml = xml.Replace(placeholder, expression, StringComparison.Ordinal);
+        }
+
+        return xml;
+    }
+
+    private static string ProtectExpressions(string value, Dictionary<string, string> expressions)
+    {
+        var spans = PolicyDecompiler.CollectExpressionSpans(value);
+        var sb = new StringBuilder(value.Length);
+        int cursor = 0;
+        foreach (var (start, length) in spans)
+        {
+            sb.Append(value, cursor, start - cursor);
+            var placeholder = $"__APIM_RAW_EXPR_{expressions.Count}__";
+            expressions[placeholder] = value.Substring(start, length);
+            sb.Append(placeholder);
+            cursor = start + length;
+        }
+
+        sb.Append(value, cursor, value.Length - cursor);
+        return sb.ToString();
+    }
+
     public static string GetElementTextOrValue(XElement element)
     {
         return element.Value;

@@ -92,6 +92,48 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    public void InlinePolicyFallback_EmitsRawExpressions()
+    {
+        var xml = """<policies><inbound><unknown-policy check="@(context.Variables.ContainsKey(&quot;x&quot;) &amp;&amp; 1 &lt; 2)" note="a &amp; &quot;b&quot;" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain(
+            """context.InlinePolicy(@"<unknown-policy check=""@(context.Variables.ContainsKey(""x"") && 1 < 2)"" note=""a &amp; &quot;b&quot;"" />");""");
+    }
+
+    [TestMethod]
+    [DataRow("""<inbound><unknown-policy check="@(context.Request.Headers.GetValueOrDefault(&quot;a&quot;, &quot;&quot;).Length &gt; 1 &amp;&amp; 1 &lt; 2)" note="a &amp; b"><item>@(context.Variables.ContainsKey(&quot;x&quot;) &amp;&amp; 1 &lt; 2)</item></unknown-policy></inbound>""",
+        DisplayName = "Inline policy with characters XML escapes in expressions")]
+    [DataRow("""<inbound><set-header name="X-Mode" exists-action="@(context.Request.Method == &quot;GET&quot; ? &quot;override&quot; : &quot;skip&quot;)"><value>v</value></set-header></inbound>""",
+        DisplayName = "set-header with expression exists-action")]
+    [DataRow("""<inbound><set-header name="X-Empty" exists-action="override" /></inbound>""",
+        DisplayName = "set-header override without values")]
+    [DataRow("""<inbound><set-query-parameter name="mode" exists-action="{{action}}"><value>v</value></set-query-parameter></inbound>""",
+        DisplayName = "set-query-parameter with named value exists-action")]
+    [DataRow("""<inbound><set-query-parameter name="empty" exists-action="skip" /></inbound>""",
+        DisplayName = "set-query-parameter skip without values")]
+    public void PolicyKeptAsInlinePolicy_RoundTrips(string sections)
+    {
+        AssertRoundTrip($"<policies>{sections}</policies>");
+    }
+
+    [TestMethod]
+    [DataRow("""<unknown-policy a="@(1 + 1)" />""", DisplayName = "whole expression")]
+    [DataRow("""<unknown-policy a="x @(1 + 1) y" />""", DisplayName = "text around an expression")]
+    [DataRow("""<unknown-policy>@(1 + 1)<b /></unknown-policy>""", DisplayName = "expression next to a child")]
+    [DataRow("""<unknown-policy><!-- @(1 + 1) --><b /></unknown-policy>""", DisplayName = "expression in a comment")]
+    public void PolicyKeptAsInlinePolicy_LeavesNoMarkerWhenCompiled(string policy)
+    {
+        var xml = $"<policies><inbound>{policy}</inbound></policies>";
+
+        var result = CompileCSharp(s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest"));
+
+        result.Errors.Should().BeEmpty();
+        result.Document.ToString().Should().NotContain("__expression__");
+    }
+
+    [TestMethod]
     public void SimpleBase_RoundTrips()
     {
         var xml = "<policies><inbound><base /></inbound></policies>";

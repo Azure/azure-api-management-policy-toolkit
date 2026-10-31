@@ -412,7 +412,7 @@ public class PolicyDecompiler
     /// Uses a state machine that correctly handles strings, comments, char literals,
     /// and nested braces within C# expressions.
     /// </summary>
-    private static List<(int start, int length)> CollectExpressionSpans(string text)
+    internal static List<(int start, int length)> CollectExpressionSpans(string text)
     {
         var spans = new List<(int, int)>();
         for (int i = 0; i < text.Length - 1; i++)
