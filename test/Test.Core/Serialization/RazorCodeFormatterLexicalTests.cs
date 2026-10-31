@@ -72,6 +72,12 @@ public class RazorCodeFormatterLexicalTests
     }
 
     [TestMethod]
+    public void ShouldFormatBalancedCodeAfterUnbalancedCode()
+    {
+        RazorCodeFormatter.Format("<a>@(b</a><c>@(1+1)</c>").Should().Be("<a>@(b</a><c>@(1 + 1)</c>");
+    }
+
+    [TestMethod]
     public void ShouldFormatBalancedCodeBeforeUnbalancedCode()
     {
         var result = RazorCodeFormatter.Format("<a b=\"@(1+1)\">@{ return '{'; </a>");
@@ -101,6 +107,8 @@ public class RazorCodeFormatterLexicalTests
     [DataRow("""<foo a="x @(1+1) y" />""")]
     [DataRow("""<foo a="@(1+1)-@(2+2)" />""")]
     [DataRow("""<foo>x @(1+1) y</foo>""")]
+    [DataRow("""<foo a="x @(1+1)" />""")]
+    [DataRow("""<foo>x @(1+1)</foo>""")]
     public void ShouldLeaveLiteralTextAroundAnExpressionAsItIs(string xml)
     {
         var element = XElement.Parse(xml);
