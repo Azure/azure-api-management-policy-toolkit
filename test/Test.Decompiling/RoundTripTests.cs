@@ -149,6 +149,8 @@ public class RoundTripTests
         DisplayName = "send-request with a literal certificate body")]
     [DataRow("""<inbound><send-request response-variable-name="r" mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="{{certificate}}" /></send-request></inbound>""",
         DisplayName = "send-request with a certificate body from a named value")]
+    [DataRow("""<inbound><validate-content unspecified-content-type-action="prevent" max-size="1024" size-exceeded-action="detect"><content validate-as="json" action="detect" case-insensitive-property-names="@(context.Request.Method == &quot;POST&quot;)" /></validate-content></inbound>""",
+        DisplayName = "validate-content case-insensitive-property-names as expression")]
     public void ValidationAndAuthenticationChildren_RoundTrip(string sections)
     {
         AssertRoundTrip($"<policies>{sections}</policies>");
@@ -193,6 +195,25 @@ public class RoundTripTests
         var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
         csharp.Should().Contain("Wait(\"any\",")
             .And.MatchRegex(@"Condition\d+\(waitBranch\d+\.ExpressionContext\)");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    [DataRow("""<authentication-certificate body="{{certificate}}" />""", DisplayName = "On its own")]
+    [DataRow("""<send-request response-variable-name="r" mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="{{certificate}}" /></send-request>""", DisplayName = "In send-request")]
+    public void CertificateBodyFromANamedValue_StaysTyped(string policy)
+    {
+        var csharp = s_decompiler.DecompileDocument($"<policies><inbound>{policy}</inbound></policies>", "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("Body =").And.NotContain("InlinePolicy");
+    }
+
+    [TestMethod]
+    public void SendOneWayRequestWithALiteralCertificateBody_IsKeptAsWritten()
+    {
+        var xml = """<policies><inbound><send-one-way-request mode="new"><set-url>https://example.org</set-url><set-method>GET</set-method><authentication-certificate body="AAECAw==" password="p" /></send-one-way-request></inbound></policies>""";
+
+        s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest").Should().Contain("InlinePolicy");
         AssertRoundTrip(xml);
     }
 
