@@ -89,7 +89,7 @@ public class PolicyDecompiler
         writer.DecreaseIndent();
         writer.AppendLine("}");
 
-        return writer.ToString();
+        return RequiredUsings.AddTo(writer.ToString(), _context.ExpressionMethods);
     }
 
     public string DecompileFragment(
@@ -125,7 +125,7 @@ public class PolicyDecompiler
         writer.DecreaseIndent();
         writer.AppendLine("}");
 
-        return writer.ToString();
+        return RequiredUsings.AddTo(writer.ToString(), _context.ExpressionMethods);
     }
 
     #region Setup and Structure
