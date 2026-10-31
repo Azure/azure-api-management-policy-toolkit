@@ -33,9 +33,19 @@ public static partial class Rules
             helpLinkUri: "TODO",
             customTags: new[] { "APIM", "ApiManagement" });
 
+        public readonly static DiagnosticDescriptor AmbiguousTypeName = new DiagnosticDescriptor(
+            "APIM003",
+            "Ambiguous type name used",
+            "Type name '{0}' is ambiguous in API Management, use '{1}'",
+            "Type",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true,
+            description: "Description.",
+            helpLinkUri: "TODO",
+            customTags: new[] { "APIM", "ApiManagement" });
 
         public readonly static ImmutableArray<DiagnosticDescriptor> All = ImmutableArray.Create(
-            DisallowedType, DisallowedMember
+            DisallowedType, DisallowedMember, AmbiguousTypeName
         );
     }
 }
