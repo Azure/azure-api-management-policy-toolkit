@@ -124,6 +124,13 @@ public static class CompilerUtils
 
         foreach (var expression in creationSyntax.Initializer?.Expressions ?? [])
         {
+            // A callback, such as RetryConfig.ConditionEvaluator, is only run by the emulator and isn't part of
+            // the policy.
+            if (expression is AssignmentExpressionSyntax property && IsDelegateProperty(context, property))
+            {
+                continue;
+            }
+
             if (expression is not AssignmentExpressionSyntax assignment)
             {
                 context.Report(Diagnostic.Create(
@@ -183,6 +190,15 @@ public static class CompilerUtils
             .ToList();
 
         return new InitializerValue { UnnamedValues = result, Node = creationSyntax };
+    }
+
+    // A lambda counts when the type of the property can't be resolved, which is the case for a delegate type when
+    // the compilation doesn't reference the assembly declaring it.
+    private static bool IsDelegateProperty(IDocumentCompilationContext context, AssignmentExpressionSyntax property)
+    {
+        var type = CachedModel(context.Compilation, property.SyntaxTree).GetTypeInfo(property.Left).Type;
+        return type is { TypeKind: TypeKind.Delegate } ||
+               (property.Right is AnonymousFunctionExpressionSyntax && type is null or { TypeKind: TypeKind.Error });
     }
 
     public static InitializerValue ProcessExpression(

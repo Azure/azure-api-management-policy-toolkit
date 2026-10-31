@@ -380,4 +380,37 @@ public class RetryTests
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
     }
+
+    [TestMethod]
+    public void ShouldLeaveTheEmulatorCallbackOutOfTheCompiledPolicy()
+    {
+        var result =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Retry(new RetryConfig
+                    {
+                        Condition = true,
+                        ConditionEvaluator = () => context.ExpressionContext.Response.StatusCode == 500,
+                        Count = 3,
+                        Interval = 1
+                    }, () => { context.Base(); });
+                }
+            }
+            """.CompileDocument();
+
+        result.Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <inbound>
+                    <retry condition="true" count="3" interval="1">
+                        <base />
+                    </retry>
+                </inbound>
+            </policies>
+            """);
+    }
 }
