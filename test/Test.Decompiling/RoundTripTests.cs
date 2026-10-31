@@ -513,6 +513,44 @@ public class RoundTripTests
         AssertRoundTripSemantic(xml);
     }
 
+    [TestMethod]
+    public void CacheValueWithExpressions_RoundTrips()
+    {
+        AssertRoundTrip(
+            """<policies><inbound><cache-value key="k" variable-name="v" expires-after="@(context.Response.StatusCode)" refresh-after="@(context.Response.StatusCode + 1)"><value><base /></value></cache-value></inbound></policies>""");
+    }
+
+    [TestMethod]
+    public void RetryWithExpressionCondition_RoundTrips()
+    {
+        AssertRoundTrip(
+            """<policies><inbound><retry condition="@(context.Response.StatusCode == 500)" count="3" interval="1"><base /></retry></inbound></policies>""");
+    }
+
+    [TestMethod]
+    public void RetryWithMethodAsConditionEvaluator_CompilesWithoutTheCallback()
+    {
+        var result = CompileCSharp(
+            """
+            using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
+
+            [Document]
+            public class RoundTripPolicy : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Retry(new RetryConfig { Condition = true, ConditionEvaluator = Evaluate, Count = 3, Interval = 1 }, () => { context.Base(); });
+                }
+
+                private static bool Evaluate() => false;
+            }
+            """);
+
+        result.Errors.Should().BeEmpty();
+        result.Document!.Descendants("retry").Single().Attributes().Select(attribute => attribute.Name.LocalName)
+            .Should().BeEquivalentTo("condition", "count", "interval");
+    }
+
     /// <summary>
     /// Tests that complex real-world policy files can be decompiled and recompiled
     /// without crashes, even when expression methods reference types not available

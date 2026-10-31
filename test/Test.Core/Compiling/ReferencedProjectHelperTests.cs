@@ -57,6 +57,32 @@ public class ReferencedProjectHelperTests
     }
 
     [TestMethod]
+    public void ShouldCompileAConfigFactoryFromReferencedProject()
+    {
+        var result = Compile(
+            """
+            public static class Configs
+            {
+                public static RetryConfig Retry() => new RetryConfig { Condition = true, ConditionEvaluator = () => false, Count = 3, Interval = 1 };
+            }
+            """,
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.Retry(Lib.Configs.Retry(), () => { context.Base(); });
+                }
+            }
+            """);
+
+        result.Should().BeSuccessful();
+        result.Document.Descendants("retry").Single().Attributes().Select(attribute => attribute.Name.LocalName)
+            .Should().BeEquivalentTo("condition", "count", "interval");
+    }
+
+    [TestMethod]
     public void ShouldSubstituteTypeArgumentsOfGenericHelperFromReferencedProject()
     {
         var result = Compile(

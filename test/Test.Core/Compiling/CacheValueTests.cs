@@ -461,4 +461,42 @@ public class CacheValueTests
 
         result.Errors.Should().ContainSingle(error => error.Id == "APIM2006" && error.GetMessage(null).Contains(missing));
     }
+
+    [TestMethod]
+    public void ShouldLeaveTheEmulatorCallbacksOutOfTheCompiledPolicy()
+    {
+        var result =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.CacheValue(new CacheValueConfig
+                        {
+                            Key = "k",
+                            VariableName = "v",
+                            ExpiresAfter = 60,
+                            ExpiresAfterEvaluator = () => 60,
+                            RefreshAfter = 30,
+                            RefreshAfterEvaluator = () => 30
+                        },
+                        () => { context.SetVariable("v", "x"); });
+                }
+            }
+            """.CompileDocument();
+
+        result.Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <inbound>
+                    <cache-value key="k" variable-name="v" expires-after="60" refresh-after="30">
+                        <value>
+                            <set-variable name="v" value="x" />
+                        </value>
+                    </cache-value>
+                </inbound>
+            </policies>
+            """);
+    }
 }
