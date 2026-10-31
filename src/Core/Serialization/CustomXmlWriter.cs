@@ -75,8 +75,7 @@ public sealed class CustomXmlWriter : IDisposable
 
     private void WriteValue(string value)
     {
-        var trimmed = value.TrimStart();
-        if (_rawExpressions && (trimmed.StartsWith("@(") || trimmed.StartsWith("@{")))
+        if (_rawExpressions && RazorCodeFormatter.IsOneExpression(value))
         {
             // rawxml format: policy expressions are written verbatim, keeping any
             // characters that are otherwise reserved in XML (e.g. unescaped quotes

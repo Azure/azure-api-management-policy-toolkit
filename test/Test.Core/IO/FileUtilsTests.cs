@@ -100,6 +100,57 @@ public class FileUtilsTests
         File.Exists(Path.Combine(outsideFolder, "escaped.xml")).Should().BeFalse();
     }
 
+    [TestMethod]
+    public void WriteToFile_ShouldFormatExpressionsWithBracketsInLiteralsAndComments()
+    {
+        var element = new XElement("policies",
+            new XElement("inbound",
+                new XElement("set-variable",
+                    new XAttribute("name", "a"),
+                    new XAttribute("value", "@{var s = \"}\"; var t = '{'; return s + t + \"{{\";}")),
+                new XElement("set-body", "@{\n// comment with } and )\nreturn context.Request.Body.As<string>();}"),
+                new XElement("set-header",
+                    new XAttribute("name", "x @(\"a\"+\"b\") y"),
+                    new XElement("value", "@(\")\"+1)"))));
+
+        var data = CreateData("policy.xml");
+        data.Element = element;
+        data.FormatCode = true;
+        data.RawXml = true;
+        data.XmlWriterSettings = new XmlWriterSettings
+        {
+            OmitXmlDeclaration = true,
+            ConformanceLevel = ConformanceLevel.Fragment,
+            Indent = true,
+            IndentChars = "    ",
+            NewLineChars = Environment.NewLine,
+        };
+
+        var lines = File.ReadAllLines(FileUtils.WriteToFile(data));
+
+        lines[0].Should().StartWith("<!--");
+        lines[1].Should().StartWith("<!--");
+        string.Join(Environment.NewLine, lines.Skip(2)).Should().Be(
+            """
+            <policies>
+                <inbound>
+                    <set-variable name="a" value="@{
+            var s = "}";
+            var t = '{';
+            return s + t + "{{";
+            }" />
+                    <set-body>@{
+            // comment with } and )
+            return context.Request.Body.As<string>();
+            }</set-body>
+                    <set-header name="x @(&quot;a&quot;+&quot;b&quot;) y">
+                        <value>@(")" + 1)</value>
+                    </set-header>
+                </inbound>
+            </policies>
+            """.ReplaceLineEndings());
+    }
+
     private FileUtils.Data CreateData(string outputFilePath)
     {
         return new FileUtils.Data
@@ -116,5 +167,38 @@ public class FileUtilsTests
             OutputFilePath = outputFilePath,
             OutputFolder = _outputFolder,
         };
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void WriteToFile_ShouldLeaveTheGivenDocumentAsItIs(bool rawXml)
+    {
+        var element = new XElement("policies", new XAttribute("a", "@(1+1)"));
+        var data = CreateData("policy.xml");
+        data.Element = element;
+        data.FormatCode = true;
+        data.RawXml = rawXml;
+
+        FileUtils.WriteToFile(data);
+
+        element.Attribute("a")!.Value.Should().Be("@(1+1)");
+    }
+
+    [TestMethod]
+    [DataRow("""<a>@(1 + 1) &amp; b</a>""")]
+    [DataRow("""<a>@(1 + 1) &lt; b</a>""")]
+    [DataRow("""<a b="@(1 + 1) &amp; c" />""")]
+    [DataRow("""<a b="@(1 + 1)@(2 + 2) &lt; c" />""")]
+    public void WriteToFile_ShouldEscapeLiteralTextThatFollowsAnExpression(string xml)
+    {
+        var data = CreateData("policy.xml");
+        data.Element = XElement.Parse(xml);
+        data.FormatCode = true;
+        data.RawXml = true;
+
+        var written = File.ReadAllLines(FileUtils.WriteToFile(data));
+
+        written.Last().Should().EndWith(xml);
     }
 }
