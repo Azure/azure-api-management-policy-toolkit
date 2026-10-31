@@ -193,6 +193,17 @@ internal sealed partial class PolicyExpressionCompiler
                 : rewritten;
         }
 
+        // A returned value that C# converts to the helper's numeric return type has that conversion written out.
+        public override SyntaxNode? VisitReturnStatement(ReturnStatementSyntax node)
+        {
+            var visited = (ReturnStatementSyntax)base.VisitReturnStatement(node)!;
+            return node.Expression is { } written && visited.Expression is { } result &&
+                   TryGetImplicitNumericConversion(model, written, out var returnType)
+                ? visited.WithExpression(
+                    compiler.ConvertRawNamedValue(returnType, result) ?? CastTo(returnType, result).Expression)
+                : visited;
+        }
+
         // An explicit cast of a named value, directly or from a helper or argument, converts all of its text like
         // an implicit conversion: to string it's the string "{{x}}", to another type (int)({{x}}). A cast of the
         // parenthesized call, as the decompiler writes a token used as code, keeps the raw token.

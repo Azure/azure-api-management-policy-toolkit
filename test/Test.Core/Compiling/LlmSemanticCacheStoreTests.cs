@@ -43,7 +43,7 @@ public class LlmSemanticCacheStoreTests
         """
         <policies>
             <outbound>
-                <llm-semantic-cache-store duration="@(context.User.Email.EndsWith("@contoso.example") ? 10 : 60)" />
+                <llm-semantic-cache-store duration="@((uint)(context.User.Email.EndsWith("@contoso.example") ? 10 : 60))" />
             </outbound>
         </policies>
         """,

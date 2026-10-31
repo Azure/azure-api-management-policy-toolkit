@@ -134,7 +134,7 @@ public class CacheStoreValueTests
                     Duration = Exp(context.ExpressionContext),
                 });
             }
-            uint Exp(IExpressionContext context) 
+            int Exp(IExpressionContext context)
                 => context.User.Email.EndsWith("@contoso.example") ? 10 : 60;
         }
         """,
