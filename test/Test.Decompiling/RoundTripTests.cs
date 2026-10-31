@@ -299,6 +299,8 @@ public class RoundTripTests
     [DataRow("@(a /* ) */ + b)", true)]
     [DataRow("@(a", false)]
     [DataRow("text @(a)", false)]
+    [DataRow("x(a)", false)]
+    [DataRow("@b}", false)]
     public void IsExpression_RequiresOneBalancedExpression(string value, bool expected)
     {
         new PolicyDecompilerContext().IsExpression(value).Should().Be(expected);
@@ -357,6 +359,67 @@ public class RoundTripTests
         var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
 
         csharp.Should().Contain("\"a b\"").And.Contain("1 +\n");
+    }
+
+    [TestMethod]
+    [DataRow("""<inbound><rate-limit calls="1{{x}}" renewal-period="60" /></inbound>""", DisplayName = "An int")]
+    [DataRow("""<inbound><retry condition="true" count="1" interval="1" first-fast-retry="t{{x}}"><base /></retry></inbound>""", DisplayName = "A bool")]
+    [DataRow("""<outbound><llm-semantic-cache-store duration="1{{x}}" /></outbound>""", DisplayName = "A uint")]
+    [DataRow("""<inbound><emit-metric name="m" value="1{{x}}"><dimension name="d" value="v" /></emit-metric></inbound>""", DisplayName = "A double")]
+    [DataRow("""<inbound><choose><when condition="t{{x}}"><base /></when></choose></inbound>""", DisplayName = "A condition")]
+    [DataRow("""<inbound><choose><when condition="{{Flag}}"><base /></when></choose></inbound>""", DisplayName = "A condition that is a named value")]
+    public void NamedValueInATypedValue_RoundTrips(string sections)
+    {
+        var xml = $"<policies>{sections}</policies>";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        CSharpSyntaxTree.ParseText(csharp).GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Should().BeEmpty("the decompiled C# should be syntactically valid.\nGenerated C#:\n{0}", csharp);
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void TokenThatIsNotANamedValue_NextToANamedValue_StaysText()
+    {
+        var xml = """<policies><inbound><set-variable name="key" value="{{123}}-{{x}}" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("\"{{123}}-\"").And.NotContain("NamedValue(\"123\")");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void TextWithOnlyATokenThatIsNotANamedValue_GetsNoHelper()
+    {
+        var xml = """<policies><inbound><set-variable name="key" value="x{{123}}" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain("\"x{{123}}\"").And.NotContain("IExpressionContext context)");
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void EntityInCDataAndCommentOfARawPolicy_StaysAsWritten()
+    {
+        // the unescaped quotes make this document one that is read through the raw policy fallback
+        var xml = """<policies><inbound><set-variable name="a" value="@(context.Request.Headers.GetValueOrDefault("x",""))" /><unknown-policy><![CDATA[@("a&amp;b")]]><!-- @("c&amp;d") --><e /></unknown-policy></inbound></policies>""";
+
+        var nodes = System.Xml.Linq.XDocument.Parse(PolicyDecompiler.PreprocessXml(xml)).Descendants("unknown-policy").Single().Nodes().ToList();
+
+        nodes.OfType<System.Xml.Linq.XCData>().Single().Value.Should().Be("@(\"a&amp;b\")");
+        nodes.OfType<System.Xml.Linq.XComment>().Single().Value.Should().Be(" @(\"c&amp;d\") ");
+    }
+
+    [TestMethod]
+    public void DocumentWhoseOnlyMultiLineExpressionIsInText_IsNotRewritten()
+    {
+        var xml = "<policies><inbound><set-header name='a'><value>@(1 +\n2)</value></set-header></inbound></policies>";
+
+        PolicyDecompiler.PreprocessXml(xml).Should().Be(xml);
     }
 
     [TestMethod]

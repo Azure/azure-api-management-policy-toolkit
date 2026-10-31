@@ -96,7 +96,7 @@ public class PolicyDecompilerContext
     /// </summary>
     private static bool IsSingleExpression(string value)
     {
-        if (value.Length < 3 || value[0] != '@' || (value[1] != '(' && value[1] != '{'))
+        if (value.Length < 2 || (value[1] != '(' && value[1] != '{'))
         {
             return false;
         }

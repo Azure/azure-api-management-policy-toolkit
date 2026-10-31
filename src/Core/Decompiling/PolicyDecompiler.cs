@@ -283,7 +283,7 @@ public class PolicyDecompiler
 
         // Scan for all @(...) and @{...} expression spans
         var spans = CollectExpressionSpans(xml);
-        if (spans.Count == 0) return PreserveAttributeLineBreaks(xml);
+        if (spans.Count == 0) return xml;
 
         // Replace expressions with XML-safe placeholders
         var exprMap = new Dictionary<string, string>(spans.Count, StringComparer.Ordinal);
@@ -356,24 +356,15 @@ public class PolicyDecompiler
             return xml;
         }
 
-        XDocument doc;
-        XDocument parsed;
-        try
+        using var sr = new StringReader(xml);
+        using var xr = new XmlTextReader(sr)
         {
-            using var sr = new StringReader(xml);
-            using var xr = new XmlTextReader(sr)
-            {
-                DtdProcessing = DtdProcessing.Prohibit,
-                Normalization = false,
-                WhitespaceHandling = WhitespaceHandling.All
-            };
-            doc = XDocument.Load(xr, LoadOptions.PreserveWhitespace);
-            parsed = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
-        }
-        catch (XmlException)
-        {
-            return xml;
-        }
+            DtdProcessing = DtdProcessing.Prohibit,
+            Normalization = false,
+            WhitespaceHandling = WhitespaceHandling.All
+        };
+        var doc = XDocument.Load(xr, LoadOptions.PreserveWhitespace);
+        var parsed = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
 
         // Only an expression keeps its line breaks. Any other attribute keeps the value an XML parser gives it:
         // its line breaks are spaces, while a character reference such as &#10; is a real line break.
