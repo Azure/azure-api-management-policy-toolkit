@@ -634,6 +634,14 @@ public class SendRequestTests
     }
 
     [TestMethod]
+    public void ShouldWriteNoSendRequestWithoutAUrlOrMethod()
+    {
+        var result = InboundDocument("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\" });").CompileDocument();
+
+        result.Document.Descendants("send-request").Should().BeEmpty();
+    }
+
+    [TestMethod]
     [DataRow("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\" });", 2)]
     [DataRow("context.SendRequest(new SendRequestConfig { ResponseVariableName = \"r\", Url = \"https://example.com\" });", 1)]
     [DataRow("context.SendOneWayRequest(new SendOneWayRequestConfig { Mode = \"new\" });", 2)]
