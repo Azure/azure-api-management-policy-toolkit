@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring;
 using Microsoft.Azure.ApiManagement.PolicyToolkit.Authoring.Expressions;
@@ -114,6 +115,12 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
             var rewriter = new HelperInliningRewriter(
                 this, declarationModel, bindings, stack, method, _renamer.CreateRenames(body, declarationModel, renameAll));
             var visited = rewriter.Visit(body);
+            if (visited is ExpressionSyntax result && body is ExpressionSyntax written &&
+                TryGetImplicitNumericConversion(declarationModel, written, out var returnType))
+            {
+                visited = ConvertRawNamedValue(returnType, result) ?? CastTo(returnType, result).Expression;
+            }
+
             return rewriter.HasUnsupportedWrite ? null : visited;
         }
     }
@@ -510,7 +517,47 @@ internal sealed partial class PolicyExpressionCompiler(IDocumentCompilationConte
         (SymbolEqualityComparer.Default.Equals(first, second) ||
          first.ToDisplayString(EmittedTypeFormat) == second.ToDisplayString(EmittedTypeFormat));
 
-    private static ExpressionSyntax CastTo(ITypeSymbol type, ExpressionSyntax expression) =>
+    // C# converts 300 to uint when a helper declared to return uint returns it, but the emitted expression
+    // is only the 300, which API Management types as int. The conversion has to be written out.
+    private static bool TryGetImplicitNumericConversion(
+        SemanticModel model,
+        ExpressionSyntax expression,
+        [NotNullWhen(true)] out ITypeSymbol? target)
+    {
+        target = null;
+        var info = model.GetTypeInfo(expression);
+        if (info.Type is not { } type || info.ConvertedType is not { } converted)
+        {
+            return false;
+        }
+
+        // A helper declared to return uint? converts 300 to uint. An int? stays nullable, so a cast to long would
+        // throw for a null value: it is converted to long?.
+        var sourceValue = NullableValueType(type);
+        var targetValue = NullableValueType(converted);
+        if (!(IsNumeric(sourceValue) || sourceValue.SpecialType == SpecialType.System_Char) ||
+            !IsNumeric(targetValue) ||
+            SymbolEqualityComparer.Default.Equals(sourceValue, targetValue))
+        {
+            return false;
+        }
+
+        target = SymbolEqualityComparer.Default.Equals(sourceValue, type) ? targetValue : converted;
+        return true;
+    }
+
+    private static ITypeSymbol NullableValueType(ITypeSymbol type) =>
+        type is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable
+            ? nullable.TypeArguments[0]
+            : type;
+
+    private static bool IsNumeric(ITypeSymbol type) => type.SpecialType is
+        SpecialType.System_SByte or SpecialType.System_Byte or SpecialType.System_Int16 or
+        SpecialType.System_UInt16 or SpecialType.System_Int32 or SpecialType.System_UInt32 or
+        SpecialType.System_Int64 or SpecialType.System_UInt64 or SpecialType.System_Single or
+        SpecialType.System_Double or SpecialType.System_Decimal;
+
+    private static ParenthesizedExpressionSyntax CastTo(ITypeSymbol type, ExpressionSyntax expression) =>
         SyntaxFactory.ParenthesizedExpression(SyntaxFactory.CastExpression(
             SyntaxFactory.ParseTypeName(type.ToDisplayString(EmittedTypeFormat)),
             ParenthesizeIfNeeded(expression)));

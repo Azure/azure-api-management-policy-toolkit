@@ -596,4 +596,180 @@ public partial class PolicyExpressionCompilerTests
 
         result.Errors.Should().Contain(error => error.Id == "APIM2013");
     }
+
+    [TestMethod]
+    public void ShouldWriteOutOnlyTheConversionsOfAReturnedValueThatTheGatewayNeeds()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetVariable("a", MaxAge(context.ExpressionContext));
+                    context.SetVariable("b", Count(context.ExpressionContext));
+                    context.SetVariable("c", Same(context.ExpressionContext));
+                    context.SetVariable("d", Block(context.ExpressionContext));
+                    context.SetVariable("e", Optional(context.ExpressionContext));
+                }
+
+                uint? Optional(IExpressionContext context) => 300;
+                uint MaxAge(IExpressionContext context) => 300;
+                long Count(IExpressionContext context) => context.Response.StatusCode + 1;
+                int Same(IExpressionContext context) => context.Response.StatusCode;
+                uint Block(IExpressionContext context)
+                {
+                    var status = context.Response.StatusCode;
+                    if (status > 200)
+                    {
+                        return 1;
+                    }
+                    return (uint)status;
+                }
+            }
+            """;
+
+        code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(
+            """
+            <policies>
+                <inbound>
+                    <set-variable name="a" value="@((uint)300)" />
+                    <set-variable name="b" value="@((long)(context.Response.StatusCode + 1))" />
+                    <set-variable name="c" value="@(context.Response.StatusCode)" />
+                    <set-variable name="d" value="@{
+            var status = context.Response.StatusCode;
+            if (status > 200)
+            {
+            return (uint)1;
+            }
+
+            return (uint)status;
+            }" />
+                    <set-variable name="e" value="@((uint)300)" />
+                </inbound>
+            </policies>
+            """);
+    }
+
+    [TestMethod]
+    [DataRow("sbyte")]
+    [DataRow("byte")]
+    [DataRow("short")]
+    [DataRow("ushort")]
+    [DataRow("ulong")]
+    [DataRow("float")]
+    [DataRow("double")]
+    [DataRow("decimal")]
+    public void ShouldWriteOutTheConversionToANumericType(string type)
+    {
+        var code =
+            $$"""
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetVariable("a", Value(context.ExpressionContext));
+                }
+
+                {{type}} Value(IExpressionContext context) => 1;
+            }
+            """;
+
+        code.CompileDocument().Document.Descendants("set-variable").Single().Attribute("value")!.Value
+            .Should().Be($"@(({type})1)");
+    }
+
+    [TestMethod]
+    public void ShouldLeaveANullReturnedAsANullableNumericType()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetVariable("a", Optional(context.ExpressionContext));
+                }
+
+                uint? Optional(IExpressionContext context)
+                {
+                    if (context.Response.StatusCode > 200)
+                    {
+                        return null;
+                    }
+
+                    return 1;
+                }
+            }
+            """;
+
+        var value = code.CompileDocument().Document.Descendants("set-variable").Single().Attribute("value")!.Value;
+
+        value.Should().Contain("return null;").And.Contain("return (uint)1;");
+    }
+
+    [TestMethod]
+    public void ShouldConvertAllOfARawNamedValueAHelperReturns()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetVariable("a", Single(context.ExpressionContext));
+                    context.SetVariable("b", Block(context.ExpressionContext));
+                }
+
+                [NamedValue("n")]
+                static int N() => 0;
+
+                long Single(IExpressionContext context) => N();
+                long Block(IExpressionContext context)
+                {
+                    return N();
+                }
+            }
+            """;
+
+        var values = code.CompileDocument().Document.Descendants("set-variable")
+            .Select(element => element.Attribute("value")!.Value)
+            .ToArray();
+
+        values.Should().AllSatisfy(value => value.Should().Contain("(long)({{n}})"));
+    }
+
+    [TestMethod]
+    public void ShouldWriteOutTheConversionOfANullableOrCharValue()
+    {
+        var code =
+            """
+            [Document]
+            public class PolicyDocument : IDocument
+            {
+                public void Inbound(IInboundContext context)
+                {
+                    context.SetVariable("a", Widened(context.ExpressionContext));
+                    context.SetVariable("b", Letter(context.ExpressionContext));
+                    context.SetVariable("c", Same(context.ExpressionContext));
+                }
+
+                int? Status(IExpressionContext context) => context.Response.StatusCode;
+                long? Widened(IExpressionContext context) => Status(context);
+                int Letter(IExpressionContext context) => 'a';
+                int? Same(IExpressionContext context) => Status(context);
+            }
+            """;
+
+        var values = code.CompileDocument().Document.Descendants("set-variable")
+            .ToDictionary(element => element.Attribute("name")!.Value, element => element.Attribute("value")!.Value);
+
+        values["a"].Should().Contain("(long?").And.Contain("context.Response.StatusCode");
+        values["b"].Should().Be("@((int)'a')");
+        values["c"].Should().NotContain("long");
+    }
 }

@@ -47,6 +47,13 @@ simple operands, may be evaluated more than once or not at all, depending on how
 other argument, including a call or a division that could throw, is only accepted when the helper evaluates its
 parameter exactly once.
 
+### Numeric types
+
+API Management types an expression by its code, not by the helper that holds it, and rejects a type an attribute
+doesn't take. A conversion that C# makes implicitly to a helper's return type is therefore written out:
+`uint MaxAge(...) => 300` compiles to `@((uint)300)`. That covers a helper's return value and every `return` of a
+multi-statement helper.
+
 ## Conditions
 
 Policy `if` conditions support boolean helper calls combined with `!`, `&&`, `||` and parentheses.
