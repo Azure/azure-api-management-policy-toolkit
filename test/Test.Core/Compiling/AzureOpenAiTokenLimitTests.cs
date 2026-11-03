@@ -155,13 +155,13 @@ public class AzureOpenAiTokenLimitTests
                 });
             }
 
-            int GetQuota(IExpressionContext context) => context.User.Groups.Contains("premium") ? 50000 : 20000;
+            long GetQuota(IExpressionContext context) => context.User.Groups.Contains("premium") ? 50000L : 20000L;
         }
         """,
         """
         <policies>
             <inbound>
-                <azure-openai-token-limit counter-key="counter-key" estimate-prompt-tokens="true" token-quota="@(context.User.Groups.Contains("premium") ? 50000 : 20000)" token-quota-period="Daily" />
+                <azure-openai-token-limit counter-key="counter-key" estimate-prompt-tokens="true" token-quota="@(context.User.Groups.Contains("premium") ? 50000L : 20000L)" token-quota-period="Daily" />
             </inbound>
         </policies>
         """,

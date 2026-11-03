@@ -28,10 +28,11 @@ public record TokenLimitConfig
     public int? TokensPerMinute { get; init; }
 
     /// <summary>
-    /// Specifies the maximum number of tokens that can be consumed per time period. Policy expressions are allowed.
+    /// Specifies the maximum number of tokens that can be consumed per time period. Policy expressions are allowed
+    /// and have to return a long.
     /// </summary>
     [ExpressionAllowed]
-    public int? TokenQuota { get; init; }
+    public long? TokenQuota { get; init; }
 
     /// <summary>
     /// Specifies the time period for the token quota. Valid values are "day", "week", and "month".

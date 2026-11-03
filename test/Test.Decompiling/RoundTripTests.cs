@@ -225,6 +225,27 @@ public class RoundTripTests
     }
 
     [TestMethod]
+    [DataRow("{{quota}}", "long NamedValue_Quota")]
+    [DataRow("@(100L)", "long TokenQuota")]
+    public void TokenQuotaValue_GetsALongHelper(string quota, string helper)
+    {
+        var xml = $"""<policies><inbound><llm-token-limit counter-key="@(context.Request.IpAddress)" estimate-prompt-tokens="true" token-quota="{quota}" token-quota-period="Daily" /></inbound></policies>""";
+
+        var csharp = s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest");
+
+        csharp.Should().Contain(helper);
+        AssertRoundTrip(xml);
+    }
+
+    [TestMethod]
+    public void TokenQuotaDuration_IsDecompiledToSeconds()
+    {
+        var xml = """<policies><inbound><llm-token-limit counter-key="key" estimate-prompt-tokens="true" token-quota="PT1H" token-quota-period="Daily" /></inbound></policies>""";
+
+        s_decompiler.DecompileDocument(xml, "RoundTripPolicy", "RoundTripTest").Should().Contain("TokenQuota = 3600");
+    }
+
+    [TestMethod]
     public void Wait_PreservesParentAndBranchPolicyIds()
     {
         var xml = """

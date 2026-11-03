@@ -155,13 +155,13 @@ public class LlmTokenLimitTests
                 });
             }
 
-            int GetQuota(IExpressionContext context) => context.User.Groups.Contains("premium") ? 50000 : 20000;
+            long GetQuota(IExpressionContext context) => context.User.Groups.Contains("premium") ? 50000L : 20000L;
         }
         """,
         """
         <policies>
             <inbound>
-                <llm-token-limit counter-key="counter-key" estimate-prompt-tokens="true" token-quota="@(context.User.Groups.Contains("premium") ? 50000 : 20000)" token-quota-period="Daily" />
+                <llm-token-limit counter-key="counter-key" estimate-prompt-tokens="true" token-quota="@(context.User.Groups.Contains("premium") ? 50000L : 20000L)" token-quota-period="Daily" />
             </inbound>
         </policies>
         """,
@@ -313,5 +313,18 @@ public class LlmTokenLimitTests
     public void ShouldCompileLlmTokenLimitPolicy(string code, string expectedXml)
     {
         code.CompileDocument().Should().BeSuccessful().And.DocumentEquivalentTo(expectedXml);
+    }
+
+    [TestMethod]
+    public void TokenQuotaShouldHoldALong()
+    {
+        var config = new Authoring.TokenLimitConfig
+        {
+            CounterKey = "key",
+            EstimatePromptTokens = true,
+            TokenQuota = 3_000_000_000L
+        };
+
+        config.TokenQuota.Should().Be(3_000_000_000L);
     }
 }
